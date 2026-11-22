@@ -10,13 +10,20 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 
-const updates: unknown[] = [];
+type UserUpdate = {
+  readonly username?: string;
+  readonly currency?: string;
+  readonly dateFormat?: string;
+  readonly hasSeenOnboarding?: boolean;
+};
+
+const updates: UserUpdate[] = [];
 const realFetch = globalThis.fetch;
 globalThis.fetch = Object.assign(
   async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     if (request.url.endsWith("/update-user")) {
-      updates.push(await request.json());
+      updates.push((await request.json()) as UserUpdate);
       return Response.json({ status: true });
     }
     if (request.url.endsWith("/is-username-available")) return Response.json({ available: true });
@@ -68,12 +75,10 @@ async function openDashboard(
     id: "(app)",
     beforeLoad: () => ({
       session: {
-        user: {
-          username,
-          currency: "USD",
-          dateFormat: "MM/DD/YYYY",
-          ...onboarding,
-        },
+        user: Object.assign(
+          { username, currency: "USD", dateFormat: "MM/DD/YYYY", ...onboarding },
+          ...updates,
+        ),
       },
     }),
     component: () => (
@@ -248,7 +253,7 @@ test("an account with a generated username is asked to choose one, and saves it"
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
   await screen.findByRole("dialog", { name: "Install the myakiba extension." });
-  expect(updates).toEqual([{ username: "collector" }]);
+  expect(updates).toEqual([{ username: "collector", hasSeenOnboarding: true }]);
 });
 
 test("a new account in a ja-JP browser starts with yen and year-first dates", async () => {
@@ -259,7 +264,11 @@ test("a new account in a ja-JP browser starts with yen and year-first dates", as
   expect(preferences().dateFormat).toBe("YYYY/MM/DD");
 
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  await waitFor(() => expect(updates).toEqual([{ currency: "JPY", dateFormat: "YYYY/MM/DD" }]));
+  await waitFor(() =>
+    expect(updates).toEqual([
+      { currency: "JPY", dateFormat: "YYYY/MM/DD", hasSeenOnboarding: true },
+    ]),
+  );
 });
 
 test("a new account in an en-GB browser starts with pounds and day-first dates", async () => {
@@ -279,3 +288,36 @@ test("Getting Started shows an onboarded account its saved currency, whatever th
   expect(preferences().currency).toContain("USD");
   expect(preferences().dateFormat).toBe("MM/DD/YYYY");
 });
+
+async function choosePreferences(currency: string, dateFormat: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Currency" }));
+  fireEvent.click(await screen.findByRole("option", { name: new RegExp(currency, "u") }));
+  fireEvent.click(screen.getByRole("button", { name: dateFormat }));
+}
+
+test.each([
+  ["EUR", "YYYY/MM/DD"],
+  ["USD", "MM/DD/YYYY"],
+])(
+  "%s and %s saved before a reload at the extension step come back, not the locale's guess",
+  async (currency, dateFormat) => {
+    useBrowserLocale("en-GB");
+    await openDashboard(false);
+    await choosePreferences(currency, dateFormat);
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+    const saved = updates.length;
+
+    cleanup();
+    await openDashboard(false);
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+
+    expect(preferences().currency).toContain(currency);
+    expect(preferences().dateFormat).toBe(dateFormat);
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+    expect(updates.slice(saved)).toEqual([]);
+  },
+);

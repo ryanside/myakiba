@@ -148,6 +148,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
         ...(needsUsername && { username: value.username.trim() }),
         ...(value.currency !== sessionCurrency && { currency: value.currency }),
         ...(value.dateFormat !== sessionDateFormat && { dateFormat: value.dateFormat }),
+        ...(isNewAccount && { hasSeenOnboarding: true }),
       };
       if (Object.keys(changes).length === 0) {
         advance();
