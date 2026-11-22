@@ -1870,7 +1870,7 @@ test("an Item added again after its commit arrives unselected", async () => {
 
 /** Adds an Item through Add's search, as a pick or the `?item=` link would add it to the draft. */
 async function addFromSearch(user: User, text: string, option: RegExp) {
-  await click(user, "Search myakiba");
+  await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
   await user.type(await screen.findByRole("combobox", { name: "Search myakiba" }), text);
   await user.click(await screen.findByRole("option", { name: option }));
   await user.keyboard("{Escape}");
@@ -1889,13 +1889,20 @@ function holdItemReads() {
     });
 }
 
-/** Clicks whichever Add button the page shows, and reports whether that sent a commit. */
+/** The Add button, when the page shows one the user can press. */
+const addButton = () => {
+  const button = screen.queryByRole("button", { name: /^Add \d+ to collection/u });
+  return button === null || button.hasAttribute("disabled") ? null : button;
+};
+
+/** Presses Add if the user can, and reports whether that sent a commit. */
 async function tryToCommit() {
   const before = server.commits.length;
-  const button = screen.queryByRole("button", { name: /^Add \d+ to collection/u });
-  if (button !== null) fireEvent.click(button);
-  await pause(200);
-  return server.commits.length > before;
+  const button = addButton();
+  if (button === null) return false;
+  fireEvent.click(button);
+  await waitFor(() => expect(server.commits.length).toBeGreaterThan(before));
+  return true;
 }
 
 test("an Item added again waits for a fresh read of what you own, and cannot be added from the old one", async () => {
@@ -2022,4 +2029,79 @@ test("a read sent while a commit was in flight cannot decide an Item added again
 
   await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
   expect(await tryToCommit()).toBe(false);
+});
+
+const BLOCKED = "Retry or remove items that could not load";
+
+test("a row whose read failed blocks Add for every row until it is removed or read", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([OTHER_ID]));
+  server.itemsFailure = refused(503, "down");
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  expect([
+    isChecked("Rem"),
+    addButton() === null,
+    screen.queryByRole("button", { name: BLOCKED })?.hasAttribute("disabled"),
+  ]).toEqual(["true", true, true]);
+
+  server.itemsFailure = null;
+  await click(user, "Remove this row");
+  await waitFor(() => expect(addButton() !== null).toBe(true));
+  expect(await tryToCommit()).toBe(true);
+  expect(server.commits[0]?.rows.map(({ itemId }) => itemId)).toEqual([OTHER_ID]);
+});
+
+test("a row waiting for its read can be removed", async () => {
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  const release = holdItemReads();
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID]));
+
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Remove this row" }) !== null).toBe(true),
+  );
+  await click(user, "Remove this row");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  await release();
+});
+
+test("Select all leaves a row waiting for its read to that read", async () => {
+  draft(OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+  const release = holdItemReads();
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID, OTHER_ID]));
+
+  const all = screen.getByRole("checkbox", { name: "Select all items" });
+  await user.click(all);
+  await user.click(all);
+  await release();
+
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  expect(isChecked("Rem")).toBe("true");
+});
+
+test("an unselected row says where the Item is, without counting its Collection Items", async () => {
+  seedItems(
+    item(ITEM_ID, {
+      title: "Hatsune Miku",
+      externalId: 98_777,
+      collectionCount: 2,
+      onOrderCount: 3,
+    }),
+  );
+  openAddPage(`/add?item=${ITEM_ID}&to=collection`);
+
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  expect(shows("In your collection, On order")).toBe(true);
 });
