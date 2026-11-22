@@ -62,6 +62,7 @@ export function useAddController(search: AddSearchParams) {
   }, [hasPresetItem, navigate]);
 
   const rowItemIds = rows.map((row) => row.itemId);
+  const deciding = rows.some((row) => row.selected === null);
   const draftItemIds: ReadonlySet<string> = new Set([...rowItemIds, ...waiting]);
   const {
     data: itemData,
@@ -69,7 +70,7 @@ export function useAddController(search: AddSearchParams) {
     isPlaceholderData: itemsStale,
     error: itemsError,
     refetch: refetchItems,
-  } = useRead(add.items, { itemIds: rowItemIds, newestArrival });
+  } = useRead(add.items, { itemIds: rowItemIds, newestArrival: deciding ? newestArrival : 0 });
   const readItems: ReadonlyMap<string, AddItem> = new Map(
     (itemData?.items ?? []).map((item) => [item.itemId, item]),
   );
@@ -93,7 +94,10 @@ export function useAddController(search: AddSearchParams) {
   const gone = (row: DraftRow) => answered && !readItems.has(row.itemId);
   const undecided = rows.some((row) => row.selected === null && !gone(row));
   const itemsLoading =
-    rowItemIds.length > 0 && (itemsPending || itemsStale || (undecided && itemsError === null));
+    rowItemIds.length > 0 &&
+    (itemsPending ||
+      (itemsStale && rows.some((row) => !readItems.has(row.itemId))) ||
+      (undecided && itemsError === null));
   // A failed refresh leaves the Items it already read, so only a row without one needs the error.
   const itemsReadError =
     itemsError !== null && rows.some((row) => !items.has(row.itemId)) ? itemsError : null;
@@ -333,7 +337,7 @@ export function useAddController(search: AddSearchParams) {
       destination,
       emailVerified,
       loading: pending,
-      rowsFailedToLoad: undecided && itemsError !== null,
+      rowsFailedToLoad: itemsError !== null && (undecided || items.size === 0),
       onIssues: reportIssues,
       onSending: () => setSending(true),
       onFailed: () => setSending(false),

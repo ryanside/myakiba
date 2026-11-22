@@ -309,6 +309,8 @@ function verbOf({ ownership, wishlist, lists }: Destination): CommitVerb {
   return ownership?.kind === "none" && !wishlist && lists.length === 0 ? "Keep" : "Add";
 }
 
+export const ROWS_FAILED_TO_LOAD = "Retry or remove items that could not load";
+
 export function commitPlan(
   destination: Destination,
   count: number,
@@ -320,7 +322,7 @@ export function commitPlan(
   const verb = verbOf(destination);
   const blocked = (label: string): CommitPlan => ({ kind: "blocked", verb, label });
   if (!context.emailVerified) return blocked("Verify your email to add items");
-  if (context.rowsFailedToLoad) return blocked("Retry or remove items that could not load");
+  if (context.rowsFailedToLoad) return blocked(ROWS_FAILED_TO_LOAD);
   if (count === 0) return blocked("Select items to add");
   const { ownership, wishlist, lists } = destination;
   switch (ownership?.kind) {

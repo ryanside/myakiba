@@ -2138,3 +2138,24 @@ test("when a failed read leaves nothing to add, Add says to retry or remove, bes
     screen.queryAllByText(BLOCKED).some((element) => element.closest("button") === null),
   ]).toEqual([true, true]);
 });
+
+test("an owned Item picked alone counts while it waits, with Add disabled, then reads as nothing selected", async () => {
+  seedItems(item("item-30001", { title: "Owned pick", collectionCount: 1 }));
+  const release = holdItemReads();
+  loadExtension({ picks: [fakePick(30_001)] });
+  openAddPage("/add?to=collection");
+  await waitFor(() => expect(draftItemIds()).toEqual(["item-30001"]));
+
+  expect([
+    screen.queryByRole("button", { name: /^Add 1 to collection/u })?.hasAttribute("disabled"),
+    shows("Add 1 item to"),
+  ]).toEqual([true, true]);
+
+  await release();
+  await waitFor(() => expect(isChecked("Owned pick")).toBe("false"));
+  expect([
+    screen.queryByRole("button", { name: "Select items to add" })?.hasAttribute("disabled"),
+    shows("Add 0 of 1 item to"),
+    server.commits.length,
+  ]).toEqual([true, true, 0]);
+});

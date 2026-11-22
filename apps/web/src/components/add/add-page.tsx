@@ -6,9 +6,11 @@ import { useAddController } from "./add-controller";
 import { LiveRegions, Notices } from "./add-notices";
 import { AddItems } from "./add-table";
 import { CommitButton } from "./commit-button";
+import { ROWS_FAILED_TO_LOAD } from "./commit-input";
 import { OrderSwap, useSlide } from "./destination-motion";
 import { DestinationSentence } from "./destination-sentence";
 import { OrderDetails } from "./order-details";
+import { SHORT_LABEL } from "./sentence-fit";
 
 const appRouteApi = getRouteApi("/(app)");
 
@@ -43,6 +45,14 @@ function AccountAddPage({ search }: { readonly search: AddSearchParams }) {
             <DestinationSentence controller={c} disabled={!c.hasItems}>
               <CommitButton {...c.commitProps} />
             </DestinationSentence>
+            {c.commitProps.rowsFailedToLoad ? (
+              <p
+                aria-hidden="true"
+                className={cn(SHORT_LABEL, "pt-1.5 text-end text-xs text-muted-foreground")}
+              >
+                {ROWS_FAILED_TO_LOAD}
+              </p>
+            ) : null}
           </div>
           <div inert={c.sending}>
             <OrderSwap id={orderId}>

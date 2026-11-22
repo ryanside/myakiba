@@ -2,7 +2,7 @@
  * How the destination sentence stays on one line, by the room its row has. Each step down keeps what
  * means most and leaves the words it drops to screen readers:
  *
- * - under 48rem the commit shows only its verb;
+ * - under 48rem the commit shows only its verb, and a failed read's reason takes a line below;
  * - under 41rem Wishlist and Lists show as icons with their state, and "and" goes;
  * - under 36rem "also on" goes;
  * - under 31rem the lead ("Add 12 items to") goes;
