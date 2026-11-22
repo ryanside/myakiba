@@ -61,6 +61,7 @@ const listPage = (items: readonly ServerItem[]) => {
   const totals = {
     totalCount: items.length,
     totalValue: items.reduce((sum, { price, paid }) => (paid ? sum + price : sum), 0),
+    paidItemCount: items.filter(({ paid }) => paid).length,
     totalItemsThisMonth: 0,
   };
   return { items, ...totals };
@@ -159,7 +160,7 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
   let actions: Actions | null = null;
   function CollectionPage() {
     const { filters } = useCollectionFilters();
-    const { items, totalCount, totalValue } = useCollectionQuery();
+    const { items, totalCount, totalValue, paidItemCount } = useCollectionQuery();
     const mutations = useCollectionMutations({ filters });
     useEffect(() => {
       actions = mutations;
@@ -167,6 +168,7 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
     return (
       <>
         <p aria-label="totals">{`${totalCount} items worth ${totalValue}`}</p>
+        <p aria-label="paid items">{paidItemCount}</p>
         <ul aria-label="collection">
           {items.map((item) => (
             <li key={item.id}>{`${item.itemTitle} ${item.price}`}</li>
@@ -250,7 +252,11 @@ describe("a Collection Item write on the collection page", () => {
       actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
     );
     await waitFor(() =>
-      expect(shown()).toEqual({ totals: "1 items worth 500", items: ["Rin 500"], itemPage: "" }),
+      expect(shown()).toEqual({
+        totals: "1 items worth 500",
+        items: ["Rin 500"],
+        itemPage: "",
+      }),
     );
 
     await answer(0, "finish");
@@ -260,6 +266,22 @@ describe("a Collection Item write on the collection page", () => {
       shown: { totals: "1 items worth 500", items: ["Rin 500"], itemPage: "" },
       toasts: ["success: Collection item(s) deleted"],
     });
+  });
+
+  test("an unfiltered delete lowers the paid item count before the server answers", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+    const paidItems = () => screen.getByLabelText("paid items").textContent;
+    expect(paidItems()).toBe("2");
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
+    );
+    await waitFor(() => expect(paidItems()).toBe("1"));
+
+    await answer(0, "finish");
+    expect(await deleting).toBe("ok");
+    await waitFor(() => expect(paidItems()).toBe("1"));
   });
 
   test("a failed edit restores the row and the Item page's copy and says so", async () => {
@@ -439,7 +461,11 @@ describe("a failed Collection Item write after the filter changes", () => {
           setTimeout(resolve, 50);
         }),
     );
-    expect(shown()).toEqual({ totals: "1 items worth 500", items: ["Rin 500"], itemPage: "1000" });
+    expect(shown()).toEqual({
+      totals: "1 items worth 500",
+      items: ["Rin 500"],
+      itemPage: "1000",
+    });
 
     await releaseReads();
     expect(await deleting).toBe("error");
