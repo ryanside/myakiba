@@ -1,6 +1,7 @@
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
+import { ApiNotFound } from "@/lib/errors/api-not-found";
 import { useRead, useResourceMutation, useRootedInfiniteRead } from "@/data/client";
 import { usePositionOrderMutation } from "@/data/position-order";
 import {
@@ -13,6 +14,7 @@ import {
   listsMove,
   removeListMembersCommand,
   removeTargetsFromListCommand,
+  restoreListMembersCommand,
   updateListCommand,
 } from "@/data/resources/lists";
 
@@ -137,12 +139,51 @@ export function useRemoveTargetsFromListMutation(targets: readonly ListTarget[])
   } as const;
 }
 
+/** Long enough to hear the toast and reach Undo with F6; it pauses while hovered or focused. */
+const UNDO_TIMEOUT_MS = 10_000;
+
+/** Removes at once; the toast's Undo puts the removed members back where they were. */
 export function useRemoveListMembersMutation(listId: string) {
-  const mutation = useResourceMutation(removeListMembersCommand);
+  const restore = useResourceMutation(restoreListMembersCommand, {
+    onFailed: (input, failureToast, failure) => {
+      const toastId = toast.add({
+        type: "error",
+        ...failureToast,
+        ...(!(failure instanceof ApiNotFound) && {
+          actionProps: {
+            children: "Retry",
+            onClick() {
+              toast.close(toastId);
+              void restore.run(input);
+            },
+          },
+        }),
+      });
+    },
+  });
+  const remove = useResourceMutation(removeListMembersCommand);
+
   return {
-    run: (memberIds: readonly string[]) => mutation.run({ listId, memberIds }),
-    isPending: mutation.isPending,
-    variables: mutation.pendingInput?.memberIds,
+    /** `title` names the member when only one is removed. */
+    run: async (memberIds: readonly string[], title?: string) => {
+      const removed = await remove.run({ listId, memberIds });
+      if (removed.isErr()) return removed;
+      const toastId = toast.add({
+        type: "success",
+        title: `${memberIds.length === 1 && title ? title : memberIds.length} removed from List`,
+        timeout: UNDO_TIMEOUT_MS,
+        actionProps: {
+          children: "Undo",
+          onClick() {
+            toast.close(toastId);
+            void restore.run({ listId, members: removed.value.removed });
+          },
+        },
+      });
+      return removed;
+    },
+    isPending: remove.isPending,
+    variables: remove.pendingInput?.memberIds,
   } as const;
 }
 

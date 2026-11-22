@@ -229,6 +229,8 @@ const listsGet = () => serve(caller, Lists.get, inputOf(Lists.get));
 const listsUpdate = () => serve(caller, Lists.update, inputOf(Lists.update));
 const listsRemove = () => serve(caller, Lists.remove, inputOf(Lists.remove));
 const listsRemoveMembers = () => serve(caller, Lists.removeMembers, inputOf(Lists.removeMembers));
+const listsRestoreMembers = () =>
+  serve(caller, Lists.restoreMembers, inputOf(Lists.restoreMembers));
 const listsMembers = () => serve(caller, Lists.members, inputOf(Lists.members));
 const listsMoveMembers = () => serve(caller, Lists.moveMembers, inputOf(Lists.moveMembers));
 void (true satisfies Equal<
@@ -243,6 +245,7 @@ void (true satisfies Equal<
     update: Failures<typeof listsUpdate>;
     remove: Failures<typeof listsRemove>;
     removeMembers: Failures<typeof listsRemoveMembers>;
+    restoreMembers: Failures<typeof listsRestoreMembers>;
     members: Failures<typeof listsMembers>;
     moveMembers: Failures<typeof listsMoveMembers>;
   },
@@ -257,6 +260,7 @@ void (true satisfies Equal<
     update: S<404, "List not found"> | S<500, "Failed to update list">;
     remove: S<404, "List not found"> | S<500, "Failed to delete lists">;
     removeMembers: S<404, "Selection not found"> | S<500, "Failed to remove from List">;
+    restoreMembers: S<404, "List not found"> | S<500, "Failed to undo">;
     members: S<404, "List not found"> | S<500, "Failed to load List">;
     moveMembers: S<404, "List or selection not found"> | S<500, "Failed to save List order">;
   }

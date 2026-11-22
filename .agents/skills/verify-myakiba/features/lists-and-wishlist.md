@@ -8,7 +8,7 @@ A user groups Items, Collection Items and Orders into named Lists, and keeps a W
 - `list-edit` renames a List.
 - `list-delete` deletes a List after confirmation and keeps its members' records.
 - `list-add-member` adds an Item, Collection Item or Order to one or more Lists.
-- `list-remove-member` removes a member after confirmation.
+- `list-remove-member` removes a member at once, and the toast's `Undo` puts it back at its old position.
 - `wishlist-toggle` adds and removes an Item from the Wishlist on its Item page.
 
 ## How to get to it (user POV)
@@ -28,7 +28,8 @@ Preconditions:
 - **Add a Collection Item.** On `/collection`, click the row's `role=button[name='Open menu']`, then `role=menuitem[name='Add to List']`. In the `Add to List` dialog, click `role=dialog[name='Add to List'] >> role=checkbox[name='Verify List']`, then `role=button[name='Save']`. The toast reads `1 Collection Item added to 1 List`, `$H logs <run>` has `PUT /api/lists/targets`, and `$H psql <run> "select item_id, collection_id, order_id from list_member"` returns one row with only `collection_id` set.
 - **See the member.** `preview_navigate` to `<url>/lists/<listId>`. The title is `List - myakiba`, the page reads `1 in this List`, and the member card reads `Collection Item` above `Verify Figure Alpha`.
 - **Rename.** On the List page, click `role=main >> role=button[name='Edit']`. In `Edit List`, type `Verify List Renamed` into `role=dialog >> role=textbox[name='Title']` with `clear: true` and click `Save`. The heading shows the new title and `$H logs <run>` has `PUT /api/lists/<id>`.
-- **Remove the member.** Hover `role=main >> role=link[name='Verify Figure Alpha'] >> nth=0`, then click `role=button[name='Remove Verify Figure Alpha from List']`. In `Remove from List?`, click `role=dialog >> role=button[name='Remove']`. The toast reads `1 removed from List`, the page shows `This List is empty`, and `$H logs <run>` has `DELETE /api/lists/<id>/members`.
+- **Remove the member.** Hover `role=main >> role=link[name='Verify Figure Alpha'] >> nth=0`, then click `role=button[name='Remove Verify Figure Alpha from List']`. No dialog opens. The toast reads `Verify Figure Alpha removed from List` with an `Undo` button, the page shows `This List is empty`, and `$H logs <run>` has `DELETE /api/lists/<id>/members`.
+- **Undo the remove.** Click `role=button[name='Undo']` in that toast within 10 s, or press F6 and Tab to it. The member returns, `$H logs <run>` has `POST /api/lists/<id>/members/restore`, and `$H psql <run> "select collection_id, position from list_member"` shows the same row as before the remove. Remove it again before the next step.
 - **Add an Item.** On `<url>/item/900002`, click `role=button[name='Add Item to List']`, check `Verify List Renamed` in the same dialog, and click `Save`. The toast reads `1 Item added to 1 List`, and `list_member` has one row with only `item_id` set.
 - **Delete.** On `/lists`, hover `role=main >> role=link[name='Verify List Renamed']`, click `role=button[name='Actions for Verify List Renamed']`, then `role=menuitem[name='Delete']`, then `role=dialog >> role=button[name='Delete']` in `Delete List?`. `No Lists yet` returns, `$H logs <run>` has `DELETE /api/lists`, `list_member` is empty, and the `item` row for `verifyitem2` is still in SQL.
 - **Add an Order with a new List.** On an Order page, click `role=main >> role=button[name='Add to List']`. Type `Verify Inline List` into `role=dialog[name='Add to List'] >> role=textbox[name='New List']` and click `role=button[name='Create']`. The new List appears already checked. Click `Save`. The toast reads `1 Order added to 1 List`, and `list_member` has one row with only `order_id` set. This List stays for the rest of the run.

@@ -483,6 +483,14 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       { status: 404, body: "Selection not found" },
     ],
     [
+      "an Undo of a removal into her List",
+      (held) =>
+        call(BOB, "POST", `/lists/${held.listId}/members/restore`, {
+          members: [{ type: "item", id: held.itemId, position: 0 }],
+        }),
+      LIST_NOT_FOUND,
+    ],
+    [
       "a move of her List Member",
       (held) =>
         call(BOB, "PATCH", `/lists/${held.listId}/members/order`, {
@@ -652,6 +660,18 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
           ],
         }),
       { status: 200, body: { listId: "list-bob", removedCount: 0 } },
+    ],
+    [
+      "an Undo of her Item, Collection Item and Order into his List",
+      (held, bobs) =>
+        call(BOB, "POST", `/lists/${bobs.listId}/members/restore`, {
+          members: [
+            { type: "item", id: held.itemId, position: 0 },
+            { type: "collectionItem", id: held.collectionId, position: 1 },
+            { type: "order", id: held.orderId, position: 2 },
+          ],
+        }),
+      { status: 200, body: { restoredCount: 0 } },
     ],
     [
       "a move of his own Order Item into her Order",

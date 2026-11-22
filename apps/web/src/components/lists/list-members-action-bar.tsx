@@ -8,7 +8,6 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import type { Saving } from "@/data/client";
 
 export function ListMembersActionBar({
@@ -34,26 +33,18 @@ export function ListMembersActionBar({
       <ActionBarSelection className="border-none">{selectedCount} selected</ActionBarSelection>
       <ActionBarSeparator />
       <ActionBarGroup>
-        <WriteConfirmDialog
-          renderTrigger={
-            <ActionBarItem
-              disabled={selectedCount === 0 || isRemoving}
-              onSelect={(event) => event.preventDefault()}
-              variant="destructive"
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-              <span>{isRemoving ? "Removing..." : "Remove from List"}</span>
-            </ActionBarItem>
-          }
-          title={`Remove ${selectedCount} from List?`}
-          description="This removes the selection from this List. The Items, Collection Items, and Orders will not be deleted."
-          confirmLabel="Remove"
-          onConfirm={async () => {
+        <ActionBarItem
+          disabled={selectedCount === 0 || isRemoving}
+          onSelect={async (event) => {
+            event.preventDefault();
             const saved = await onRemoveMembers(selectedMemberIds);
             if (saved.isOk()) onClearSelection();
-            return saved;
           }}
-        />
+          variant="destructive"
+        >
+          <HugeiconsIcon icon={Delete02Icon} />
+          <span>{isRemoving ? "Removing..." : "Remove from List"}</span>
+        </ActionBarItem>
       </ActionBarGroup>
       <ActionBarSeparator />
       <ActionBarClose aria-label="Clear selection">

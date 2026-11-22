@@ -1,5 +1,6 @@
 import { LIST_PAGE_SIZE } from "@myakiba/contracts/lists/schema";
-import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { ListInput, ListMemberRestore, ListTarget } from "@myakiba/contracts/lists/schema";
+import { ApiNotFound } from "@/lib/errors/api-not-found";
 import {
   addTargetsToLists,
   createList,
@@ -12,9 +13,16 @@ import {
   moveLists,
   removeListMembers,
   removeTargetsFromList,
+  restoreListMembers,
   updateList,
 } from "@/queries/lists";
-import { defineCommand, offsetAfterLoaded, rootedInfiniteRead, rootedRead } from "../client";
+import {
+  defineCommand,
+  messageAs,
+  offsetAfterLoaded,
+  rootedInfiniteRead,
+  rootedRead,
+} from "../client";
 import { positionOrderCommand } from "../position-order";
 
 const overviewKey = ["lists", "overview"] as const;
@@ -154,6 +162,25 @@ export const removeListMembersCommand = defineCommand({
     readonly listId: string;
     readonly memberIds: readonly string[];
   }) => removeListMembers(listId, memberIds),
-  successTitle: ({ memberIds }) => `${memberIds.length} removed from List`,
-  failureToast: () => ({ title: "Failed to remove from List" }),
+  failureToast: messageAs("title", () => "Failed to remove from List"),
+});
+
+export const restoreListMembersCommand = defineCommand({
+  invalidates: ["lists"],
+  refetchKeys: ({ listId }) => [
+    overview,
+    { queryKey: membersKey(listId), exact: true },
+    anyTargetOptions,
+  ],
+  persist: ({
+    listId,
+    members,
+  }: {
+    readonly listId: string;
+    readonly members: readonly ListMemberRestore[];
+  }) => restoreListMembers(listId, members),
+  failureToast: (_input, failure) => ({
+    title: "Failed to undo",
+    ...(failure instanceof ApiNotFound && { description: failure.message }),
+  }),
 });

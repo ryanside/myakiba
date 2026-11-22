@@ -1,4 +1,4 @@
-import { listInputSchema } from "@myakiba/contracts/lists/schema";
+import { listInputSchema, restoreListMembersSchema } from "@myakiba/contracts/lists/schema";
 import { positionOrderInputSchema } from "@myakiba/contracts/shared/position-order";
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
@@ -36,6 +36,11 @@ const listsRouter = privateApi("/lists")
     "/:listId/members",
     (ctx) => serve(ctx, Lists.removeMembers, { ...ctx.params, ...ctx.body }),
     { params: listIdParamSchema, body: removeListMembersSchema },
+  )
+  .post(
+    "/:listId/members/restore",
+    (ctx) => serve(ctx, Lists.restoreMembers, { ...ctx.params, ...ctx.body }),
+    { params: listIdParamSchema, body: restoreListMembersSchema },
   )
   .get("/:listId/members", (ctx) => serve(ctx, Lists.members, { ...ctx.params, ...ctx.query }), {
     params: listIdParamSchema,

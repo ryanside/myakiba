@@ -1,11 +1,16 @@
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { collection, item, list, listMember, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
-import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { ListInput, ListMemberRestore, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { addListMembers, lockOwnedLists, splitTargets, canTarget } from "@/lib/list-members";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
+import {
+  planPositionOrderMove,
+  planPositionOrderRestore,
+  POSITION_UPDATE_CHUNK_SIZE,
+} from "@/lib/position-order";
+import type { PositionedRow } from "@/lib/position-order";
 import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
@@ -37,6 +42,89 @@ async function ownedListForUpdate(tx: Tx, userId: string, listId: string) {
     .limit(1)
     .for("update");
   return owned;
+}
+
+const memberColumns = {
+  id: listMember.id,
+  itemId: listMember.itemId,
+  collectionId: listMember.collectionId,
+  orderId: listMember.orderId,
+  position: listMember.position,
+};
+
+type MemberRow = {
+  readonly id: string;
+  readonly itemId: string | null;
+  readonly collectionId: string | null;
+  readonly orderId: string | null;
+  readonly position: number;
+};
+
+/** Writes each row's new position in chunks. */
+async function savePositions(tx: Tx, listId: string, updates: readonly PositionedRow[]) {
+  for (let index = 0; index < updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
+    const chunk = updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
+    const positionCases = chunk.map((update) => sql`WHEN ${update.id} THEN ${update.position}`);
+    await tx
+      .update(listMember)
+      .set({
+        position: sql<number>`CASE ${listMember.id} ${sql.join(positionCases, sql.raw(" "))} ELSE ${listMember.position} END`,
+      })
+      .where(
+        and(
+          eq(listMember.listId, listId),
+          inArray(
+            listMember.id,
+            chunk.map((row) => row.id),
+          ),
+        ),
+      );
+  }
+}
+
+function targetOf(member: MemberRow): ListTarget {
+  if (member.itemId) return { type: "item", id: member.itemId };
+  if (member.collectionId) return { type: "collectionItem", id: member.collectionId };
+  if (member.orderId) return { type: "order", id: member.orderId };
+  panic(`List member ${member.id} names no item, collection item or order`);
+}
+
+const targetKey = (target: ListTarget) => `${target.type}:${target.id}`;
+
+/** Locks the viewer's targets against a delete until the transaction ends, answering which exist. */
+async function lockTargets(tx: Tx, userId: string, targets: readonly ListTarget[]) {
+  const { itemIds, collectionIds, orderIds } = splitTargets(targets);
+  const [items, collectionItems, orders] = await Promise.all([
+    itemIds.length === 0
+      ? Promise.resolve([])
+      : tx
+          .select({ id: item.id })
+          .from(item)
+          .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds)))
+          .orderBy(asc(item.id))
+          .for("key share"),
+    collectionIds.length === 0
+      ? Promise.resolve([])
+      : tx
+          .select({ id: collection.id })
+          .from(collection)
+          .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
+          .orderBy(asc(collection.id))
+          .for("key share"),
+    orderIds.length === 0
+      ? Promise.resolve([])
+      : tx
+          .select({ id: order.id })
+          .from(order)
+          .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
+          .orderBy(asc(order.id))
+          .for("key share"),
+  ]);
+  return new Set([
+    ...items.map(({ id }) => targetKey({ type: "item", id })),
+    ...collectionItems.map(({ id }) => targetKey({ type: "collectionItem", id })),
+    ...orders.map(({ id }) => targetKey({ type: "order", id })),
+  ]);
 }
 
 export const Lists = {
@@ -360,13 +448,64 @@ export const Lists = {
       const deletedMembers = await scope.tx
         .delete(listMember)
         .where(and(eq(listMember.listId, listId), inArray(listMember.id, memberIds)))
-        .returning({ id: listMember.id });
+        .returning(memberColumns);
       if (deletedMembers.length !== memberIds.length) {
         return Result.err(new SelectionNotFound());
       }
 
+      const removed: ListMemberRestore[] = deletedMembers
+        .toSorted(
+          (left, right) => left.position - right.position || left.id.localeCompare(right.id),
+        )
+        .map((member) => ({ ...targetOf(member), position: member.position }));
       scope.log.set({ removedCount: deletedMembers.length });
-      return Result.ok({ removedCount: deletedMembers.length });
+      return Result.ok({ removedCount: deletedMembers.length, removed });
+    },
+  ),
+
+  restoreMembers: command(
+    { action: "lists.members.restore", failure: "Failed to undo" },
+    async (
+      scope,
+      input: { readonly listId: string; readonly members: readonly ListMemberRestore[] },
+    ) => {
+      const userId = scope.viewer.userId;
+      const { listId, members } = input;
+      scope.log.set({ list: { id: listId }, memberCount: members.length });
+      if (!(await ownedListForUpdate(scope.tx, userId, listId))) {
+        return Result.err(new ListNotFound());
+      }
+
+      const currentMembers = await scope.tx
+        .select(memberColumns)
+        .from(listMember)
+        .where(eq(listMember.listId, listId))
+        .orderBy(asc(listMember.position), asc(listMember.id))
+        .for("update");
+      const present = new Set(currentMembers.map((member) => targetKey(targetOf(member))));
+      const absent = members.filter((member) => !present.has(targetKey(member)));
+      const existing = await lockTargets(scope.tx, userId, absent);
+      const restorable = absent.filter((member) => existing.has(targetKey(member)));
+      if (restorable.length === 0) {
+        scope.log.set({ restoredCount: 0 });
+        return Result.ok({ restoredCount: 0 });
+      }
+
+      const plan = planPositionOrderRestore(currentMembers, restorable);
+      await savePositions(scope.tx, listId, plan.updates);
+      await scope.tx.insert(listMember).values(
+        plan.placed.map(({ restored, position }) => ({
+          listId,
+          userId,
+          itemId: restored.type === "item" ? restored.id : null,
+          collectionId: restored.type === "collectionItem" ? restored.id : null,
+          orderId: restored.type === "order" ? restored.id : null,
+          position,
+        })),
+      );
+
+      scope.log.set({ restoredCount: restorable.length });
+      return Result.ok({ restoredCount: restorable.length });
     },
   ),
 
@@ -535,26 +674,7 @@ export const Lists = {
       const plan = planPositionOrderMove(currentMembers, movedIds, anchorId, placement);
       if (plan.kind === "not_found") return Result.err(new ListOrSelectionNotFound());
 
-      for (let index = 0; index < plan.updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
-        const updates = plan.updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
-        const positionCases = updates.map(
-          (update) => sql`WHEN ${update.id} THEN ${update.position}`,
-        );
-        await scope.tx
-          .update(listMember)
-          .set({
-            position: sql<number>`CASE ${listMember.id} ${sql.join(positionCases, sql.raw(" "))} ELSE ${listMember.position} END`,
-          })
-          .where(
-            and(
-              eq(listMember.listId, listId),
-              inArray(
-                listMember.id,
-                updates.map((row) => row.id),
-              ),
-            ),
-          );
-      }
+      await savePositions(scope.tx, listId, plan.updates);
 
       return Result.ok("List order saved" as const);
     },

@@ -90,13 +90,22 @@ function RouteComponent(): React.JSX.Element {
   const { selectedIds, setSelection, deselect } = useSelection();
   const removeMembers = removeMembersMutation.run;
   const selectedMemberIds = useMemo(() => [...selectedIds], [selectedIds]);
+  const titleOf = useCallback(
+    (memberIds: readonly string[]) => {
+      const [memberId] = memberIds;
+      return memberIds.length === 1
+        ? members.find((member) => member.id === memberId)?.title
+        : undefined;
+    },
+    [members],
+  );
   const handleRemove = useCallback(
     async (memberId: string): Saving => {
-      const removed = await removeMembers([memberId]);
+      const removed = await removeMembers([memberId], titleOf([memberId]));
       if (removed.isOk()) deselect([memberId]);
       return removed;
     },
-    [removeMembers, deselect],
+    [removeMembers, titleOf, deselect],
   );
 
   return (
@@ -212,7 +221,7 @@ function RouteComponent(): React.JSX.Element {
         selectedMemberIds={selectedMemberIds}
         isRemoving={removeMembersMutation.isPending}
         onClearSelection={() => setSelection({})}
-        onRemoveMembers={(memberIds) => removeMembersMutation.run(memberIds)}
+        onRemoveMembers={(memberIds) => removeMembers(memberIds, titleOf(memberIds))}
       />
 
       {isPending ? (

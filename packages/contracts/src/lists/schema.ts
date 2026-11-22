@@ -24,6 +24,25 @@ export const listTargetsSchema = z
     { error: "List targets must be unique" },
   );
 
+/** A removed List Member as Undo sends it back: its target and the position it held. */
+const listMemberRestoreSchema = z.strictObject({
+  type: listTargetTypeSchema,
+  id: listTargetIdSchema,
+  position: z.int32().nonnegative(),
+});
+
+export const restoreListMembersSchema = z.strictObject({
+  members: z
+    .array(listMemberRestoreSchema)
+    .min(1)
+    .max(WRITE_LIMITS.ids)
+    .refine(
+      (members) =>
+        new Set(members.map((member) => `${member.type}:${member.id}`)).size === members.length,
+      { error: "List targets must be unique" },
+    ),
+});
+
 export const listInputSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(WRITE_LIMITS.title),
   description: z.string().trim().max(WRITE_LIMITS.notes),
@@ -38,4 +57,5 @@ export const listIdsSchema = z
   });
 
 export type ListTarget = z.infer<typeof listTargetSchema>;
+export type ListMemberRestore = z.infer<typeof listMemberRestoreSchema>;
 export type ListInput = z.infer<typeof listInputSchema>;

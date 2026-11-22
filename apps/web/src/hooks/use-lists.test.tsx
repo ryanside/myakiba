@@ -30,6 +30,8 @@ const server = {
   heldFetches: [] as (() => void)[],
   writes: [] as string[],
   failWrites: false,
+  removeFailure: null as { status: number; value: string } | null,
+  restoreFailures: [] as { status: number; value: string }[],
 };
 
 const written = async <Data,>(label: string, data: Data) => {
@@ -72,8 +74,31 @@ const listEndpoint = ({ listId }: { listId: string }) => ({
     };
   },
   members: {
-    delete: async ({ memberIds }: { memberIds: string[] }) =>
-      written(`remove ${memberIds.join(",")} from ${listId}`, null),
+    delete: async ({ memberIds }: { memberIds: string[] }) => {
+      if (server.removeFailure) {
+        server.writes.push(`remove ${memberIds.join(",")} from ${listId}`);
+        return { data: null, error: server.removeFailure };
+      }
+      return written(`remove ${memberIds.join(",")} from ${listId}`, {
+        removedCount: memberIds.length,
+        removed: memberIds.map((id, index) => ({
+          type: "item",
+          id: `item-${id}`,
+          position: index,
+        })),
+      });
+    },
+    restore: {
+      post: async ({ members }: { members: { type: string; id: string; position: number }[] }) => {
+        server.writes.push(
+          `restore ${members.map(({ id, position }) => `${id}@${position}`).join(",")} to ${listId}`,
+        );
+        const failure = server.restoreFailures.shift();
+        return failure
+          ? { data: null, error: failure }
+          : { data: { restoredCount: members.length }, error: null };
+      },
+    },
     get: async ({ query }: { query: { limit: number; offset: number } }) => {
       server.fetches.push(listId);
       const items = (server.members[listId] ?? []).map((id) => ({ id }));
@@ -192,6 +217,8 @@ afterEach(() => {
   server.heldFetches.length = 0;
   server.writes.length = 0;
   server.failWrites = false;
+  server.removeFailure = null;
+  server.restoreFailures.length = 0;
   toastAdd.mockClear();
   moves.clear();
   currentActions = undefined;
@@ -681,7 +708,7 @@ const LIST_WRITES: readonly {
     saved: {
       outcome: "ok",
       writes: ["remove m1,m2 from l1"],
-      toasts: ["success: 2 removed from List"],
+      toasts: ["success: 2 removed from List: Undo"],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
@@ -706,4 +733,119 @@ describe("list writes", () => {
       expect(await writeToLists(run)).toEqual(failed);
     });
   }
+});
+
+/** The last toast's action, as a click on it runs it. */
+function lastToastAction() {
+  const options = toastAdd.mock.calls.at(-1)?.[0];
+  const onClick = options?.actionProps?.onClick;
+  if (!onClick) throw new Error("the last toast has no action");
+  return () => onClick(new MouseEvent("click") as never);
+}
+
+const shownToasts = () =>
+  toastAdd.mock.calls.map(([options]) =>
+    [options.type, options.title, options.description, options.actionProps?.children]
+      .filter(Boolean)
+      .join(": "),
+  );
+
+async function removeFromList(memberIds: readonly string[], title?: string) {
+  const queryClient = new QueryClient();
+  const view = render(
+    <QueryClientProvider client={queryClient}>
+      <ListScreens />
+    </QueryClientProvider>,
+  );
+  const settled = () => waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+  await settled();
+  server.fetches.length = 0;
+  toastAdd.mockClear();
+  await act(async () => {
+    const saved = await currentActions?.removeMembers.run(memberIds, title);
+    expect(saved?.status).toBe("ok");
+  });
+  await settled();
+  server.fetches.length = 0;
+  return { settled, unmount: view.unmount };
+}
+
+describe("Undo after Remove from List", () => {
+  test("Undo sends back each removed member's target and position, then refetches the List", async () => {
+    const { settled } = await removeFromList(["m1"], "Nendoroid Hatsune Miku");
+    expect(shownToasts()).toEqual(["success: Nendoroid Hatsune Miku removed from List: Undo"]);
+    expect(toastAdd.mock.calls.at(-1)?.[0].timeout).toBe(10_000);
+
+    await act(async () => lastToastAction()());
+    await waitFor(() => expect(server.writes).toContain("restore item-m1@0 to l1"));
+    await settled();
+
+    expect(server.writes).toEqual(["remove m1 from l1", "restore item-m1@0 to l1"]);
+    expect(server.fetches.toSorted()).toEqual(["l1", "options", "overview"]);
+  });
+
+  test("one Undo puts back every member removed together", async () => {
+    await removeFromList(["m1", "m2"]);
+    expect(shownToasts()).toEqual(["success: 2 removed from List: Undo"]);
+
+    await act(async () => lastToastAction()());
+
+    await waitFor(() => expect(server.writes.at(-1)).toBe("restore item-m1@0,item-m2@1 to l1"));
+  });
+
+  test("Undo still runs after the List page has closed", async () => {
+    const { unmount } = await removeFromList(["m1"], "figma Saber");
+    unmount();
+
+    await act(async () => lastToastAction()());
+
+    await waitFor(() => expect(server.writes.at(-1)).toBe("restore item-m1@0 to l1"));
+  });
+
+  test("a failed Undo offers Retry, which sends the same restore again", async () => {
+    await removeFromList(["m1"], "figma Saber");
+    server.restoreFailures.push({ status: 500, value: "Failed to undo" });
+    await act(async () => lastToastAction()());
+    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo: Retry"));
+
+    await act(async () => lastToastAction()());
+
+    await waitFor(() =>
+      expect(server.writes).toEqual([
+        "remove m1 from l1",
+        "restore item-m1@0 to l1",
+        "restore item-m1@0 to l1",
+      ]),
+    );
+    expect(shownToasts().at(-1)).toBe("error: Failed to undo: Retry");
+  });
+
+  test("an Undo into a deleted List says so and offers no Retry", async () => {
+    await removeFromList(["m1"], "figma Saber");
+    server.restoreFailures.push({ status: 404, value: "List not found" });
+
+    await act(async () => lastToastAction()());
+
+    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo: List not found"));
+  });
+
+  test("a failed remove shows its reason and offers no Undo", async () => {
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ListScreens />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(currentActions).toBeDefined());
+    server.removeFailure = { status: 404, value: "Selection not found" };
+    toastAdd.mockClear();
+
+    await act(async () => {
+      const saved = await currentActions?.removeMembers.run(["m1"], "figma Saber");
+      expect(saved?.status).toBe("error");
+    });
+
+    expect(shownToasts()).toEqual(["error: Selection not found"]);
+  });
 });

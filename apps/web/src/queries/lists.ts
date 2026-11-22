@@ -1,4 +1,4 @@
-import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { ListInput, ListMemberRestore, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { call } from "@/data/api";
 import { app } from "@/lib/treaty-client";
@@ -89,6 +89,12 @@ export function removeListMembers(listId: string, memberIds: readonly string[]) 
     }),
     { fallback: "Failed to remove from List" },
   );
+}
+
+export function restoreListMembers(listId: string, members: readonly ListMemberRestore[]) {
+  return call(app.api.lists({ listId }).members.restore.post({ members: [...members] }), {
+    fallback: "Failed to undo",
+  });
 }
 
 export function moveListMembers(listId: string, intent: PositionOrderInput) {

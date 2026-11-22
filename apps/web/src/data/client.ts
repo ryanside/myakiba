@@ -416,11 +416,14 @@ type Saved<Output> = Result<Output, WriteFailed>;
 /** What a write handler returns, such as a form's `onSubmit` prop. */
 export type Saving<Output = unknown> = Promise<Saved<Output>>;
 
-type WriteOptions<Input, Output> = {
+type WriteOptions<Input, Output, Failure extends Error> = {
   /** Feedback that needs the screen, like a toast whose action navigates. The write waits for it. */
   readonly onSaved?: (input: Input, output: Output) => void | Promise<void>;
-  /** Shows the command's failure toast in place of the runner, such as with an action. */
-  readonly onFailed?: (input: Input, failureToast: FailureToast) => void;
+  /**
+   * Shows the command's failure toast in place of the runner, such as with an action. `failure` is
+   * the declared failure, or null for a defect.
+   */
+  readonly onFailed?: (input: Input, failureToast: FailureToast, failure: Failure | null) => void;
   /** Writes that share a key count as one save in progress for `useIsMutating`. */
   readonly mutationKey?: readonly unknown[];
 };
@@ -451,7 +454,7 @@ async function runCommand<Input, Output, Failure extends Error>(
   spec: CommandSpec<Input, Output, Failure, WritableFamily>,
   queryClient: QueryClient,
   input: Input,
-  { onSaved, onFailed }: WriteOptions<Input, Output>,
+  { onSaved, onFailed }: WriteOptions<Input, Output, Failure>,
 ): Promise<Result<Output, Failure | Panic>> {
   const refetchFamilies = () => invalidateFamilies(queryClient, familiesOf(spec));
   const invalidateKeys = (keys: readonly RefetchKey<WritableFamily>[]) =>
@@ -494,7 +497,7 @@ async function runCommand<Input, Output, Failure extends Error>(
     const failureToast = spec.failureToast?.(input, declared);
     if (failureToast !== undefined) {
       const shown = { ...failureToast, ...(declared === null && { description: DEFECT_TEXT }) };
-      if (onFailed) onFailed(input, shown);
+      if (onFailed) onFailed(input, shown, declared);
       else toast.add({ type: "error", ...shown });
     }
   }
@@ -510,7 +513,7 @@ async function runCommand<Input, Output, Failure extends Error>(
  */
 export function useResourceMutation<Input, Output, Failure extends Error>(
   command: Command<Input, Output, Failure>,
-  options: WriteOptions<Input, Output> = {},
+  options: WriteOptions<Input, Output, Failure> = {},
 ) {
   const spec = command[commandSpec];
   const queryClient = useQueryClient();
