@@ -98,8 +98,16 @@ export const editOrderCommand = defineCommand({
   }: { readonly values: EditedOrder; readonly cascadeOptions: CascadeOptions } & OnList) =>
     editOrder(values, cascadeOptions),
   optimistic: async (queryClient, { values, cascadeOptions, list }) => {
-    // The Total, payment state and Unpaid Costs come from one server row. Paying an Order in full
-    // draws no Unpaid Costs, so only that payment state is patched here.
+    // An Order's fees, Total, payment state and Unpaid Costs come with the server's row. Paying it
+    // in full draws no Unpaid Costs, so that payment state alone is patched here.
+    const {
+      shippingFee: _shippingFee,
+      taxes: _taxes,
+      duties: _duties,
+      tariffs: _tariffs,
+      miscFees: _miscFees,
+      ...edited
+    } = values;
     const cascadedPayment =
       cascadeOptions.includes("paid") && values.paid ? { payment: paymentOf(true) } : {};
     // Always patch the order detail cache; it is keyed by id, so it is safe to update
@@ -108,7 +116,7 @@ export const editOrderCommand = defineCommand({
     await queryClient.cancelQueries({ queryKey: orderDetailKey });
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
     queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-      old ? { ...old, ...values, ...cascadedPayment } : old,
+      old ? { ...old, ...edited, ...cascadedPayment } : old,
     );
 
     const listKey = orders.list.key(list);
@@ -122,7 +130,7 @@ export const editOrderCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === values.orderId
-                  ? { ...order, ...values, ...cascadedPayment }
+                  ? { ...order, ...edited, ...cascadedPayment }
                   : order,
               ),
             }

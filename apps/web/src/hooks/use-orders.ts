@@ -221,12 +221,10 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     [],
   );
 
+  // A Paid click shows at once, so it is unticked only from a row the server called Paid: the
+  // Order takes no second click until its refreshed row lands.
   const handleSetOrderPaid = useCallback(async (orderId: string, paid: boolean): Saving => {
     const setPaidList = listRef.current;
-    if (!hasActiveFiltersOrSorting(setPaidList)) {
-      return setOrderPaidMutationRef.current.run({ orderId, paid, list: setPaidList });
-    }
-
     setPendingOrderIdList((previous) => addPendingIds(previous, [orderId]));
     const saved = await setOrderPaidMutationRef.current.run({ orderId, paid, list: setPaidList });
     setPendingOrderIdList((previous) => removePendingIds(previous, [orderId]));
