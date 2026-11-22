@@ -5465,6 +5465,25 @@
       "fixed": [
         "the chip row wraps, so a chip past the row's width moves to the next line instead of being clipped"
       ]
+    },
+    {
+      "fix": "4df32002e148241b0e0864a99a7524e10006ba21",
+      "bug": "A fee edit, an item price edit or an item removal patched an Order's Total at once and kept its old Unpaid Costs, so the Order page and the Orders table read Total $21.00 beside Unpaid Costs $120.00 until the refetch landed.",
+      "test": "apps/web/src/data/resources/orders-unpaid-costs.test.tsx",
+      "fixed": [
+        "a fee edit that is still saving draws the new Total on the Order page with no Unpaid Costs from before it",
+        "a fee edit that is still saving draws the new Total on the Orders table with no Unpaid Costs from before it",
+        "an item price edit that is still saving draws its new Total with no Unpaid Costs from before it",
+        "removing an item that is still saving draws the new Total with no Unpaid Costs from before it"
+      ]
+    },
+    {
+      "fix": "4df32002e148241b0e0864a99a7524e10006ba21",
+      "bug": "The Orders table's Unpaid Costs cell drew a negative amount from a negative fee, which the Orders cards and the Order page hide.",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": [
+        "the Unpaid Costs column leaves a row blank when a negative fee takes its amount below zero"
+      ]
     }
   ],
   "lint": [
