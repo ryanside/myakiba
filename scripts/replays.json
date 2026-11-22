@@ -5446,6 +5446,13 @@
         "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
         "when a failed read leaves nothing to add, Add says to retry or remove, beside the button too",
         "a New Order with its default title is blocked with the read's reason when the current read fails"
+      ],
+      "testAt": "7b710ae0b7abcddf15848f7e5cf2a83afce5e77d",
+      "reason": "34d8dada7 changed this case's reason to Enter an Order title and renamed it, so the test file stays at the commit that added it, and HEAD runs it by its new name.",
+      "atHead": [
+        "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
+        "when a failed read leaves nothing to add, Add says to retry or remove, beside the button too",
+        "a New Order with its default title asks for an Order title when the current read fails, and typing one enables Create"
       ]
     },
     {
@@ -5465,7 +5472,8 @@
       "fixed": [
         "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
         "a row that loaded on its first read keeps its Item and edits when a later row fails and is removed during the failure",
-        "an unverified user whose read failed sees only the verify reason at the button"
+        "an unverified user whose read failed sees only the verify reason at the button",
+        "when a row failed to load and the title also waits, Add says to retry or remove those items"
       ]
     },
     {
@@ -5476,6 +5484,21 @@
         "a New Order with its default title waits for the current read of its rows, and a typed title does not",
         "a New Order with its default title is blocked with the read's reason when the current read fails",
         "a New Order created from the current read retries a lost answer with the same title and commitId"
+      ],
+      "testAt": "7b710ae0b7abcddf15848f7e5cf2a83afce5e77d",
+      "reason": "34d8dada7 changed this case's reason to Enter an Order title and renamed it, so the test file stays at the commit that added it, and HEAD runs it by its new name.",
+      "atHead": [
+        "a New Order with its default title waits for the current read of its rows, and a typed title does not",
+        "a New Order with its default title asks for an Order title when the current read fails, and typing one enables Create",
+        "a New Order created from the current read retries a lost answer with the same title and commitId"
+      ]
+    },
+    {
+      "fix": "34d8dada7d306564f440284c2f6a77e429e3cbc8",
+      "bug": "When every Add row drew on a kept summary and the read a default New Order title waits for failed, Create said to retry or remove items that could not load, though no row had failed, and did not name the title that unblocks it.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "a New Order with its default title asks for an Order title when the current read fails, and typing one enables Create"
       ]
     }
   ],
