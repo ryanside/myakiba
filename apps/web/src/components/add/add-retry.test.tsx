@@ -6,6 +6,7 @@ import {
   loadExtension,
   openAddPage,
   resetServer,
+  seedDraft,
   seedItems,
   server,
 } from "../../../test/add-app";
@@ -76,4 +77,39 @@ test("the same choices after a commit that answered start a new commitId", async
 
   const [first, second] = commitIds();
   expect(second).not.toBe(first);
+});
+
+test("a reload after a lost answer keeps each row's selection, so the retry repeats the commit", async () => {
+  seedDraft([
+    { itemId: ITEM_ID, overrides: {} },
+    { itemId: OTHER_ID, overrides: {} },
+  ]);
+  const { commitAnswer } = server;
+  server.commitAnswer = () => new Promise(() => {});
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  const rem = await screen.findByRole("checkbox", { name: "Select Rem" });
+  await user.click(rem);
+  await user.click(rem);
+  await user.click(screen.getByRole("button", { name: "Add 2 to collection" }));
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  cleanup();
+  // The server saved both rows before its answer was lost.
+  seedItems(
+    item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }),
+    item(OTHER_ID, { title: "Rem", externalId: 112_233, collectionCount: 1 }),
+  );
+  server.commitAnswer = commitAnswer;
+
+  openAddPage("/add?to=collection");
+  const checked = (title: string) =>
+    screen.queryByRole("checkbox", { name: `Select ${title}` })?.getAttribute("aria-checked");
+  await waitFor(() => expect([checked("Hatsune Miku"), checked("Rem")]).toEqual(["true", "true"]));
+  await user.click(screen.getByRole("button", { name: "Add 2 to collection" }));
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+  const [lost, retried] = server.commits;
+  expect([retried?.commitId, retried?.rows.map(({ itemId }) => itemId)]).toEqual([
+    lost?.commitId,
+    lost?.rows.map(({ itemId }) => itemId),
+  ]);
 });
