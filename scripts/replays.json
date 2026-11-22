@@ -5290,7 +5290,7 @@
     },
     {
       "fix": "fce52ba86687e643a5e556fc16b84294ed81218a",
-      "bug": "The Collection page divided Item Spend by every Owned item for Average Cost, in a route no test reached, so an unpaid item lowered it.",
+      "bug": "useCollectionQuery returned no averageItemCost, so the Collection page's Average Cost was computed in the route, where no test reached it. The route already divided by the paid item count; the test fails before the fix only because the hook did not return the average.",
       "test": "apps/web/src/data/resources/collection.test.tsx",
       "fixed": [
         "a Collection Item write on the collection page > Average Cost is the mean of the paid prices, before and after a delete"
