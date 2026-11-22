@@ -5402,8 +5402,8 @@
         "a reload, a move to another Order, the back button and leaving for Orders each show the page's own title",
         "an Order's tab follows a rename made on its page",
         "a missing Order and an Order with no title name only the kind",
-        "an Item's tab names the kind while pending or missing, then the Item's whole title",
-        "a List's tab names the kind while pending or failed, then follows the List's title through a rename"
+        "an Item's tab names the kind while pending, missing or failed, then the Item's whole title",
+        "a List's tab names the kind until its heading shows or when it fails, then follows the List's title through a rename"
       ]
     }
   ],
