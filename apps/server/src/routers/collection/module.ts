@@ -16,6 +16,7 @@ import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import { StatusNeedsOrder } from "./errors/status-needs-order";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { itemIsPaid, paidItemPrice } from "@/lib/order-money";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
   row: T,
@@ -128,7 +129,8 @@ export const Collection = {
         },
         tiebreak: [collection.createdAt, collection.id],
         totals: {
-          totalValue: { sum: collection.price },
+          totalValue: { sum: paidItemPrice },
+          paidItemCount: { count: itemIsPaid },
           totalItemsThisMonth: {
             count: sql`${collection.collectionDate} >= date_trunc('month', CURRENT_DATE)::date`,
           },

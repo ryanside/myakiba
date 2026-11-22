@@ -5,7 +5,7 @@ import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../test/database";
 
-const { collection, item, order } = figureSchema;
+const { collection, entry, entry_to_item, item, order } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -25,14 +25,19 @@ const db = await createTestDatabase();
 const { default: dashboardRouter } = await import("./dashboard/index");
 const { default: ordersRouter } = await import("./orders/index");
 const { default: expensesRouter } = await import("./expenses/index");
+const { default: collectionRouter } = await import("./collection/index");
+const { default: analyticsRouter } = await import("./analytics/index");
 const app = new Elysia({ prefix: "/api" })
   .use(dashboardRouter)
   .use(ordersRouter)
-  .use(expensesRouter);
+  .use(expensesRouter)
+  .use(collectionRouter)
+  .use(analyticsRouter);
 
 const oneOrder = "user-one-order";
 const twoOrders = "user-two-orders";
 const paidApart = "user-paid-apart";
+const ownedUnpaid = "user-owned-unpaid";
 
 async function seedOrderedOrder(userId: string) {
   await db.insert(item).values([
@@ -83,6 +88,7 @@ beforeAll(async () => {
     { id: oneOrder, name: "Ryan", email: "r@example.com", username: "ryan" },
     { id: twoOrders, name: "Aki", email: "a@example.com", username: "aki" },
     { id: paidApart, name: "Mei", email: "m@example.com", username: "mei" },
+    { id: ownedUnpaid, name: "Yui", email: "y@example.com", username: "yui" },
   ]);
   await seedOrderedOrder(oneOrder);
   await seedOrderedOrder(twoOrders);
@@ -124,6 +130,7 @@ beforeAll(async () => {
     },
   ]);
   await seedPaidApartFromStatus();
+  await seedOwnedUnpaid();
 });
 
 async function seedPaidApartFromStatus() {
@@ -176,7 +183,104 @@ async function seedPaidApartFromStatus() {
   ]);
 }
 
-type Dashboard = { readonly unpaidCosts: number };
+async function seedOwnedUnpaid() {
+  await db.insert(item).values([
+    {
+      id: "kaito",
+      ownerId: ownedUnpaid,
+      externalId: 107,
+      title: "Kaito",
+      category: "Prepainted",
+      scale: "1/7",
+    },
+    {
+      id: "meiko",
+      ownerId: ownedUnpaid,
+      externalId: 108,
+      title: "Meiko",
+      category: "Prepainted",
+      scale: "1/7",
+    },
+  ]);
+  await db
+    .insert(entry)
+    .values({ id: "vocaloid", ownerId: ownedUnpaid, category: "Origins", name: "Vocaloid" });
+  await db.insert(entry_to_item).values([
+    { ownerId: ownedUnpaid, entryId: "vocaloid", itemId: "kaito" },
+    { ownerId: ownedUnpaid, entryId: "vocaloid", itemId: "meiko" },
+  ]);
+  await db.insert(order).values({
+    id: "received-order",
+    userId: ownedUnpaid,
+    title: "Received, paid later",
+    shop: "AmiAmi",
+    status: "Owned",
+    paid: true,
+    orderDate: "2024-05-01",
+    paymentDate: "2024-05-02",
+    collectionDate: "2024-06-01",
+    shippingFee: 500,
+  });
+  await db.insert(collection).values([
+    {
+      id: "owned-unpaid-item",
+      userId: ownedUnpaid,
+      itemId: "kaito",
+      orderId: "received-order",
+      status: "Owned",
+      paid: false,
+      price: 30_000,
+      shop: "AmiAmi",
+      collectionDate: "2024-06-01",
+    },
+    {
+      id: "owned-paid-item",
+      userId: ownedUnpaid,
+      itemId: "meiko",
+      orderId: "received-order",
+      status: "Owned",
+      paid: true,
+      price: 8000,
+      shop: "AmiAmi",
+      collectionDate: "2024-06-01",
+    },
+  ]);
+}
+
+type Dashboard = {
+  readonly unpaidCosts: number;
+  readonly collectionStats: { readonly totalSpent: number };
+  readonly categoriesOwned: readonly { readonly name: string; readonly totalValue: number }[];
+};
+type CollectionList = { readonly totalValue: number; readonly paidItemCount: number };
+type ExpensesCollection = {
+  readonly summary: {
+    readonly spend: number;
+    readonly orderLinked: { readonly spend: number };
+    readonly standalone: { readonly spend: number };
+  };
+  readonly kpis: { readonly averageItemCost: number };
+  readonly breakdown: readonly { readonly spend: number }[];
+  readonly spendingByPeriod: readonly { readonly collectionItems: number }[];
+  readonly averageCostByPeriod: readonly { readonly collectionItems: number }[];
+  readonly averageCostToDate: readonly { readonly collectionItems: number }[];
+};
+type AnalyticsOverview = {
+  readonly analytics: {
+    readonly entries: readonly {
+      readonly category: string;
+      readonly topBySpend: readonly { readonly totalSpent: number }[];
+    }[];
+    readonly shops: { readonly topBySpend: readonly { readonly totalSpent: number }[] };
+    readonly scales: { readonly topBySpend: readonly { readonly totalSpent: number }[] };
+  };
+};
+type AnalyticsSection = {
+  readonly analytics: {
+    readonly kpis: { readonly totalSpent: number; readonly averageSpent: number };
+    readonly rows: readonly { readonly totalSpent: number }[];
+  };
+};
 type OrdersList = {
   readonly items: readonly { readonly title: string; readonly total: number }[];
   readonly totalSpent: number;
@@ -196,7 +300,11 @@ type ExpensesOrders = {
   };
 };
 type ExpenseShops = {
-  readonly items: readonly { readonly shop: string; readonly spend: number }[];
+  readonly items: readonly {
+    readonly shop: string;
+    readonly spend: number;
+    readonly averageItemCost?: number;
+  }[];
 };
 type Monthly = {
   readonly paidAmount: number;
@@ -396,5 +504,103 @@ describe("the Orders page lists the Orders behind Order Spend", () => {
     const small = await get<OrdersList>(twoOrders, "/orders?limit=10&orderSpendMax=3000");
 
     expect(small.items.map((row) => row.title)).toEqual(["AmiAmi"]);
+  });
+});
+
+describe("an Owned Order Item that is still unpaid", () => {
+  test("counts as Unpaid Costs and in no page's Spend", async () => {
+    const collectionPage = await get<CollectionList>(ownedUnpaid, "/collection?limit=10");
+    const dashboard = await get<Dashboard>(ownedUnpaid, "/dashboard");
+    const expenses = await get<ExpensesCollection>(ownedUnpaid, "/expenses/collection");
+    const expenseShops = await get<ExpenseShops>(ownedUnpaid, "/expenses/shops?scope=collection");
+    const { analytics } = await get<AnalyticsOverview>(ownedUnpaid, "/analytics");
+    const { analytics: origins } = await get<AnalyticsSection>(ownedUnpaid, "/analytics/origins");
+    const { analytics: shops } = await get<AnalyticsSection>(ownedUnpaid, "/analytics/shops");
+    const { analytics: scales } = await get<AnalyticsSection>(ownedUnpaid, "/analytics/scales");
+    const sum = (rows: readonly { readonly collectionItems: number }[]) =>
+      rows.reduce((total, row) => total + row.collectionItems, 0);
+
+    expect({
+      collectionPage: collectionPage.totalValue,
+      dashboardCategories: dashboard.categoriesOwned.map((row) => row.totalValue),
+      dashboardUnpaidCosts: dashboard.unpaidCosts,
+      dashboardTotalSpent: dashboard.collectionStats.totalSpent,
+      expenses: expenses.summary.spend,
+      expensesOrderLinked: expenses.summary.orderLinked.spend,
+      expensesStandalone: expenses.summary.standalone.spend,
+      expensesByPeriod: sum(expenses.spendingByPeriod),
+      expensesByCategory: expenses.breakdown.map((row) => row.spend),
+      expenseShops: expenseShops.items.map((row) => row.spend),
+      analyticsOrigins: analytics.entries
+        .find((row) => row.category === "Origins")
+        ?.topBySpend.map((row) => row.totalSpent),
+      analyticsShops: analytics.shops.topBySpend.map((row) => row.totalSpent),
+      analyticsScales: analytics.scales.topBySpend.map((row) => row.totalSpent),
+      originsSection: [origins.kpis.totalSpent, ...origins.rows.map((row) => row.totalSpent)],
+      shopsSection: [shops.kpis.totalSpent, ...shops.rows.map((row) => row.totalSpent)],
+      scalesSection: [scales.kpis.totalSpent, ...scales.rows.map((row) => row.totalSpent)],
+    }).toEqual({
+      collectionPage: 8000,
+      dashboardCategories: [8000],
+      dashboardUnpaidCosts: 30_000,
+      dashboardTotalSpent: 8000,
+      expenses: 8000,
+      expensesOrderLinked: 8000,
+      expensesStandalone: 0,
+      expensesByPeriod: 8000,
+      expensesByCategory: [8000],
+      expenseShops: [8000],
+      analyticsOrigins: [8000],
+      analyticsShops: [8000],
+      analyticsScales: [8000],
+      originsSection: [8000, 8000],
+      shopsSection: [8000, 8000],
+      scalesSection: [8000, 8000],
+    });
+  });
+
+  test("Collection Spend, Fee Spend and Unpaid Costs add up to the Order Total", async () => {
+    const orders = await get<OrdersList>(ownedUnpaid, "/orders?limit=10");
+    const collectionExpenses = await get<ExpensesCollection>(ownedUnpaid, "/expenses/collection");
+    const orderExpenses = await get<ExpensesOrders>(ownedUnpaid, "/expenses/orders");
+    const orderTotal = orders.items.reduce((total, row) => total + row.total, 0);
+
+    expect(orderTotal).toBe(38_500);
+    expect(orders.totalSpent + orders.unpaidCosts).toBe(orderTotal);
+    expect(orderExpenses.summary.spend + orderExpenses.kpis.unpaidCosts).toBe(orderTotal);
+    expect(
+      collectionExpenses.summary.orderLinked.spend +
+        orderExpenses.summary.fees.spend +
+        orderExpenses.kpis.unpaidCosts,
+    ).toBe(orderTotal);
+  });
+
+  test("averages divide Collection Spend by the paid items it sums", async () => {
+    const collectionPage = await get<CollectionList>(ownedUnpaid, "/collection?limit=10");
+    const expenses = await get<ExpensesCollection>(ownedUnpaid, "/expenses/collection");
+    const expenseShops = await get<ExpenseShops>(ownedUnpaid, "/expenses/shops?scope=collection");
+    const sections = await Promise.all(
+      ["origins", "shops", "scales"].map((name) =>
+        get<AnalyticsSection>(ownedUnpaid, `/analytics/${name}`),
+      ),
+    );
+    const nonZero = (rows: readonly { readonly collectionItems: number }[]) =>
+      rows.map((row) => row.collectionItems).filter((value) => value > 0);
+
+    expect({
+      collectionPagePaidItems: collectionPage.paidItemCount,
+      expenses: expenses.kpis.averageItemCost,
+      expensesByPeriod: nonZero(expenses.averageCostByPeriod),
+      expensesToDate: nonZero(expenses.averageCostToDate),
+      expenseShops: expenseShops.items.map((row) => row.averageItemCost),
+      analyticsSections: sections.map(({ analytics }) => analytics.kpis.averageSpent),
+    }).toEqual({
+      collectionPagePaidItems: 1,
+      expenses: 8000,
+      expensesByPeriod: [8000],
+      expensesToDate: [8000],
+      expenseShops: [8000],
+      analyticsSections: [8000, 8000, 8000],
+    });
   });
 });

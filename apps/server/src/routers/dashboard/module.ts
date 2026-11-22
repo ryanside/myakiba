@@ -8,13 +8,13 @@ import { Result } from "better-result";
 import { prepared, query } from "@/domain/kernel";
 import { itemImageSql } from "@/lib/item-image-url";
 import {
-  itemIsPaid,
   orderIsPaid,
   orderIsUnpaid,
   orderPayment,
   orderSpend,
   orderTotal,
   orderUnpaidCosts,
+  paidItemPrice,
   selectUnpaidCosts,
 } from "@/lib/order-money";
 
@@ -56,10 +56,7 @@ const collectionStatsRead = prepared("collection_stats", (tx) =>
   tx
     .select({
       totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-      totalSpent:
-        sql<number>`COALESCE(${sum(sql`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`)}, 0)`.mapWith(
-          Number,
-        ),
+      totalSpent: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)`.mapWith(Number),
     })
     .from(collection)
     .where(eq(collection.userId, sql.placeholder("userId"))),
@@ -70,7 +67,7 @@ const categoriesOwnedRead = prepared("categories_owned", (tx) =>
     .select({
       name: sql<Category>`${item.category}::text`,
       count: count(),
-      totalValue: sql<number>`COALESCE(${sum(collection.price)}, 0)`.mapWith(Number),
+      totalValue: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)`.mapWith(Number),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))

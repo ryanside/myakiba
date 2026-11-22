@@ -5299,6 +5299,47 @@
         "the selection footer keeps counting rows a search hides > on the Collection page",
         "the selection footer keeps counting rows a search hides > on the Orders page"
       ]
+    },
+    {
+      "fix": "daa300e70e7fb1121f13e44fafa34eb3a3d4a657",
+      "bug": "Every Collection Spend read summed each Owned Collection Item's price whatever its Paid, so an Owned and unpaid Order Item counted in both Collection Spend and Unpaid Costs on the Collection page, the Dashboard, Expenses and Analytics.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Owned Order Item that is still unpaid > counts as Unpaid Costs and in no page's Spend",
+        "an Owned Order Item that is still unpaid > Collection Spend, Fee Spend and Unpaid Costs add up to the Order Total"
+      ]
+    },
+    {
+      "fix": "913f3faf54d13d9871a23ae0e694ff5090c8247d",
+      "bug": "The Collection page's optimistic delete subtracted a deleted unpaid item's price from Item Spend, which counts only paid items.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers"
+      ]
+    },
+    {
+      "fix": "a77c570486e3cd984e0f9b833ddb9330922b3917",
+      "bug": "Once Collection Spend counted only paid items, the Collection page, Expenses and the Analytics sections still divided it by every Owned item, so an unpaid item lowered each average.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Owned Order Item that is still unpaid > averages divide Collection Spend by the paid items it sums"
+      ]
+    },
+    {
+      "fix": "a77c570486e3cd984e0f9b833ddb9330922b3917",
+      "bug": "The Collection list returned no paid item count, so the Collection page had no count of paid items to divide Item Spend by or to lower on an optimistic delete.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > an unfiltered delete lowers the paid item count before the server answers"
+      ]
+    },
+    {
+      "fix": "fce52ba86687e643a5e556fc16b84294ed81218a",
+      "bug": "useCollectionQuery returned no averageItemCost, so the Collection page's Average Cost was computed in the route, where no test reached it. The route already divided by the paid item count; the test fails before the fix only because the hook did not return the average.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > Average Cost is the mean of the paid prices, before and after a delete"
+      ]
     }
   ],
   "lint": [

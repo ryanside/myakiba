@@ -19,7 +19,7 @@ import {
   paidOrderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
-import { orderFees, orderIsPaid } from "@/lib/order-money";
+import { orderFees, orderIsPaid, paidItemCount, paidItemPrice } from "@/lib/order-money";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const EMPTY_FEE_BREAKDOWN = {
@@ -68,8 +68,9 @@ async function getCollectionShopRows(
     tx
       .select({
         shop: collection.shop,
-        spend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`.as("spend"),
+        spend: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`.as("spend"),
         itemCount: sql<number>`${count(collection.id)}::integer`.as("item_count"),
+        paidItemCount: sql<number>`${paidItemCount}::integer`.as("paid_item_count"),
       })
       .from(collection)
       .leftJoin(order, eq(collection.orderId, order.id))
@@ -83,6 +84,7 @@ async function getCollectionShopRows(
         shop: grouped.shop,
         spend: grouped.spend,
         itemCount: grouped.itemCount,
+        paidItemCount: grouped.paidItemCount,
         totalScopedSpend:
           sql<number>`(SELECT SUM(${grouped.spend}) FROM ${grouped})::double precision`.as(
             "total_scoped_spend",
@@ -98,6 +100,7 @@ async function getCollectionShopRows(
         shop: scopedShops.shop,
         spend: scopedShops.spend,
         itemCount: scopedShops.itemCount,
+        paidItemCount: scopedShops.paidItemCount,
         totalScopedSpend: scopedShops.totalScopedSpend,
       },
       rows: (fields) =>
@@ -127,7 +130,7 @@ async function getCollectionShopRows(
       spend: row.spend,
       share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
       itemCount: row.itemCount,
-      averageItemCost: row.itemCount > 0 ? Math.round(row.spend / row.itemCount) : 0,
+      averageItemCost: row.paidItemCount > 0 ? Math.round(row.spend / row.paidItemCount) : 0,
     })),
     totalCount: page.totalCount,
   };

@@ -141,10 +141,14 @@ export const deleteCollectionItemsCommand = defineCommand({
       queryClient.setQueryData<CollectionPage>(listKey, (old) => {
         if (!old) return old;
         let deletedValue = 0;
+        let deletedPaidItems = 0;
         const retainedItems: CollectionItem[] = [];
         for (const item of old.items) {
           if (idSet.has(item.id)) {
-            deletedValue += item.price;
+            if (item.paid) {
+              deletedValue += item.price;
+              deletedPaidItems += 1;
+            }
           } else {
             retainedItems.push(item);
           }
@@ -155,6 +159,7 @@ export const deleteCollectionItemsCommand = defineCommand({
           items: retainedItems,
           totalCount: old.totalCount - ids.length,
           totalValue: old.totalValue - deletedValue,
+          paidItemCount: old.paidItemCount - deletedPaidItems,
         };
       });
     }

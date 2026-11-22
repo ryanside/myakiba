@@ -85,10 +85,10 @@ export function projectCollectionDashboard({
   const averageCostByPeriod = buckets.map((bucketName) => {
     const row = byBucket.get(bucketName);
     const itemSpend = row?.itemSpend ?? 0;
-    const itemCount = row?.itemCount ?? 0;
+    const paidItemCount = row?.paidItemCount ?? 0;
     return {
       bucket: bucketName,
-      collectionItems: itemCount > 0 ? Math.round(itemSpend / itemCount) : 0,
+      collectionItems: paidItemCount > 0 ? Math.round(itemSpend / paidItemCount) : 0,
     };
   });
   let cumulativeSpend = 0;
@@ -98,7 +98,7 @@ export function projectCollectionDashboard({
   const categorizedItemCount = categories.reduce((total, category) => total + category.count, 0);
   for (const point of spendingByPeriod) {
     cumulativeSpend += point.collectionItems;
-    cumulativeCount += byBucket.get(point.bucket)?.itemCount ?? 0;
+    cumulativeCount += byBucket.get(point.bucket)?.paidItemCount ?? 0;
     cumulativeSpending.push({ ...point, collectionItems: cumulativeSpend });
     averageCostToDate.push({
       bucket: point.bucket,
@@ -122,7 +122,8 @@ export function projectCollectionDashboard({
     },
     kpis: {
       itemCount: summary.itemCount,
-      averageItemCost: summary.itemCount > 0 ? Math.round(summary.spend / summary.itemCount) : 0,
+      averageItemCost:
+        summary.paidItemCount > 0 ? Math.round(summary.spend / summary.paidItemCount) : 0,
       shopCount: summary.shopCount,
     },
     breakdown: categories.map((category) => ({
