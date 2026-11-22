@@ -5453,6 +5453,14 @@
         "after a status is chosen on an Expenses link's list, All clears both",
         "pressing Fees paid again clears it"
       ]
+    },
+    {
+      "fix": "e6ffc1ba0768274272b896f623619c9c655af4ce",
+      "bug": "The shared quick filter row did not wrap inside a container that clips horizontal overflow, so on a 360 to 390 px screen the Orders row cut off Unpaid and hid the pressed Fees paid chip an Expenses link adds.",
+      "test": "apps/web/src/components/quick-filter-chips.test.tsx",
+      "fixed": [
+        "the chip row wraps, so a chip past the row's width moves to the next line instead of being clipped"
+      ]
     }
   ],
   "lint": [
