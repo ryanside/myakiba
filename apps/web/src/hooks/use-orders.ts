@@ -7,6 +7,7 @@ import {
   deleteOrderItemsCommand,
   deleteOrdersCommand,
   editOrderCommand,
+  setOrderPaidCommand,
   editOrderItemCommand,
   fillOrdersCommand,
   mergeOrdersCommand,
@@ -85,6 +86,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   const listRef = useRef(list);
 
   const editOrderMutation = useResourceMutation(editOrderCommand);
+  const setOrderPaidMutation = useResourceMutation(setOrderPaidCommand);
   const deleteOrdersMutation = useResourceMutation(deleteOrdersCommand);
   const mergeOrdersMutation = useResourceMutation(mergeOrdersCommand);
   const splitOrdersMutation = useResourceMutation(splitOrdersCommand);
@@ -95,6 +97,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   const fillOrdersMutation = useResourceMutation(fillOrdersCommand);
   const fillItemsMutation = useResourceMutation(fillCollectionItemsCommand);
   const editOrderMutationRef = useRef(editOrderMutation);
+  const setOrderPaidMutationRef = useRef(setOrderPaidMutation);
   const deleteOrdersMutationRef = useRef(deleteOrdersMutation);
   const editItemMutationRef = useRef(editItemMutation);
   const deleteItemMutationRef = useRef(deleteItemMutation);
@@ -104,6 +107,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   useLayoutEffect(() => {
     listRef.current = list;
     editOrderMutationRef.current = editOrderMutation;
+    setOrderPaidMutationRef.current = setOrderPaidMutation;
     deleteOrdersMutationRef.current = deleteOrdersMutation;
     editItemMutationRef.current = editItemMutation;
     deleteItemMutationRef.current = deleteItemMutation;
@@ -112,6 +116,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   }, [
     list,
     editOrderMutation,
+    setOrderPaidMutation,
     deleteOrdersMutation,
     editItemMutation,
     deleteItemMutation,
@@ -215,6 +220,18 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     },
     [],
   );
+
+  const handleSetOrderPaid = useCallback(async (orderId: string, paid: boolean): Saving => {
+    const setPaidList = listRef.current;
+    if (!hasActiveFiltersOrSorting(setPaidList)) {
+      return setOrderPaidMutationRef.current.run({ orderId, paid, list: setPaidList });
+    }
+
+    setPendingOrderIdList((previous) => addPendingIds(previous, [orderId]));
+    const saved = await setOrderPaidMutationRef.current.run({ orderId, paid, list: setPaidList });
+    setPendingOrderIdList((previous) => removePendingIds(previous, [orderId]));
+    return saved;
+  }, []);
 
   const handleDeleteOrders = useCallback(async (orderIds: ReadonlySet<string>): Saving => {
     const deleteOrdersMutationState = deleteOrdersMutationRef.current;
@@ -354,6 +371,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     handleDeleteOrders,
     handleMerge,
     handleSplit,
+    handleSetOrderPaid,
     handleEditItem,
     handleDeleteItem,
     handleDeleteItems,

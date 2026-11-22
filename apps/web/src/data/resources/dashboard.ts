@@ -1,7 +1,7 @@
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { shownMessageOf } from "../api";
 import { getDashboard, getMonthlyDashboard } from "@/queries/dashboard";
-import { updateOrderDate, updateOrderPaid, updateOrderStatus } from "@/queries/orders";
+import { updateOrderDate, fillOrderPaid, updateOrderStatus } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
@@ -57,7 +57,7 @@ export const updateKanbanOrderPaidCommand = defineCommand({
   invalidates: collectionWriteFamilies,
   refetchBy: "caller",
   persist: ({ orderId, paid }: { readonly orderId: string; readonly paid: boolean }) =>
-    updateOrderPaid(orderId, paid),
+    fillOrderPaid(orderId, paid),
   failureToast: (_input, failure) => ({
     title: shownMessageOf(failure, "Failed to update Paid. Please try again."),
   }),

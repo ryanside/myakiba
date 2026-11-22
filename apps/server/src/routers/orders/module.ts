@@ -559,7 +559,7 @@ export const Orders = {
         .set({ ...input.order, updatedAt: new Date() })
         .where(selected);
 
-      const changed = input.cascadeOptions.filter(
+      const changed = [...new Set(input.cascadeOptions)].filter(
         (field) => input.order[field] !== undefined && input.order[field] !== before[field],
       );
       if (changed.length === 0) return Result.ok("Order updated successfully" as const);

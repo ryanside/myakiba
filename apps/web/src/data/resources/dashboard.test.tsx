@@ -89,7 +89,7 @@ describe("a kanban Paid write", () => {
     return toasts;
   }
 
-  test("sets the Order's Paid and cascades it to every Order Item", async () => {
+  test("sets Paid on the Order and every Order Item through an Order fill", async () => {
     const sent: { url: string; method: string; body: unknown }[] = [];
     answerWith(async (...args: Parameters<typeof fetch>) => {
       const request = new Request(...args);
@@ -100,9 +100,9 @@ describe("a kanban Paid write", () => {
     expect(await markPaid(true)).toEqual([]);
     expect(sent).toEqual([
       {
-        url: expect.stringMatching(/\/api\/orders\/od-alpha$/),
+        url: expect.stringMatching(/\/api\/orders\/fill$/),
         method: "PUT",
-        body: { order: { paid: true }, cascadeOptions: ["paid"] },
+        body: { orderIds: ["od-alpha"], fill: { field: "paid", value: true } },
       },
     ]);
   });

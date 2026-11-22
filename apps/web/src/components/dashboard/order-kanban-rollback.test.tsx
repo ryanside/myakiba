@@ -54,7 +54,7 @@ await mock.module("@/queries/orders", () => ({
   updateOrderStatus: (orderId: string, status: string) => sendWrite(orderId, { status }),
   updateOrderDate: (orderId: string, field: string, date: string | null) =>
     sendWrite(orderId, { [field]: date }),
-  updateOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
+  fillOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
 }));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({

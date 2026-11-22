@@ -15,7 +15,7 @@ globalThis.fetch = Object.assign(
   { preconnect: realFetch.preconnect },
 );
 
-const { editOrder } = await import("./orders");
+const { editOrder, fillOrderPaid } = await import("./orders");
 
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -45,5 +45,14 @@ test("an Order edit names the Order in the path and sends only the fields a user
 
   expect(requested.map(({ url, method, body }) => [url.pathname, method, body])).toEqual([
     ["/api/orders/order-1", "PUT", { order: editable, cascadeOptions: ["shop"] }],
+  ]);
+});
+
+test("Paid from a checkbox writes Paid to the Order and every item in it, as an Order fill", async () => {
+  requested.length = 0;
+  await fillOrderPaid("order-1", true);
+
+  expect(requested.map(({ url, method, body }) => [url.pathname, method, body])).toEqual([
+    ["/api/orders/fill", "PUT", { orderIds: ["order-1"], fill: { field: "paid", value: true } }],
   ]);
 });

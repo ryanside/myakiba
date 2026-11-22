@@ -114,6 +114,7 @@ await mock.module("@/queries/orders", () => ({
   deleteOrderItems: held("delete items", () => {}),
   moveItem: held("move items", () => {}),
   fillOrders: held("fill orders", () => {}),
+  fillOrderPaid: held("set paid", () => {}),
 }));
 await mock.module("@/queries/collection", () => ({
   getCollection: async () => Result.ok({ items: [], totalCount: 0 }),
@@ -340,6 +341,29 @@ describe("an Order write on the orders page", () => {
       "error: Failed to update order. Please try again.",
       "success: Order deleted",
     ]);
+  });
+});
+
+describe("a Paid click on the orders page", () => {
+  test("sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands", async () => {
+    const orders = renderOrdersPage({ shop: ["AmiAmi"] });
+    await loaded();
+
+    const setting = orders.act((actions) => actions.handleSetOrderPaid(ALPHA.orderId, true));
+    await waitFor(() =>
+      expect(shown().orders).toEqual(["Alpha 1000 saving", "Bravo 500", "Charlie 200"]),
+    );
+
+    await answer(0, "finish");
+    expect(await setting).toBe("ok");
+    await waitFor(() => expect(shown().orders).toEqual(["Alpha 1000", "Bravo 500", "Charlie 200"]));
+    expect({
+      writes: server.writes.map(({ name, args }) => [name, args]),
+      toasts: toastTitles(),
+    }).toEqual({
+      writes: [["set paid", [ALPHA.orderId, true]]],
+      toasts: ["success: Order updated"],
+    });
   });
 });
 
