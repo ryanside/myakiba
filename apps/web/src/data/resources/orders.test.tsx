@@ -288,7 +288,8 @@ describe("an Order write on the orders page", () => {
     const readsBeforeWrite = server.listReads;
 
     const editing = orders.act((actions) => actions.handleEditOrder(alphaWithShippingFee(300), []));
-    await waitFor(() => expect(shown().orders).toEqual(["Alpha 1200", "Bravo 500", "Charlie 200"]));
+    await waitFor(() => expect(server.writes).toHaveLength(1));
+    expect(shown().orders).toEqual(["Alpha 1000", "Bravo 500", "Charlie 200"]);
 
     const releaseReads = holdListReads();
     await answer(0, "fail");
@@ -311,12 +312,8 @@ describe("an Order write on the orders page", () => {
     await loaded();
 
     const editing = orders.act((actions) => actions.handleEditOrder(alphaWithShippingFee(300), []));
-    await waitFor(() =>
-      expect(shown()).toEqual({
-        count: "3",
-        orders: ["Alpha 1200", "Bravo 500", "Charlie 200"],
-      }),
-    );
+    await waitFor(() => expect(server.writes).toHaveLength(1));
+    expect(shown()).toEqual({ count: "3", orders: ["Alpha 1000", "Bravo 500", "Charlie 200"] });
 
     const deleting = orders.act((actions) => actions.handleDeleteOrders(new Set([ALPHA.orderId])));
     await waitFor(() =>

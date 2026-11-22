@@ -119,29 +119,42 @@ const row = (title: string) => {
   return found;
 };
 
-test("paying the only unpaid item draws no Unpaid Costs on the Order page while it saves", async () => {
+const OLD = { total: "$21.00", unpaidCosts: "$20.00" };
+
+test("paying the only unpaid item keeps the Order's pair until the server's Order lands", async () => {
   const user = await renderOrderPage();
-  expect(summary()).toEqual({ total: "$21.00", unpaidCosts: "$20.00" });
+  server.afterWrite = () => {
+    server.order = { ...feesPaid, payment: "paid", unpaidCosts: 0 };
+  };
 
   await user.click(screen.getByRole("checkbox", { name: "Rin paid" }));
   await waitFor(() => expect(server.writes.length).toBe(1));
+  const whileSaving = summary();
+  server.writes[0]?.settle();
 
-  expect(summary()).toEqual({ total: "$21.00", unpaidCosts: null });
+  await waitFor(() => expect(summary()).toEqual({ total: "$21.00", unpaidCosts: null }));
+  expect(whileSaving).toEqual(OLD);
 });
 
-test("an item price edit draws no Unpaid Costs beside the Order's new Total while it saves", async () => {
+test("an item price edit keeps the Order's pair until the server's Order lands", async () => {
   const user = await renderOrderPage();
+  server.afterWrite = () => {
+    server.order = { ...feesPaid, total: 5100, unpaidCosts: 5000 };
+  };
 
   await user.click(within(row("Rin")).getByRole("button", { name: /edit Price$/ }));
   const price = within(row("Rin")).getByRole("textbox", { name: "Price" });
   await user.clear(price);
   await user.type(price, "50{Enter}");
   await waitFor(() => expect(server.writes.length).toBe(1));
+  const whileSaving = summary();
+  server.writes[0]?.settle();
 
-  expect(summary()).toEqual({ total: "$51.00", unpaidCosts: null });
+  await waitFor(() => expect(summary()).toEqual({ total: "$51.00", unpaidCosts: "$50.00" }));
+  expect(whileSaving).toEqual(OLD);
 });
 
-test("removing the only unpaid item draws no Unpaid Costs while it saves, and none once the Order reads paid", async () => {
+test("removing the only unpaid item keeps the Order's pair until the server's Order reads paid", async () => {
   const user = await renderOrderPage();
   server.afterWrite = () => {
     server.order = { ...feesPaid, payment: "paid", total: 100, unpaidCosts: 0, itemCount: 1 };
@@ -159,5 +172,5 @@ test("removing the only unpaid item draws no Unpaid Costs while it saves, and no
   server.writes[0]?.settle();
 
   await waitFor(() => expect(summary()).toEqual({ total: "$1.00", unpaidCosts: null }));
-  expect(whileSaving).toEqual({ total: "$1.00", unpaidCosts: null });
+  expect(whileSaving).toEqual(OLD);
 });
