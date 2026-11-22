@@ -19,6 +19,7 @@ export function CommitButton({
   emailVerified,
   loading,
   rowsFailedToLoad,
+  orderTitleNeeded,
   onIssues,
   onSending,
   onFailed,
@@ -35,6 +36,7 @@ export function CommitButton({
   /** Some selected rows have no summary yet, so the commit would leave them out. */
   readonly loading: boolean;
   readonly rowsFailedToLoad?: boolean;
+  readonly orderTitleNeeded?: boolean;
   readonly onIssues: (issues: readonly CommitIssue[]) => void;
   readonly onSending: () => void;
   readonly onFailed: () => void;
@@ -43,7 +45,11 @@ export function CommitButton({
 }) {
   const commit = useCommitAdd(userId);
   const { status, run } = useButtonStatus({ successDuration: 900 });
-  const plan = commitPlan(destination, count, { emailVerified, rowsFailedToLoad });
+  const plan = commitPlan(destination, count, {
+    emailVerified,
+    rowsFailedToLoad,
+    orderTitleNeeded,
+  });
   const glide = useGlide<HTMLDivElement>(plan.label);
 
   const handleCommit = async () => {

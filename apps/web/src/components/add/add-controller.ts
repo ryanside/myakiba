@@ -13,6 +13,7 @@ import { useAddDraft } from "./add-draft";
 import type { DraftRow, RowOverrides } from "./add-draft";
 import type { CommitAnswer } from "./commit-button";
 import {
+  ORDER_TITLE_NEEDED,
   ROWS_FAILED_TO_LOAD,
   commitPlan,
   defaultOrderTitle,
@@ -137,11 +138,17 @@ export function useAddController(search: AddSearchParams) {
     title: item.title,
   }));
   const newOrderTitle = defaultOrderTitle(commitRows.map(({ title }) => title));
-  const rowsFailedToLoad = readError !== null && (undecided || items.size === 0 || titleAwaitsRead);
-  // The line under a narrow sentence says what the button would, so it shows only for this reason.
-  const failedReadBlocksAdd =
-    commitPlan(destination, selectedCount, { emailVerified, rowsFailedToLoad }).label ===
-    ROWS_FAILED_TO_LOAD;
+  const rowsFailedToLoad = itemsReadError !== null && (undecided || items.size === 0);
+  const orderTitleNeeded = titleAwaitsRead && itemsError !== null;
+  // The line under a narrow sentence says what the button would, so it shows only these reasons.
+  const { label: blockedLabel } = commitPlan(destination, selectedCount, {
+    emailVerified,
+    rowsFailedToLoad,
+    orderTitleNeeded,
+  });
+  const narrowReason = [ROWS_FAILED_TO_LOAD, ORDER_TITLE_NEEDED].includes(blockedLabel)
+    ? blockedLabel
+    : null;
   const releaseOf = useRowReleases(rows);
   const failedPicks = intake.rows.filter((pick) => pick.state === "failed").length;
   const unverifiedPick = intake.rows.some(
@@ -317,7 +324,7 @@ export function useAddController(search: AddSearchParams) {
     handleDiscardPick,
 
     waiting: waiting.length,
-    failedReadBlocksAdd,
+    narrowReason,
     stopped: intake.stopped,
     failedPicks,
     unverifiedPick,
@@ -341,6 +348,7 @@ export function useAddController(search: AddSearchParams) {
       emailVerified,
       loading: pending,
       rowsFailedToLoad,
+      orderTitleNeeded,
       onIssues: reportIssues,
       onSending: () => setSending(true),
       onFailed: () => setSending(false),
