@@ -86,13 +86,16 @@ export const orders = {
     staleTime: 30_000,
   }),
   mergeDraft: rootedRead("orderMergeDraft", {
-    key: (orderIds: readonly string[]) => ["orderMergeDraft", orderIds] as const,
-    load: getMergeDraft,
+    key: ({ opening, orderIds }: MergeDraftRead) => ["orderMergeDraft", opening, orderIds] as const,
+    load: ({ orderIds }) => getMergeDraft(orderIds),
     retry: false,
     staleTime: Infinity,
     gcTime: 0,
   }),
 };
+
+/** One opening of the Merge dialog reads its own draft, so no opening sees another's read. */
+type MergeDraftRead = { readonly opening: string; readonly orderIds: readonly string[] };
 
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
 type OnList = { readonly list: OrderFilters };

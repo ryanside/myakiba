@@ -53,7 +53,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "../ui/textarea";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaidField } from "@/components/orders/payment";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -104,14 +104,16 @@ export function OrderForm(props: OrderFormProps) {
 
 const MERGED_ORDER_TITLE = "New Merged Order";
 const NOTES_PAST_LIMIT = `The merged Orders' notes together pass the ${WRITE_LIMITS.notes.toLocaleString("en-US")}-character limit. Shorten them to merge.`;
+const notesTooLong = (notes: string) => notes.length > WRITE_LIMITS.notes;
 const mergedNotesFit = ({ value }: { readonly value: { readonly notes: string } }) =>
-  value.notes.length > WRITE_LIMITS.notes ? NOTES_PAST_LIMIT : undefined;
+  notesTooLong(value.notes) ? NOTES_PAST_LIMIT : undefined;
 
 function MergeOrderFormContent(
   props: DeferredMergeOrderFormProps & { readonly close: () => void },
 ) {
+  const opening = useMemo(() => crypto.randomUUID(), []);
   const orderIds = [...props.orderIds].toSorted();
-  const draft = useRead(orders.mergeDraft, orderIds);
+  const draft = useRead(orders.mergeDraft, { opening, orderIds });
   if (draft.isSuccess) {
     return (
       <OrderFormContent
@@ -144,8 +146,9 @@ function OrderFormContent(
     type === "edit-order" ? (props as DeferredEditOrderFormProps).orderData : undefined;
 
   const { status: buttonStatus, run } = useButtonStatus();
+  const notesReasonId = useId();
   const form = useForm({
-    validators: type === "merge" ? { onMount: mergedNotesFit, onChange: mergedNotesFit } : {},
+    validators: type === "merge" ? { onSubmit: mergedNotesFit } : {},
     defaultValues: {
       ...initial,
       shippingFee: minorUnitsToMajorString(initial.shippingFee),
@@ -555,11 +558,15 @@ function OrderFormContent(
 
         <DialogFooter>
           <form.Subscribe
-            selector={(state) => state.errors[0]}
-            children={(reason) =>
-              reason ? (
-                <p role="alert" className="text-xs text-destructive sm:mr-auto sm:self-center">
-                  {String(reason)}
+            selector={(state) => notesTooLong(state.values.notes)}
+            children={(tooLong) =>
+              tooLong ? (
+                <p
+                  id={notesReasonId}
+                  role="alert"
+                  className="text-xs text-destructive sm:mr-auto sm:self-center"
+                >
+                  {NOTES_PAST_LIMIT}
                 </p>
               ) : null
             }
@@ -576,12 +583,15 @@ function OrderFormContent(
             )}
           />
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-            children={([canSubmit, isSubmitting]) => (
+            selector={(state) =>
+              [state.canSubmit, state.isSubmitting, notesTooLong(state.values.notes)] as const
+            }
+            children={([canSubmit, isSubmitting, tooLong]) => (
               <StatusButton
                 type="submit"
                 status={formSubmitStatus(buttonStatus, isSubmitting)}
-                disabled={!canSubmit}
+                disabled={!canSubmit || tooLong}
+                aria-describedby={tooLong ? notesReasonId : undefined}
                 variant="default"
               >
                 Merge
