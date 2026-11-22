@@ -5263,6 +5263,19 @@
         "the selection footer counts every selected row, not only the page's > on the Collection page",
         "the selection footer counts every selected row, not only the page's > on the Orders page",
         "the selection footer counts every selected row, not only the page's > in an Order's items"
+      ],
+      "testAt": "0dbf0fad9063b0a6d501471b69cdd4ba8bd4e16e",
+      "reason": "The next fix in this PR drops \"of N\" from the footer and changes these tests' expected text, so this fix replays against the test file as it stood before that change."
+    },
+    {
+      "fix": "c278a271f0651ecd2c8d27d7bb1889c222c1df97",
+      "bug": "The Collection and Orders footers counted the selection out of the rows the search matched, but a selection spans searches, so 3 selected rows and a search matching 1 read \"3 of 1 row(s) selected\".",
+      "test": "apps/web/src/components/selection-footer.test.tsx",
+      "fixed": [
+        "the selection footer counts every selected row, not only the page's > on the Collection page",
+        "the selection footer counts every selected row, not only the page's > on the Orders page",
+        "the selection footer keeps counting rows a search hides > on the Collection page",
+        "the selection footer keeps counting rows a search hides > on the Orders page"
       ]
     }
   ],
