@@ -8,7 +8,7 @@ A user groups Items, Collection Items and Orders into named Lists, and keeps a W
 - `list-edit` renames a List.
 - `list-delete` deletes a List after confirmation and keeps its members' records.
 - `list-add-member` adds an Item, Collection Item or Order to one or more Lists.
-- `list-remove-member` removes a member at once, and the toast's `Undo` puts it back at its old position.
+- `list-remove-member` removes a member at once. The toast's `Undo` returns it to the slot it held in the List; if the List was reordered since, that slot can sit between different members than before. Removals from one List while its toast is open join that toast, and its `Undo` puts them all back.
 - `wishlist-toggle` adds and removes an Item from the Wishlist on its Item page.
 
 ## How to get to it (user POV)

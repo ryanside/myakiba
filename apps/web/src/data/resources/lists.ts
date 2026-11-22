@@ -16,13 +16,7 @@ import {
   restoreListMembers,
   updateList,
 } from "@/queries/lists";
-import {
-  defineCommand,
-  messageAs,
-  offsetAfterLoaded,
-  rootedInfiniteRead,
-  rootedRead,
-} from "../client";
+import { defineCommand, offsetAfterLoaded, rootedInfiniteRead, rootedRead } from "../client";
 import { positionOrderCommand } from "../position-order";
 
 const overviewKey = ["lists", "overview"] as const;
@@ -162,7 +156,12 @@ export const removeListMembersCommand = defineCommand({
     readonly listId: string;
     readonly memberIds: readonly string[];
   }) => removeListMembers(listId, memberIds),
-  failureToast: messageAs("title", () => "Failed to remove from List"),
+  failureToast: (_input, failure) => ({
+    title: "Failed to remove from List",
+    ...(failure instanceof ApiNotFound && {
+      description: "This List changed elsewhere. Reload to see it.",
+    }),
+  }),
 });
 
 export const restoreListMembersCommand = defineCommand({

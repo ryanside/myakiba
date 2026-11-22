@@ -221,6 +221,7 @@ function RouteComponent(): React.JSX.Element {
         selectedMemberIds={selectedMemberIds}
         isRemoving={removeMembersMutation.isPending}
         onClearSelection={() => setSelection({})}
+        onDeselect={deselect}
         onRemoveMembers={(memberIds) => removeMembers(memberIds, titleOf(memberIds))}
       />
 

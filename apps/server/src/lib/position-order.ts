@@ -40,39 +40,3 @@ export function planPositionOrderMove(
 
   return { kind: "moved", updates } as const;
 }
-
-type RestoreEntry<Restored> =
-  | { readonly position: number; readonly restored: Restored }
-  | { readonly position: number; readonly row: PositionedRow };
-
-const restoredFirstAtEachPosition = <Restored>(
-  left: RestoreEntry<Restored>,
-  right: RestoreEntry<Restored>,
-) => left.position - right.position || Number("row" in left) - Number("row" in right);
-
-export function planPositionOrderRestore<Restored extends { readonly position: number }>(
-  rowsInReadOrder: readonly PositionedRow[],
-  restoredRows: readonly Restored[],
-) {
-  const entries: RestoreEntry<Restored>[] = [
-    ...restoredRows.map((restored) => ({ position: restored.position, restored })),
-    ...rowsInReadOrder.map((row) => ({ position: row.position, row })),
-  ].toSorted(restoredFirstAtEachPosition);
-
-  const placed: { readonly restored: Restored; readonly position: number }[] = [];
-  const updates: PositionedRow[] = [];
-  let floor = Number.NEGATIVE_INFINITY;
-  for (const entry of entries) {
-    if ("row" in entry) {
-      if (entry.position >= floor) continue;
-      updates.push({ id: entry.row.id, position: floor });
-      floor += 1;
-      continue;
-    }
-    const position = Math.max(entry.position, floor);
-    placed.push({ restored: entry.restored, position });
-    floor = position + 1;
-  }
-
-  return { placed, updates };
-}

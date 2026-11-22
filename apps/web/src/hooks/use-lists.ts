@@ -1,6 +1,7 @@
-import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { ListInput, ListMemberRestore, ListTarget } from "@myakiba/contracts/lists/schema";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
+import { ApiInvalid } from "@/lib/errors/api-invalid";
 import { ApiNotFound } from "@/lib/errors/api-not-found";
 import { useRead, useResourceMutation, useRootedInfiniteRead } from "@/data/client";
 import { usePositionOrderMutation } from "@/data/position-order";
@@ -141,43 +142,85 @@ export function useRemoveTargetsFromListMutation(targets: readonly ListTarget[])
 
 const UNDO_TIMEOUT_MS = 10_000;
 
+type PendingRestore = { readonly toastId: string; readonly members: readonly ListMemberRestore[] };
+
+const undoByList = new Map<string, PendingRestore>();
+const retryByList = new Map<string, PendingRestore>();
+
+const targetKey = ({ type, id }: ListTarget) => `${type}:${id}`;
+
+function withoutRepeats(members: readonly ListMemberRestore[]) {
+  const seen = new Set<string>();
+  return members.filter((member) => {
+    const key = targetKey(member);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function takePending(pending: Map<string, PendingRestore>, listId: string) {
+  const taken = pending.get(listId);
+  if (!taken) return [];
+  pending.delete(listId);
+  toast.close(taken.toastId);
+  return taken.members;
+}
+
+function forgetOnClose(pending: Map<string, PendingRestore>, listId: string, toastId: string) {
+  return () => {
+    if (pending.get(listId)?.toastId === toastId) pending.delete(listId);
+  };
+}
+
 export function useRemoveListMembersMutation(listId: string) {
   const restore = useResourceMutation(restoreListMembersCommand, {
     onFailed: (input, failureToast, failure) => {
-      const toastId = toast.add({
+      if (failure instanceof ApiNotFound || failure instanceof ApiInvalid) {
+        toast.add({ type: "error", ...failureToast });
+        return;
+      }
+      const members = withoutRepeats([
+        ...(retryByList.get(input.listId)?.members ?? []),
+        ...input.members,
+      ]);
+      const toastId = `undo-failed:${input.listId}`;
+      toast.add({
         type: "error",
-        ...failureToast,
-        id: `undo:${input.listId}:${input.members.map(({ type, id }) => `${type}:${id}`).join(",")}`,
-        ...(!(failure instanceof ApiNotFound) && {
-          actionProps: {
-            children: "Retry",
-            onClick() {
-              toast.close(toastId);
-              void restore.run(input);
-            },
-          },
-        }),
+        id: toastId,
+        title: failureToast.title,
+        actionProps: { children: "Retry", onClick: () => restoreTaken(retryByList, input.listId) },
+        onClose: forgetOnClose(retryByList, input.listId, toastId),
       });
+      retryByList.set(input.listId, { toastId, members });
     },
   });
+  const restoreTaken = (pending: Map<string, PendingRestore>, pendingListId: string) => {
+    const members = takePending(pending, pendingListId);
+    return members.length > 0 ? restore.run({ listId: pendingListId, members }) : undefined;
+  };
   const remove = useResourceMutation(removeListMembersCommand);
 
   return {
     run: async (memberIds: readonly string[], soleMemberTitle?: string) => {
       const removed = await remove.run({ listId, memberIds });
       if (removed.isErr()) return removed;
-      const toastId = toast.add({
+      const open = undoByList.get(listId);
+      const members = [...(open?.members ?? []), ...removed.value.removed];
+      const title = `${members.length === 1 && soleMemberTitle ? soleMemberTitle : members.length} removed from List`;
+      if (open) {
+        toast.update(open.toastId, { title, timeout: UNDO_TIMEOUT_MS });
+        undoByList.set(listId, { toastId: open.toastId, members });
+        return removed;
+      }
+      const toastId: string = toast.add({
         type: "success",
-        title: `${memberIds.length === 1 && soleMemberTitle ? soleMemberTitle : memberIds.length} removed from List`,
+        title,
         timeout: UNDO_TIMEOUT_MS,
-        actionProps: {
-          children: "Undo",
-          onClick() {
-            toast.close(toastId);
-            void restore.run({ listId, members: removed.value.removed });
-          },
-        },
+        actionProps: { children: "Undo", onClick: () => restoreTaken(undoByList, listId) },
+        onClose: () => forgetOnClose(undoByList, listId, toastId)(),
       });
+      undoByList.set(listId, { toastId, members });
       return removed;
     },
     isPending: remove.isPending,

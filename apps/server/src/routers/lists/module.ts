@@ -5,12 +5,7 @@ import type { ListInput, ListMemberRestore, ListTarget } from "@myakiba/contract
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { addListMembers, lockOwnedLists, splitTargets, canTarget } from "@/lib/list-members";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import {
-  planPositionOrderMove,
-  planPositionOrderRestore,
-  POSITION_UPDATE_CHUNK_SIZE,
-} from "@/lib/position-order";
-import type { PositionedRow } from "@/lib/position-order";
+import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
 import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
@@ -60,25 +55,19 @@ type MemberRow = {
   readonly position: number;
 };
 
-async function savePositions(tx: Tx, listId: string, updates: readonly PositionedRow[]) {
-  for (let index = 0; index < updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
-    const chunk = updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
-    const positionCases = chunk.map((update) => sql`WHEN ${update.id} THEN ${update.position}`);
-    await tx
-      .update(listMember)
-      .set({
-        position: sql<number>`CASE ${listMember.id} ${sql.join(positionCases, sql.raw(" "))} ELSE ${listMember.position} END`,
-      })
-      .where(
-        and(
-          eq(listMember.listId, listId),
-          inArray(
-            listMember.id,
-            chunk.map((row) => row.id),
-          ),
-        ),
-      );
-  }
+function placeRestored(heldPositions: readonly number[], restored: readonly ListMemberRestore[]) {
+  const held = new Set(heldPositions);
+  let end = heldPositions.reduce((last, position) => Math.max(last, position + 1), 0);
+  return restored.map((member) => {
+    if (member.position < end && !held.has(member.position)) {
+      held.add(member.position);
+      return member;
+    }
+    const placed = { ...member, position: end };
+    held.add(end);
+    end += 1;
+    return placed;
+  });
 }
 
 function targetOf(member: MemberRow): ListTarget {
@@ -479,27 +468,27 @@ export const Lists = {
       const currentMembers = await scope.tx
         .select(memberColumns)
         .from(listMember)
-        .where(eq(listMember.listId, listId))
-        .orderBy(asc(listMember.position), asc(listMember.id))
-        .for("update");
+        .where(eq(listMember.listId, listId));
       const present = new Set(currentMembers.map((member) => targetKey(targetOf(member))));
-      const absent = members.filter((member) => !present.has(targetKey(member)));
-      const restorable = absent.filter((member) => existing.has(targetKey(member)));
+      const restorable = members.filter(
+        (member) => !present.has(targetKey(member)) && existing.has(targetKey(member)),
+      );
       if (restorable.length === 0) {
         scope.log.set({ restoredCount: 0 });
         return Result.ok({ restoredCount: 0 });
       }
 
-      const plan = planPositionOrderRestore(currentMembers, restorable);
-      await savePositions(scope.tx, listId, plan.updates);
       await scope.tx.insert(listMember).values(
-        plan.placed.map(({ restored, position }) => ({
+        placeRestored(
+          currentMembers.map((member) => member.position),
+          restorable,
+        ).map((member) => ({
           listId,
           userId,
-          itemId: restored.type === "item" ? restored.id : null,
-          collectionId: restored.type === "collectionItem" ? restored.id : null,
-          orderId: restored.type === "order" ? restored.id : null,
-          position,
+          itemId: member.type === "item" ? member.id : null,
+          collectionId: member.type === "collectionItem" ? member.id : null,
+          orderId: member.type === "order" ? member.id : null,
+          position: member.position,
         })),
       );
 
@@ -673,7 +662,26 @@ export const Lists = {
       const plan = planPositionOrderMove(currentMembers, movedIds, anchorId, placement);
       if (plan.kind === "not_found") return Result.err(new ListOrSelectionNotFound());
 
-      await savePositions(scope.tx, listId, plan.updates);
+      for (let index = 0; index < plan.updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
+        const updates = plan.updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
+        const positionCases = updates.map(
+          (update) => sql`WHEN ${update.id} THEN ${update.position}`,
+        );
+        await scope.tx
+          .update(listMember)
+          .set({
+            position: sql<number>`CASE ${listMember.id} ${sql.join(positionCases, sql.raw(" "))} ELSE ${listMember.position} END`,
+          })
+          .where(
+            and(
+              eq(listMember.listId, listId),
+              inArray(
+                listMember.id,
+                updates.map((row) => row.id),
+              ),
+            ),
+          );
+      }
 
       return Result.ok("List order saved" as const);
     },

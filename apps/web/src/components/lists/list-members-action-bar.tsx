@@ -14,11 +14,13 @@ export function ListMembersActionBar({
   selectedMemberIds,
   isRemoving,
   onClearSelection,
+  onDeselect,
   onRemoveMembers,
 }: {
   readonly selectedMemberIds: readonly string[];
   readonly isRemoving: boolean;
   readonly onClearSelection: () => void;
+  readonly onDeselect: (memberIds: readonly string[]) => void;
   readonly onRemoveMembers: (memberIds: readonly string[]) => Saving;
 }): React.JSX.Element {
   const selectedCount = selectedMemberIds.length;
@@ -37,8 +39,9 @@ export function ListMembersActionBar({
           disabled={selectedCount === 0 || isRemoving}
           onSelect={async (event) => {
             event.preventDefault();
-            const saved = await onRemoveMembers(selectedMemberIds);
-            if (saved.isOk()) onClearSelection();
+            const removing = selectedMemberIds;
+            const saved = await onRemoveMembers(removing);
+            if (saved.isOk()) onDeselect(removing);
           }}
           variant="destructive"
         >
