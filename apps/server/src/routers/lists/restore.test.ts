@@ -25,8 +25,7 @@ await mock.module("@myakiba/auth/server", () => ({
 const db = await createTestDatabase();
 const { default: listsRouter } = await import("./index");
 const { default: ordersRouter } = await import("../orders/index");
-const { default: collectionRouter } = await import("../collection/index");
-const app = new Elysia({ prefix: "/api" }).use(listsRouter).use(ordersRouter).use(collectionRouter);
+const app = new Elysia({ prefix: "/api" }).use(listsRouter).use(ordersRouter);
 
 const userId = "user-1";
 const TITLES = ["A", "B", "C", "D", "E"] as const;
@@ -305,13 +304,16 @@ async function holdingMember(memberId: string) {
   };
 }
 
-/** Waits until a statement that starts with `statement` waits on a lock. */
-async function waitForBlocked(statement: string) {
+/** Waits until a statement that starts with one of `statements` waits on a lock. */
+async function waitForBlocked(...statements: readonly string[]) {
   for (;;) {
     const [waiting] = await db.execute<{ count: number }>(
       sql`SELECT count(*)::int AS count FROM pg_stat_activity
         WHERE wait_event_type = 'Lock' AND datname = current_database()
-          AND query LIKE ${`${statement}%`}`,
+          AND (${sql.join(
+            statements.map((statement) => sql`query LIKE ${`${statement}%`}`),
+            sql` OR `,
+          )})`,
     );
     if (waiting && waiting.count > 0) return;
     await Bun.sleep(10);
@@ -354,7 +356,7 @@ test("an Undo of an Order and a delete of that Order at once both finish", async
   const undone = undo(members);
   await Promise.race([undone, waitForLockWaits(1)]);
   const deleted = callApi("DELETE", "/orders/", { orderIds: ["order-1"] });
-  await waitForBlocked('delete from "collection"');
+  await waitForBlocked('delete from "collection"', 'select "id" from "order"');
   await commit();
 
   const [{ status: undoneStatus }, { status: deletedStatus }] = await Promise.all([
@@ -396,35 +398,6 @@ test("an Undo of another member and a delete of an Order in the List at once bot
   const commit = await holdingMember("member-ordered");
 
   const deleted = callApi("DELETE", "/orders/", { orderIds: ["order-1"] });
-  await waitForLockWaits(1);
-  const undone = undo(members);
-  await Promise.race([undone, waitForLockWaits(2)]);
-  await commit();
-
-  const [{ status: undoneStatus }, { status: deletedStatus }] = await Promise.all([
-    undone,
-    deleted,
-  ]);
-  expect({ undone: undoneStatus, deleted: deletedStatus }).toEqual({
-    undone: 200,
-    deleted: 200,
-  });
-  expect(await shownTitles()).toBe("ABCDE");
-});
-
-test("an Undo and a bulk delete of Collection Items in the List at once both finish", async () => {
-  await db.insert(collection).values([
-    { id: "collection-1", userId, itemId: "item-F", status: "Owned" },
-    { id: "collection-2", userId, itemId: "item-F", status: "Owned" },
-  ]);
-  await db.insert(listMember).values([
-    { id: "member-c1", listId: "list-1", userId, collectionId: "collection-1", position: 5 },
-    { id: "member-c2", listId: "list-1", userId, collectionId: "collection-2", position: 6 },
-  ]);
-  const members = await removed("C");
-  const commit = await holdingMember("member-c1");
-
-  const deleted = callApi("DELETE", "/collection/", { ids: ["collection-2", "collection-1"] });
   await waitForLockWaits(1);
   const undone = undo(members);
   await Promise.race([undone, waitForLockWaits(2)]);

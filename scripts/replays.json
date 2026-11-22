@@ -5396,7 +5396,9 @@
       "fix": "5e697573fe8ba932e358363334efc152c8d1202d",
       "bug": "Lists.restoreMembers locked the List's members before the Orders it put back, so an Undo of an Order beside a delete of that Order deadlocked: the delete locked the Order and cascaded to a member the Undo held, and Postgres killed the delete with a 500.",
       "test": "apps/server/src/routers/lists/restore.test.ts",
-      "fixed": ["an Undo of an Order and a delete of that Order at once both finish"]
+      "fixed": ["an Undo of an Order and a delete of that Order at once both finish"],
+      "testAt": "5e697573fe8ba932e358363334efc152c8d1202d",
+      "reason": "A later round in this PR changed the Undo rule and the other tests in this file, so its harness stays at the fix."
     },
     {
       "fix": "5e697573fe8ba932e358363334efc152c8d1202d",
@@ -5404,7 +5406,39 @@
       "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
         "Undo after Remove from List > two removals whose Undos both fail each keep a Retry that puts back their own members"
+      ],
+      "testAt": "5e697573fe8ba932e358363334efc152c8d1202d",
+      "reason": "A later round in this PR changed the Undo rule and the other tests in this file, so its harness stays at the fix."
+    },
+    {
+      "fix": "73d44f3868ed568485775934bb08ea77a0e9b2b9",
+      "bug": "Undo shifted other members to make room, so it locked every member of the List and deadlocked with a delete of an Order elsewhere in it; it also put a member ahead of one that had taken its slot, stored any number the client sent so the next add failed, and treated a tied slot or a never-listed target as a slot to take.",
+      "test": "apps/server/src/routers/lists/restore.test.ts",
+      "fixed": [
+        "Undo of a member whose slot another member holds now puts it at the end",
+        "a slot two members share counts as held, so Undo puts the member at the end",
+        "Undo stores a position past the end as the end, and the next add still appends",
+        "an owned target that was never in the List goes to the end",
+        "an Undo of another member and a delete of an Order in the List at once both finish"
       ]
+    },
+    {
+      "fix": "73d44f3868ed568485775934bb08ea77a0e9b2b9",
+      "bug": "Each removal had its own Undo toast, so a fourth made the first unreachable and a failure kept only one removal's Retry; a refused Undo offered Retry, a defective one told the user to reload beside Retry, and a failed remove said Selection not found.",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
+      "fixed": [
+        "Undo after Remove from List > removals from one List while its Undo is open join one toast whose Undo puts all of them back",
+        "Undo after Remove from List > a joined Undo that fails keeps one Retry that puts back everything it covered",
+        "Undo after Remove from List > an Undo the server refuses as invalid offers no Retry",
+        "Undo after Remove from List > an Undo that hits a defect offers Retry without telling the user to reload",
+        "Undo after Remove from List > a failed remove says what happened and offers no Undo"
+      ]
+    },
+    {
+      "fix": "73d44f3868ed568485775934bb08ea77a0e9b2b9",
+      "bug": "The selection bar cleared the whole selection after a remove, including a member ticked while the remove was saving.",
+      "test": "apps/web/src/components/lists/list-members-action-bar.test.tsx",
+      "fixed": ["a remove deselects what it removed and keeps a member ticked while it was saving"]
     }
   ],
   "lint": [
