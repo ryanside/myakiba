@@ -83,7 +83,8 @@ test("a Partly paid order shows its Unpaid Costs under the Total", () => {
   const labels = [...document.querySelectorAll("span")].map((span) => span.textContent);
   expect({
     row: unpaidCostsRow(),
-    afterTotal: labels.indexOf("Unpaid Costs") > labels.indexOf("Total"),
+    afterTotal:
+      labels.includes("Total") && labels.indexOf("Unpaid Costs") > labels.indexOf("Total"),
   }).toEqual({ row: "Unpaid Costs$12.00", afterTotal: true });
 });
 
