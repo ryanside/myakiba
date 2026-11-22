@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 
-export function useSelection() {
+/** `loaded`, when given, keeps the selection to the rows still loaded. */
+export function useSelection(loaded?: ReadonlySet<string>) {
   const [selection, setSelection] = useState<RowSelectionState>({});
 
   const selectedIds = useMemo<ReadonlySet<string>>(
-    () => new Set(Object.keys(selection).filter((id) => selection[id])),
-    [selection],
+    () =>
+      new Set(Object.keys(selection).filter((id) => selection[id] && (loaded?.has(id) ?? true))),
+    [selection, loaded],
   );
 
   const deselect = useCallback((ids: Iterable<string>) => {

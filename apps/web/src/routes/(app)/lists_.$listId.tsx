@@ -87,7 +87,8 @@ function RouteComponent(): React.JSX.Element {
   const handleLoadMore = membersQuery.fetchNextPage;
   const handleMove = moveMutation.move;
   const [viewMode, setViewMode] = useViewPreference(VIEW_PREFERENCES.lists);
-  const { selectedIds, setSelection, deselect } = useSelection();
+  const loadedMemberIds = useMemo(() => new Set(members.map((member) => member.id)), [members]);
+  const { selectedIds, setSelection, deselect } = useSelection(loadedMemberIds);
   const removeMembers = removeMembersMutation.run;
   const selectedMemberIds = useMemo(() => [...selectedIds], [selectedIds]);
   const titleOf = useCallback(
@@ -220,6 +221,7 @@ function RouteComponent(): React.JSX.Element {
       <ListMembersActionBar
         selectedMemberIds={selectedMemberIds}
         isRemoving={removeMembersMutation.isPending}
+        isRestoring={removeMembersMutation.isRestoring}
         onClearSelection={() => setSelection({})}
         onDeselect={deselect}
         onRemoveMembers={(memberIds) => removeMembers(memberIds, titleOf(memberIds))}
@@ -264,7 +266,7 @@ function RouteComponent(): React.JSX.Element {
           isSaving={moveMutation.isPending}
           sortingDisabled={removeMembersMutation.isPending}
           removingMemberIds={
-            removeMembersMutation.isPending ? removeMembersMutation.variables : undefined
+            removeMembersMutation.isRestoring ? [] : removeMembersMutation.variables
           }
           hasNextPage={membersQuery.hasNextPage}
           isFetchingNextPage={membersQuery.isFetchingNextPage}

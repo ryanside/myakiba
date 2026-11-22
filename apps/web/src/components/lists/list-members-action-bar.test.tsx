@@ -15,6 +15,7 @@ test("a remove deselects what it removed and keeps a member ticked while it was 
     <ListMembersActionBar
       selectedMemberIds={selectedMemberIds}
       isRemoving={false}
+      isRestoring={false}
       onClearSelection={() => cleared.push("all")}
       onDeselect={(memberIds) => deselected.push([...memberIds])}
       onRemoveMembers={() => saving.promise}

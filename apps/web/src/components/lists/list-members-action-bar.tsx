@@ -13,12 +13,14 @@ import type { Saving } from "@/data/client";
 export function ListMembersActionBar({
   selectedMemberIds,
   isRemoving,
+  isRestoring,
   onClearSelection,
   onDeselect,
   onRemoveMembers,
 }: {
   readonly selectedMemberIds: readonly string[];
   readonly isRemoving: boolean;
+  readonly isRestoring: boolean;
   readonly onClearSelection: () => void;
   readonly onDeselect: (memberIds: readonly string[]) => void;
   readonly onRemoveMembers: (memberIds: readonly string[]) => Saving;
@@ -36,7 +38,7 @@ export function ListMembersActionBar({
       <ActionBarSeparator />
       <ActionBarGroup>
         <ActionBarItem
-          disabled={selectedCount === 0 || isRemoving}
+          disabled={selectedCount === 0 || isRemoving || isRestoring}
           onSelect={async (event) => {
             event.preventDefault();
             const removing = selectedMemberIds;
