@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, test } from "bun:test";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -19,12 +19,14 @@ globalThis.fetch = Object.assign(
       updates.push(await request.json());
       return Response.json({ status: true });
     }
+    if (request.url.endsWith("/is-username-available")) return Response.json({ available: true });
     return Response.json(null);
   },
   { preconnect: realFetch.preconnect },
 );
 
 const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+const { generateUsername } = await import("@myakiba/contracts/shared/generated-username");
 
 function OpenOnboardingButton({ label }: { readonly label: string }) {
   const openOnboarding = useOpenOnboarding();
@@ -39,6 +41,7 @@ afterEach(() => {
   cleanup();
   localStorage.removeItem("myakiba:onboarding-v2");
   updates.length = 0;
+  delete (navigator as { language?: string }).language;
 });
 
 afterAll(() => {
@@ -47,7 +50,16 @@ afterAll(() => {
 
 type OnboardingStatus = { hasSeenOnboarding?: boolean };
 
-async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = false } = {}) {
+const GENERATED_USERNAME = generateUsername();
+
+function useBrowserLocale(language: string) {
+  Object.defineProperty(navigator, "language", { value: language, configurable: true });
+}
+
+async function openDashboard(
+  hasSeenOnboarding?: boolean,
+  { withAboutCopy = false, username = "collector" } = {},
+) {
   const onboarding: OnboardingStatus = {};
   if (hasSeenOnboarding !== undefined) onboarding.hasSeenOnboarding = hasSeenOnboarding;
   const root = createRootRoute({ component: Outlet });
@@ -57,7 +69,7 @@ async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = fals
     beforeLoad: () => ({
       session: {
         user: {
-          username: "collector",
+          username,
           currency: "USD",
           dateFormat: "MM/DD/YYYY",
           ...onboarding,
@@ -171,11 +183,7 @@ test("Getting Started opens at the welcome step even with a step left in local s
 test("the last step explains picking, then closes onboarding and goes to the Add page", async () => {
   const router = await openDashboard(true);
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
-  for (const title of [
-    "Welcome to myakiba.",
-    "Set your username, currency, and date format.",
-    "Install the myakiba extension.",
-  ]) {
+  for (const title of ["Welcome to myakiba.", "Install the myakiba extension."]) {
     await screen.findByRole("dialog", { name: title });
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   }
@@ -190,8 +198,6 @@ test("the last step explains picking, then closes onboarding and goes to the Add
 });
 
 async function continueToAddItems() {
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Install the myakiba extension." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
@@ -215,4 +221,61 @@ test("every onboarding footer button is the standard button height", async () =>
       "h-8",
     );
   }
+});
+
+function preferences() {
+  const step = screen.getByRole("dialog", { name: "Welcome to myakiba." });
+  return {
+    username: within(step).queryByRole("textbox", { name: "Username" }),
+    currency: within(step).getByRole("button", { name: "Currency" }).textContent,
+    dateFormat: within(step).getByRole("button", { pressed: true }).textContent,
+  };
+}
+
+test("an account that chose its username at sign-up is not asked for one", async () => {
+  await openDashboard(false);
+
+  expect(preferences().username).toBeNull();
+});
+
+test("an account with a generated username is asked to choose one, and saves it", async () => {
+  await openDashboard(false, { username: GENERATED_USERNAME });
+  const { username } = preferences();
+  expect(username).not.toBeNull();
+  expect((username as HTMLInputElement).value).toBe("");
+
+  fireEvent.change(username as HTMLInputElement, { target: { value: "collector" } });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  expect(updates).toEqual([{ username: "collector" }]);
+});
+
+test("a new account in a ja-JP browser starts with yen and year-first dates", async () => {
+  useBrowserLocale("ja-JP");
+  await openDashboard(false);
+
+  expect(preferences().currency).toContain("JPY");
+  expect(preferences().dateFormat).toBe("YYYY/MM/DD");
+
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await waitFor(() => expect(updates).toEqual([{ currency: "JPY", dateFormat: "YYYY/MM/DD" }]));
+});
+
+test("a new account in an en-GB browser starts with pounds and day-first dates", async () => {
+  useBrowserLocale("en-GB");
+  await openDashboard(false);
+
+  expect(preferences().currency).toContain("GBP");
+  expect(preferences().dateFormat).toBe("DD/MM/YYYY");
+});
+
+test("Getting Started shows an onboarded account its saved currency, whatever the locale", async () => {
+  useBrowserLocale("ja-JP");
+  await openDashboard(true);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+
+  expect(preferences().currency).toContain("USD");
+  expect(preferences().dateFormat).toBe("MM/DD/YYYY");
 });

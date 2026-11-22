@@ -7,7 +7,7 @@ A user with a verified email signs in with email and password and lands on the d
 - `signin-email` signs in with email and password and lands on `/dashboard`.
 - `signin-redirect` sends a signed-out user from any app route to `/login?redirect=<path>` and back to that path after sign-in. It sends a signed-in user from `/login` to `/dashboard`.
 - `signin-error` shows an error toast for a wrong password or an unverified email.
-- `signin-onboarding` walks the four-step `Welcome to myakiba.` dialog on first sign-in and ends on the Add page.
+- `signin-onboarding` walks the three-step `Welcome to myakiba.` dialog on first sign-in and ends on the Add page.
 - `signout` signs out from the account menu and returns to `/login`.
 
 ## How to get to it (user POV)
@@ -26,7 +26,7 @@ Preconditions:
 - **Wrong password.** Type `verify@example.com` into `role=textbox[name='Email']` and `wrong-password-1` into `role=textbox[name='Password']`, then click `role=button[name='Sign in']`. The `Notifications` region reads `Invalid email or password`, the URL stays `/login`, and `$H logs <run>` has `POST /api/auth/sign-in/email` with `"status":401`.
 - **Sign in.** Type `verify-password-1` into the password box with `clear: true`, click `Sign in`, then `preview_wait_for` with `urlIncludes: "/dashboard"`. The title is `Dashboard - myakiba`.
 - **Confirm the session.** Read `fetch('/api/auth/get-session').then(r => r.json())`. `user.email` is `verify@example.com`. `$H logs <run>` has `"method":"POST","path":"/api/auth/sign-in/email"` with `"status":200`.
-- **Walk onboarding.** The dialog names its steps `Onboarding`, `Preferences`, `Extension` and `Add items`. Click `role=dialog >> role=button[name='Continue']` three times, then `role=dialog >> role=button[name='Get started']`. The URL becomes `/add`, `$H logs <run>` has `POST /api/auth/update-user`, and `$H psql <run> "select has_seen_onboarding from \"user\" where email = 'verify@example.com'"` returns `t`.
+- **Walk onboarding.** The dialog names its steps `Preferences`, `Extension` and `Add items`. Click `role=dialog >> role=button[name='Continue']` twice, then `role=dialog >> role=button[name='Get started']`. The URL becomes `/add`, `$H logs <run>` has `POST /api/auth/update-user`, and `$H psql <run> "select has_seen_onboarding from \"user\" where email = 'verify@example.com'"` returns `t`.
 - **Or close onboarding.** Click `role=dialog >> role=button[name='Close']` on any step. From source: it writes `has_seen_onboarding` the same way.
 - **Redirect while signed in.** `preview_navigate` to `<url>/login`. The URL ends at `/dashboard`.
 - **Sign out.** Click `role=button[name='Account menu']`, then `role=menuitem[name='Sign Out']`, then `preview_wait_for` with `urlIncludes: "/login"`. The toast reads `Signed out successfully`, the URL is `/login?redirect=<the page you left>`, and `/api/auth/get-session` answers `null`.

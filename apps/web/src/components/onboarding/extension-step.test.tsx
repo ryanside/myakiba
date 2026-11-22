@@ -64,12 +64,10 @@ function renderOnboarding() {
   );
 }
 
-/** Getting Started always opens at the welcome step, so the test walks to the extension step. */
+/** Getting Started always opens at the first step, so the test walks to the extension step. */
 async function openExtensionStep(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Getting Started" }));
   await screen.findByRole("dialog", { name: "Welcome to myakiba." });
-  await user.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
 }

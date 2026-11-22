@@ -1,5 +1,5 @@
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import type { Currency } from "@myakiba/contracts/shared/types";
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 
 const CURRENCY_LOCALE_MAP = {
   BRL: "pt-BR",
@@ -121,4 +121,115 @@ export function formatReleasePrice(
     resolvedCurrencyFormat.currency,
     resolvedCurrencyFormat.locale,
   );
+}
+
+/** The regions that use each currency, by ISO 3166 region code. */
+const CURRENCY_REGIONS = {
+  AED: ["AE"],
+  AUD: ["AU", "CC", "CX", "KI", "NF", "NR", "TV"],
+  BRL: ["BR"],
+  CAD: ["CA"],
+  CHF: ["CH", "LI"],
+  CLP: ["CL"],
+  CNY: ["CN"],
+  COP: ["CO"],
+  CZK: ["CZ"],
+  DKK: ["DK", "FO", "GL"],
+  EUR: [
+    "AD",
+    "AT",
+    "AX",
+    "BE",
+    "BG",
+    "BL",
+    "CY",
+    "DE",
+    "EE",
+    "ES",
+    "FI",
+    "FR",
+    "GF",
+    "GP",
+    "GR",
+    "HR",
+    "IE",
+    "IT",
+    "LT",
+    "LU",
+    "LV",
+    "MC",
+    "ME",
+    "MF",
+    "MQ",
+    "MT",
+    "NL",
+    "PM",
+    "PT",
+    "RE",
+    "SI",
+    "SK",
+    "SM",
+    "VA",
+    "XK",
+    "YT",
+  ],
+  GBP: ["GB", "GG", "IM", "JE"],
+  HKD: ["HK"],
+  HUF: ["HU"],
+  IDR: ["ID"],
+  ILS: ["IL", "PS"],
+  INR: ["IN"],
+  JPY: ["JP"],
+  KRW: ["KR"],
+  MXN: ["MX"],
+  MYR: ["MY"],
+  NOK: ["NO", "SJ"],
+  NZD: ["CK", "NU", "NZ", "PN", "TK"],
+  PEN: ["PE"],
+  PHP: ["PH"],
+  PLN: ["PL"],
+  RON: ["RO"],
+  RUB: ["RU"],
+  SAR: ["SA"],
+  SEK: ["SE"],
+  SGD: ["SG"],
+  THB: ["TH"],
+  TRY: ["TR"],
+  TWD: ["TW"],
+  USD: ["AS", "EC", "FM", "GU", "MH", "MP", "PR", "PW", "SV", "TL", "US", "VI"],
+  VND: ["VN"],
+  ZAR: ["ZA"],
+} satisfies Readonly<Record<Currency, readonly string[]>>;
+
+const REGION_CURRENCY = new Map<string, Currency>(
+  Object.entries(CURRENCY_REGIONS).flatMap(([currency, regions]) =>
+    regions.map((region) => [region, currency as Currency] as const),
+  ),
+);
+
+const DATE_FORMAT_BY_ORDER = new Map<string, DateFormat>([
+  ["month day year", "MM/DD/YYYY"],
+  ["day month year", "DD/MM/YYYY"],
+  ["year month day", "YYYY/MM/DD"],
+  ["year day month", "YYYY/DD/MM"],
+]);
+
+type Formats = { readonly currency: Currency; readonly dateFormat: DateFormat };
+
+/** The currency and date format a browser locale suggests, or `fallback`'s where it suggests none. */
+export function localeFormats(locale: string, fallback: Formats): Formats {
+  const { region } = new Intl.Locale(locale).maximize();
+  const order = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts()
+    .map((part) => part.type)
+    .filter((type) => type === "year" || type === "month" || type === "day")
+    .join(" ");
+  return {
+    currency: (region === undefined ? undefined : REGION_CURRENCY.get(region)) ?? fallback.currency,
+    dateFormat: DATE_FORMAT_BY_ORDER.get(order) ?? fallback.dateFormat,
+  };
 }

@@ -60,8 +60,6 @@ async function openAppShellAsNewAccount() {
 async function continueToAddItems() {
   await screen.findByRole("dialog", { name: "Welcome to myakiba." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Install the myakiba extension." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Pick your first items." });
