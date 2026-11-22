@@ -69,3 +69,47 @@ test("a status chip keeps an Expenses link's feesPaid", async () => {
     offset: 0,
   });
 });
+
+const pressed = (name: string) => screen.getByRole("button", { name }).getAttribute("aria-pressed");
+
+test("after an Expenses Paid Orders link, the row shows Fees paid as the filter on, not All", () => {
+  filters = { feesPaid: true };
+  render(<OrdersQuickFilters />);
+
+  expect({ feesPaid: pressed("Fees paid"), all: pressed("All") }).toEqual({
+    feesPaid: "true",
+    all: "false",
+  });
+});
+
+test("All clears an Expenses link's feesPaid", async () => {
+  filters = { feesPaid: true };
+
+  const [change] = await press("All");
+
+  expect(searchAfter(filters, change)).toEqual({ offset: 0 });
+});
+
+test("after a status is chosen on an Expenses link's list, All clears both", async () => {
+  filters = { feesPaid: true, status: ["Shipped"] };
+
+  const [change] = await press("All");
+
+  expect(searchAfter(filters, change)).toEqual({ offset: 0 });
+});
+
+test("toggling off the last status keeps an Expenses link's feesPaid", async () => {
+  filters = { feesPaid: true, status: ["Shipped"] };
+
+  const [change] = await press("Shipped");
+
+  expect(searchAfter(filters, change)).toEqual({ feesPaid: true, offset: 0 });
+});
+
+test("pressing Fees paid again clears it", async () => {
+  filters = { feesPaid: true };
+
+  const [change] = await press("Fees paid");
+
+  expect(searchAfter(filters, change)).toEqual({ offset: 0 });
+});

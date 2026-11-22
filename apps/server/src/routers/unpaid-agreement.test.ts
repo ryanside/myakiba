@@ -547,6 +547,16 @@ describe("an Order whose Order Fees are paid and whose two Order Items are not i
     expect(linked.items.map((row) => row.title)).toEqual(["Fees paid", "Paid in full"]);
     expect(linked.items.length).toBe(expenses.kpis.paidOrderCount);
   });
+
+  test("with the fee filter cleared, the list holds the Order whose fees are unpaid again", async () => {
+    const linked = await get<OrdersList>(feesPaid, "/orders?limit=10&feesPaid=true");
+    const cleared = await get<OrdersList>(feesPaid, "/orders?limit=10");
+
+    expect({
+      linked: linked.items.some((row) => row.title === "Not yet priced"),
+      cleared: cleared.items.some((row) => row.title === "Not yet priced"),
+    }).toEqual({ linked: false, cleared: true });
+  });
 });
 
 describe("Paid is apart from the Acquisition Status", () => {
