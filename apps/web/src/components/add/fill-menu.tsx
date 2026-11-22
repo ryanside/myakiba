@@ -1,5 +1,6 @@
 import { PaintBucketIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import { Result } from "better-result";
 import { FillMenu } from "@/components/fill/fill-menu";
 import type { FillDraft, FillGroup } from "@/components/fill/fill-menu";
@@ -118,6 +119,17 @@ function writeFill(c: AddController, field: FieldId, draft: FillDraft) {
 
 const rowCount = (count: number) => (count === 1 ? "1 row" : `${count} rows`);
 
+function blankPriceHint(c: AddController): string {
+  const total = c.selectedRows.length;
+  const priced = c.selectedRows.filter(
+    ({ row, item }) => releasePriceDefault(c.releaseOf(row, item), c.currency) > 0,
+  ).length;
+  if (priced === 0) return "Blank saves no price";
+  return priced === total
+    ? "Blank uses the release price"
+    : `Blank uses the release price on ${priced} of ${total} rows`;
+}
+
 export function AddFillMenu({
   fields,
   c,
@@ -158,7 +170,7 @@ export function AddFillMenu({
         },
       });
     },
-    pricePlaceholder: "Blank uses the release price",
+    pricePlaceholder: blankPriceHint(c),
   };
   return (
     <FillMenu

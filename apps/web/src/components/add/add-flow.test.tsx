@@ -614,8 +614,6 @@ test("a release in another currency says nothing about converting it", async () 
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 });
 
-// --------------------------------------------------------------------- A price in another currency
-
 const YEN_ID = "yen000000001";
 const yenItem = () =>
   item(YEN_ID, {
@@ -712,6 +710,28 @@ test("an Item in another currency that waits for room comes in with a blank pric
 
   await waitFor(() => expect(priceOf("Yen").placeholder).toBe("Release ¥25,000"));
   expect(priceOf("Yen").value).toBe("");
+});
+
+test("a Price fill says what a blank saves for the selected rows", async () => {
+  seedItems(yenItem());
+  draft(ITEM_ID, YEN_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const blankHint = async () => {
+    await fill(user, "Price");
+    const hint = screen.getByRole<HTMLInputElement>("textbox", { name: "Price" }).placeholder;
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Fill all" })).toBeNull());
+    return hint;
+  };
+
+  expect(await blankHint()).toBe("Blank uses the release price on 1 of 2 rows");
+  await user.click(screen.getByRole("checkbox", { name: "Select Yen" }));
+  expect(await blankHint()).toBe("Blank uses the release price");
+  await user.click(screen.getByRole("checkbox", { name: "Select Yen" }));
+  await user.click(screen.getByRole("checkbox", { name: "Select Hatsune Miku" }));
+  expect(await blankHint()).toBe("Blank saves no price");
 });
 
 test("a commit points at a price the page cannot read", async () => {

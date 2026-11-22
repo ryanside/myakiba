@@ -123,7 +123,6 @@ export function plannedPrice(
   return parsed.isOk() ? parsed.value : null;
 }
 
-/** What a blank Price saves, or for a release in another currency, which saves none, its price. */
 function pricePlaceholder(release: AddItem["latestRelease"], currency: AddController["currency"]) {
   const saved = releasePriceDefault(release, currency);
   if (saved > 0) return formatCurrencyFromMinorUnits(saved, currency, getCurrencyLocale(currency));
