@@ -735,7 +735,6 @@ describe("list writes", () => {
   }
 });
 
-/** The last toast's action, as a click on it runs it. */
 function lastToastAction() {
   const options = toastAdd.mock.calls.at(-1)?.[0];
   const onClick = options?.actionProps?.onClick;

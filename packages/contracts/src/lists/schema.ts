@@ -24,7 +24,6 @@ export const listTargetsSchema = z
     { error: "List targets must be unique" },
   );
 
-/** A removed List Member as Undo sends it back: its target and the position it held. */
 const listMemberRestoreSchema = z.strictObject({
   type: listTargetTypeSchema,
   id: listTargetIdSchema,

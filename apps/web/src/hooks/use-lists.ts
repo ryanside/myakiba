@@ -139,10 +139,8 @@ export function useRemoveTargetsFromListMutation(targets: readonly ListTarget[])
   } as const;
 }
 
-/** Long enough to hear the toast and reach Undo with F6; it pauses while hovered or focused. */
 const UNDO_TIMEOUT_MS = 10_000;
 
-/** Removes at once; the toast's Undo puts the removed members back where they were. */
 export function useRemoveListMembersMutation(listId: string) {
   const restore = useResourceMutation(restoreListMembersCommand, {
     onFailed: (input, failureToast, failure) => {
@@ -164,13 +162,12 @@ export function useRemoveListMembersMutation(listId: string) {
   const remove = useResourceMutation(removeListMembersCommand);
 
   return {
-    /** `title` names the member when only one is removed. */
-    run: async (memberIds: readonly string[], title?: string) => {
+    run: async (memberIds: readonly string[], soleMemberTitle?: string) => {
       const removed = await remove.run({ listId, memberIds });
       if (removed.isErr()) return removed;
       const toastId = toast.add({
         type: "success",
-        title: `${memberIds.length === 1 && title ? title : memberIds.length} removed from List`,
+        title: `${memberIds.length === 1 && soleMemberTitle ? soleMemberTitle : memberIds.length} removed from List`,
         timeout: UNDO_TIMEOUT_MS,
         actionProps: {
           children: "Undo",

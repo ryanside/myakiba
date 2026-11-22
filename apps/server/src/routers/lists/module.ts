@@ -60,7 +60,6 @@ type MemberRow = {
   readonly position: number;
 };
 
-/** Writes each row's new position in chunks. */
 async function savePositions(tx: Tx, listId: string, updates: readonly PositionedRow[]) {
   for (let index = 0; index < updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
     const chunk = updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
@@ -91,8 +90,7 @@ function targetOf(member: MemberRow): ListTarget {
 
 const targetKey = (target: ListTarget) => `${target.type}:${target.id}`;
 
-/** Locks the viewer's targets against a delete until the transaction ends, answering which exist. */
-async function lockTargets(tx: Tx, userId: string, targets: readonly ListTarget[]) {
+async function lockExistingTargets(tx: Tx, userId: string, targets: readonly ListTarget[]) {
   const { itemIds, collectionIds, orderIds } = splitTargets(targets);
   const [items, collectionItems, orders] = await Promise.all([
     itemIds.length === 0
@@ -484,7 +482,7 @@ export const Lists = {
         .for("update");
       const present = new Set(currentMembers.map((member) => targetKey(targetOf(member))));
       const absent = members.filter((member) => !present.has(targetKey(member)));
-      const existing = await lockTargets(scope.tx, userId, absent);
+      const existing = await lockExistingTargets(scope.tx, userId, absent);
       const restorable = absent.filter((member) => existing.has(targetKey(member)));
       if (restorable.length === 0) {
         scope.log.set({ restoredCount: 0 });

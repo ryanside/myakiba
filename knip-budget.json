@@ -99,7 +99,6 @@
     "packages/contracts/src/lists/schema.ts LIST_TARGET_TYPES",
     "packages/contracts/src/lists/schema.ts MAX_LIST_BATCH_SIZE",
     "packages/contracts/src/lists/schema.ts listTargetIdSchema",
-    "packages/contracts/src/lists/schema.ts listTargetSchema",
     "packages/contracts/src/lists/schema.ts listTargetTypeSchema",
     "packages/contracts/src/orders/schema.ts cascadeOptionSchema",
     "packages/contracts/src/orders/schema.ts editedOrderSchema",

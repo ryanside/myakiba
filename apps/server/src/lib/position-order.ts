@@ -41,22 +41,23 @@ export function planPositionOrderMove(
   return { kind: "moved", updates } as const;
 }
 
-/**
- * Where restored rows go back: each takes the position it held, ahead of a current row that has
- * since taken that position, and current rows after it move up only as far as they must. Current
- * rows come in their read order, position then id.
- */
+type RestoreEntry<Restored> =
+  | { readonly position: number; readonly restored: Restored }
+  | { readonly position: number; readonly row: PositionedRow };
+
+const restoredFirstAtEachPosition = <Restored>(
+  left: RestoreEntry<Restored>,
+  right: RestoreEntry<Restored>,
+) => left.position - right.position || Number("row" in left) - Number("row" in right);
+
 export function planPositionOrderRestore<Restored extends { readonly position: number }>(
-  currentRows: readonly PositionedRow[],
+  rowsInReadOrder: readonly PositionedRow[],
   restoredRows: readonly Restored[],
 ) {
-  const entries = [
+  const entries: RestoreEntry<Restored>[] = [
     ...restoredRows.map((restored) => ({ position: restored.position, restored })),
-    ...currentRows.map((row) => ({ position: row.position, row })),
-  ].toSorted(
-    (left, right) =>
-      left.position - right.position || Number("row" in left) - Number("row" in right),
-  );
+    ...rowsInReadOrder.map((row) => ({ position: row.position, row })),
+  ].toSorted(restoredFirstAtEachPosition);
 
   const placed: { readonly restored: Restored; readonly position: number }[] = [];
   const updates: PositionedRow[] = [];

@@ -86,7 +86,6 @@ const statusOf = async (method: string, path: string, body?: Body) => {
   return status;
 };
 
-/** Each member row as Undo must put it back: everything but its id and creation time. */
 const memberRows = () =>
   db
     .select({
@@ -100,8 +99,7 @@ const memberRows = () =>
     .from(listMember)
     .orderBy(asc(listMember.position), asc(listMember.id));
 
-/** The List's members as its page shows them. */
-const shown = async () => {
+const shownTitles = async () => {
   const { body } = await call("GET", "/list-1/members");
   const { items } = z.object({ items: z.array(z.object({ title: z.string() })) }).parse(body);
   return items.map(({ title }) => title).join("");
@@ -112,11 +110,11 @@ test("Undo puts a removed member back in the row it held", async () => {
 
   const members = await removed("B");
   expect(members).toEqual([{ type: "item", id: "item-B", position: 1 }]);
-  expect(await shown()).toBe("ACDE");
+  expect(await shownTitles()).toBe("ACDE");
 
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 1 } });
   expect(await memberRows()).toEqual(before);
-  expect(await shown()).toBe("ABCDE");
+  expect(await shownTitles()).toBe("ABCDE");
 });
 
 test("Undo of members removed together puts each back in one write", async () => {
@@ -134,7 +132,7 @@ test("Undo of the middle of three removals puts only that member back between it
 
   const [, middle] = removals;
   expect(await undo(middle ?? [])).toEqual({ status: 200, body: { restoredCount: 1 } });
-  expect(await shown()).toBe("ACE");
+  expect(await shownTitles()).toBe("ACE");
 });
 
 test("Undo after a reorder puts the member back at the position it held", async () => {
@@ -146,10 +144,10 @@ test("Undo after a reorder puts the member back at the position it held", async 
       placement: "before",
     }),
   ).toBe(200);
-  expect(await shown()).toBe("EACD");
+  expect(await shownTitles()).toBe("EACD");
 
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 1 } });
-  expect(await shown()).toBe("EBACD");
+  expect(await shownTitles()).toBe("EBACD");
 });
 
 test("Undo goes ahead of a member added since that took its position", async () => {
@@ -160,10 +158,10 @@ test("Undo goes ahead of a member added since that took its position", async () 
       listIds: ["list-1"],
     }),
   ).toBe(200);
-  expect(await shown()).toBe("ABCDF");
+  expect(await shownTitles()).toBe("ABCDF");
 
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 1 } });
-  expect(await shown()).toBe("ABCDEF");
+  expect(await shownTitles()).toBe("ABCDEF");
 });
 
 test("Undo of a member another tab added back, and a repeated Undo, add nothing", async () => {
@@ -177,7 +175,7 @@ test("Undo of a member another tab added back, and a repeated Undo, add nothing"
 
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 0 } });
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 0 } });
-  expect(await shown()).toBe("ACDEB");
+  expect(await shownTitles()).toBe("ACDEB");
 });
 
 test("two Undos of one removal at once put the member back once", async () => {
@@ -189,7 +187,7 @@ test("two Undos of one removal at once put the member back once", async () => {
     ({ body }) => z.object({ restoredCount: z.number() }).parse(body).restoredCount,
   );
   expect(restoredCounts.toSorted()).toEqual([0, 1]);
-  expect(await shown()).toBe("ABCDE");
+  expect(await shownTitles()).toBe("ABCDE");
 });
 
 test("Undo after the List was deleted answers 404 and writes nothing", async () => {
@@ -215,7 +213,7 @@ test("Undo skips a member whose target was deleted since and puts the rest back"
   await db.delete(collection).where(eq(collection.id, "collection-1"));
 
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 1 } });
-  expect(await shown()).toBe("ABCDE");
+  expect(await shownTitles()).toBe("ABCDE");
 });
 
 test("Undo refuses a body that names a member id, a user or a time", async () => {
@@ -231,5 +229,5 @@ test("Undo refuses a body that names a member id, a user or a time", async () =>
     expect(status).toBe(422);
   }
   expect(await statusOf("POST", "/list-1/members/restore", { members, userId })).toBe(422);
-  expect(await shown()).toBe("ACDE");
+  expect(await shownTitles()).toBe("ACDE");
 });
