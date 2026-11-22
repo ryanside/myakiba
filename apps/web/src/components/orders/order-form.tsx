@@ -46,6 +46,7 @@ import * as z from "zod";
 import type { EditedOrder, NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -103,6 +104,12 @@ export function OrderForm(props: OrderFormProps) {
 }
 
 const MERGED_ORDER_TITLE = "New Merged Order";
+const mergedNotes = z
+  .string()
+  .max(
+    WRITE_LIMITS.notes,
+    `The merged Orders' notes together pass the ${WRITE_LIMITS.notes.toLocaleString("en-US")}-character limit. Shorten them to merge.`,
+  );
 
 function MergeOrderFormContent(
   props: DeferredMergeOrderFormProps & { readonly close: () => void },
@@ -469,9 +476,10 @@ function OrderFormContent(
         />
       </FormSection>
 
-      <FormSection title="Notes" defaultOpen={false}>
+      <FormSection title="Notes" defaultOpen={initial.notes.length > WRITE_LIMITS.notes}>
         <form.Field
           name="notes"
+          validators={type === "merge" ? { onMount: mergedNotes, onChange: mergedNotes } : {}}
           children={(field) => (
             <div className="grid gap-1.5">
               <Textarea
@@ -484,6 +492,11 @@ function OrderFormContent(
                 placeholder="Add any notes..."
                 rows={3}
               />
+              {!field.state.meta.isValid && (
+                <p role="alert" className="text-xs text-destructive">
+                  {field.state.meta.errors[0]?.message}
+                </p>
+              )}
             </div>
           )}
         />
