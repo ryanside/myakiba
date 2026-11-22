@@ -90,9 +90,9 @@ export function DeleteAccount() {
         />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogTitle>Delete account</DialogTitle>
             <DialogDescription>
-              This deletes your Item Database, Collection, Orders, Lists and Wishlist for good.
+              Everything you saved in myakiba is erased immediately. There is no grace period.
             </DialogDescription>
           </DialogHeader>
           {needsFreshSignIn ? (

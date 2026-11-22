@@ -185,9 +185,9 @@ test("Delete Account says what it deletes and still asks for the password", asyn
   });
   await pointer.click(trigger);
 
-  const dialog = await screen.findByRole("dialog", { name: "Delete your account?" });
+  const dialog = await screen.findByRole("dialog", { name: "Delete account" });
   expect(dialog.textContent).toContain(
-    "This deletes your Item Database, Collection, Orders, Lists and Wishlist for good.",
+    "Everything you saved in myakiba is erased immediately. There is no grace period.",
   );
   const submit = screen.getByRole("button", { name: "Delete Account Permanently" });
   expect(submit.hasAttribute("disabled")).toBe(false);
