@@ -104,12 +104,9 @@ export function OrderForm(props: OrderFormProps) {
 }
 
 const MERGED_ORDER_TITLE = "New Merged Order";
-const mergedNotes = z
-  .string()
-  .max(
-    WRITE_LIMITS.notes,
-    `The merged Orders' notes together pass the ${WRITE_LIMITS.notes.toLocaleString("en-US")}-character limit. Shorten them to merge.`,
-  );
+const NOTES_PAST_LIMIT = `The merged Orders' notes together pass the ${WRITE_LIMITS.notes.toLocaleString("en-US")}-character limit. Shorten them to merge.`;
+const mergedNotesFit = ({ value }: { readonly value: { readonly notes: string } }) =>
+  value.notes.length > WRITE_LIMITS.notes ? NOTES_PAST_LIMIT : undefined;
 
 function MergeOrderFormContent(
   props: DeferredMergeOrderFormProps & { readonly close: () => void },
@@ -155,6 +152,7 @@ function OrderFormContent(
 
   const { status: buttonStatus, run } = useButtonStatus();
   const form = useForm({
+    validators: type === "merge" ? { onMount: mergedNotesFit, onChange: mergedNotesFit } : {},
     defaultValues: {
       ...initial,
       shippingFee: minorUnitsToMajorString(initial.shippingFee),
@@ -487,7 +485,6 @@ function OrderFormContent(
       <FormSection title="Notes" defaultOpen={initial.notes.length > WRITE_LIMITS.notes}>
         <form.Field
           name="notes"
-          validators={type === "merge" ? { onMount: mergedNotes, onChange: mergedNotes } : {}}
           children={(field) => (
             <div className="grid gap-1.5">
               <Textarea
@@ -495,16 +492,11 @@ function OrderFormContent(
                 name={field.name}
                 value={field.state.value ?? ""}
                 onBlur={field.handleBlur}
-                maxLength={1000}
+                maxLength={WRITE_LIMITS.notes}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="Add any notes..."
                 rows={3}
               />
-              {!field.state.meta.isValid && (
-                <p role="alert" className="text-xs text-destructive">
-                  {field.state.meta.errors[0]?.message}
-                </p>
-              )}
             </div>
           )}
         />
@@ -569,6 +561,16 @@ function OrderFormContent(
         <div className="overflow-y-auto max-h-[70vh] py-4 scroll-fade-b">{formFields}</div>
 
         <DialogFooter>
+          <form.Subscribe
+            selector={(state) => state.errors[0]}
+            children={(reason) =>
+              reason ? (
+                <p role="alert" className="text-xs text-destructive sm:mr-auto sm:self-center">
+                  {String(reason)}
+                </p>
+              ) : null
+            }
+          />
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
