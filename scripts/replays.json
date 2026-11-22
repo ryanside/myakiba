@@ -5273,6 +5273,38 @@
         "the edit-order sheet > a title change copies nothing to the items, and no Cascade to Items choice is offered",
         "the edit-order sheet > a Paid change copies only Paid to the items"
       ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/queries/orders.test.ts",
+      "fixed": [
+        "Paid from a checkbox writes Paid to the Order and every item in it, as an Order fill"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": [
+        "a kanban Paid write > sets Paid on the Order and every Order Item through an Order fill"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": [
+        "a Paid click on a partly paid Order sets Paid on the Order and every item, not an edit"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
+      ]
     }
   ],
   "lint": [
