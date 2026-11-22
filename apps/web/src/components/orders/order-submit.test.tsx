@@ -37,12 +37,13 @@ const mergeDraft: MergedOrder = {
   miscFees: 0,
   notes: "Box 1",
 };
-let answerDraft = async (): Promise<Awaited<ReturnType<(typeof realOrders)["getMergeDraft"]>>> =>
+type DraftAnswer = Awaited<ReturnType<(typeof realOrders)["getMergeDraft"]>>;
+let answerDraft = async (_orderIds: readonly string[]): Promise<DraftAnswer> =>
   Result.ok(mergeDraft);
 const realOrders = await import("@/queries/orders");
 await mock.module("@/queries/orders", () => ({
   ...realOrders,
-  getMergeDraft: () => answerDraft(),
+  getMergeDraft: (orderIds: readonly string[]) => answerDraft(orderIds),
 }));
 
 const { OrderForm } = await import("./order-form");
@@ -515,7 +516,9 @@ describe("the merge dialog", () => {
         );
       try {
         const queryClient = openMerge(mock(async (): Saving => Result.ok()));
-        expect(Boolean(await screen.findByText("One or more orders not found"))).toBe(true);
+        await waitFor(() =>
+          expect(screen.queryByText("One or more orders not found") !== null).toBe(true),
+        );
         expect(screen.queryByRole("button", { name: "Merge" }) === null).toBe(true);
         queryClient.clear();
       } finally {
@@ -543,4 +546,137 @@ test("moving items to a new order offers no Cascade to Items choice", () => {
   expect(screen.queryByText("Options") === null).toBe(true);
   cleanup();
   queryClient.clear();
+});
+
+describe("the merge dialog reads its Orders fresh on every open", () => {
+  const otherIds = new Set(["c", "d"]);
+
+  function renderMerge(send: (...args: unknown[]) => Saving) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (orderIds: ReadonlySet<string>) => (
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="merge"
+          renderTrigger={trigger}
+          orderIds={orderIds}
+          callbackFn={send}
+          clearSelections={() => {}}
+          currency="USD"
+        />
+      </QueryClientProvider>
+    );
+    const rendered = render(view(ids));
+    return {
+      queryClient,
+      open: () => fireEvent.click(screen.getByRole("button", { name: "Open" })),
+      cancel: async () => {
+        fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+        await waitFor(() => expect(formIsOpen()).toBe(false));
+      },
+      select: (orderIds: ReadonlySet<string>) => rendered.rerender(view(orderIds)),
+    };
+  }
+  const shippingShown = () => (screen.getByLabelText("Shipping") as HTMLInputElement).value;
+  const mergeShown = () => screen.queryByRole("button", { name: "Merge" }) !== null;
+
+  test(
+    "waits for the new draft after a source Order changed, then shows its fees",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        await merge.cancel();
+
+        let release = () => {};
+        const changed = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        answerDraft = async () => {
+          await changed;
+          return Result.ok({ ...mergeDraft, shippingFee: 2500 });
+        };
+        merge.open();
+        await settle();
+        expect(mergeShown()).toBe(false);
+
+        await act(async () => release());
+        await screen.findByRole("button", { name: "Merge" });
+        expect(shippingShown()).toBe("$25.00");
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "shows the error and no Merge when the reopened draft fails, though an earlier one loaded",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        await merge.cancel();
+
+        answerDraft = async () =>
+          Result.err(
+            new ApiNotFound({
+              body: "One or more orders not found",
+              message: "One or more orders not found",
+            }),
+          );
+        merge.open();
+        await waitFor(() =>
+          expect(screen.queryByText("One or more orders not found") !== null).toBe(true),
+        );
+        expect(mergeShown()).toBe(false);
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "sends the values and ids of the Orders selected now when the selection changes while open",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      answerDraft = async (orderIds) =>
+        Result.ok(orderIds.includes("c") ? { ...mergeDraft, shop: "HLJ" } : mergeDraft);
+      try {
+        const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+        const merge = renderMerge(send);
+        merge.select(otherIds);
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        await merge.cancel();
+
+        merge.select(ids);
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Combined" } });
+        merge.select(otherIds);
+        await waitFor(() =>
+          expect((screen.getByLabelText("Shop") as HTMLInputElement).value).toBe("HLJ"),
+        );
+
+        await userEvent.setup().click(await screen.findByRole("button", { name: "Merge" }));
+        await waitFor(() => expect(send.mock.calls.length).toBe(1));
+        const [values, sentIds] = send.mock.calls[0] ?? [];
+        expect({
+          shop: (values as { shop: string }).shop,
+          ids: [...(sentIds as Set<string>)],
+        }).toEqual({
+          shop: "HLJ",
+          ids: ["c", "d"],
+        });
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
 });
