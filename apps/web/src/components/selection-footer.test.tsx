@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { cleanup, configure, screen, within } from "@testing-library/react";
+import { cleanup, configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
@@ -22,10 +22,12 @@ afterEach(() => {
   localStorage.clear();
 });
 
-function page<T>(rows: readonly T[], url: URL) {
+function page<T>(rows: readonly T[], url: URL, titleOf: (row: T) => string) {
+  const search = url.searchParams.get("search") ?? "";
+  const matches = rows.filter((row) => titleOf(row).includes(search));
   const offset = Number(url.searchParams.get("offset") ?? 0);
-  const limit = Number(url.searchParams.get("limit") ?? rows.length);
-  return { items: rows.slice(offset, offset + limit), totalCount: rows.length };
+  const limit = Number(url.searchParams.get("limit") ?? matches.length);
+  return { items: matches.slice(offset, offset + limit), totalCount: matches.length };
 }
 
 async function renderPage(url: string) {
@@ -62,54 +64,67 @@ async function select(user: ReturnType<typeof userEvent.setup>, ...titles: strin
   }
 }
 
+const searchSettles = () =>
+  new Promise((resolve) => {
+    setTimeout(resolve, 300);
+  });
 const actionBar = () => screen.getByRole("toolbar").textContent ?? "";
+const footer = () => screen.getByText(/row\(s\) selected/).textContent;
 const itemsFooter = () =>
   screen.queryByText((_, element) => /^\d+ of \d+ selected$/.test(element?.textContent ?? ""), {
     selector: "span",
   })?.textContent;
 
+function serveCollection() {
+  const rows = ids("co", 30).map((id) => collectionItem({ id, itemTitle: id }));
+  stubFetch((request) =>
+    Response.json({
+      ...page(rows, new URL(request.url), (row) => row.itemTitle),
+      totalValue: 0,
+      totalItemsThisMonth: 0,
+    }),
+  );
+}
+
+function serveOrders() {
+  const rows = ids("od", 30).map((orderId) => ({ ...order, orderId, title: orderId }));
+  stubFetch((request) =>
+    Response.json({
+      ...page(rows, new URL(request.url), (row) => row.title),
+      totalSpent: 0,
+      activeOrders: rows.length,
+      unpaidCosts: 0,
+    }),
+  );
+}
+
 describe("the selection footer counts every selected row, not only the page's", () => {
   test("on the Collection page", async () => {
-    const rows = ids("co", 30).map((id) => collectionItem({ id, itemTitle: id }));
-    stubFetch((request) =>
-      Response.json({
-        ...page(rows, new URL(request.url)),
-        totalValue: 0,
-        totalItemsThisMonth: 0,
-      }),
-    );
+    serveCollection();
     const user = await renderPage("/collection");
     await screen.findByText("co-00");
     await select(user, "co-00", "co-01", "co-02");
     expect(actionBar()).toContain("3 items selected");
-    expect(screen.getByText(/row\(s\) selected/).textContent).toBe("3 of 30 row(s) selected");
+    expect(footer()).toBe("3 row(s) selected");
 
     await user.click(screen.getByRole("button", { name: "Go to next page" }));
     await screen.findByText("co-24");
     expect(actionBar()).toContain("3 items selected");
-    expect(screen.getByText(/row\(s\) selected/).textContent).toBe("3 of 30 row(s) selected");
+    expect(footer()).toBe("3 row(s) selected");
   });
 
   test("on the Orders page", async () => {
-    const rows = ids("od", 30).map((orderId) => ({ ...order, orderId, title: orderId }));
-    stubFetch((request) =>
-      Response.json({
-        ...page(rows, new URL(request.url)),
-        totalSpent: 0,
-        activeOrders: rows.length,
-        unpaidCosts: 0,
-      }),
-    );
+    serveOrders();
     const user = await renderPage("/orders");
     await screen.findByText("od-00");
     await select(user, "od-00", "od-01", "od-02");
     expect(actionBar()).toContain("3 orders selected");
-    expect(screen.getByText(/row\(s\) selected/).textContent).toBe("3 of 30 row(s) selected");
+    expect(footer()).toBe("3 row(s) selected");
 
     await user.click(screen.getByRole("button", { name: "Go to next page" }));
     await screen.findByText("od-24");
     expect(actionBar()).toContain("3 orders selected");
-    expect(screen.getByText(/row\(s\) selected/).textContent).toBe("3 of 30 row(s) selected");
+    expect(footer()).toBe("3 row(s) selected");
   });
 
   test("in an Order's items", async () => {
@@ -124,7 +139,8 @@ describe("the selection footer counts every selected row, not only the page's", 
     });
     stubFetch((request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/api/orders/od-alpha/items") return Response.json(page(items, url));
+      if (url.pathname === "/api/orders/od-alpha/items")
+        return Response.json(page(items, url, (item) => item.itemTitle));
       return Response.json({
         items: [{ ...order, orderId: "od-alpha", title: "Alpha", itemCount: items.length }],
         totalCount: 1,
@@ -147,5 +163,31 @@ describe("the selection footer counts every selected row, not only the page's", 
     await screen.findByText("co-12");
     expect(actionBar()).toContain("3 items selected");
     expect(itemsFooter()).toBe("3 of 14 selected");
+  });
+});
+
+describe("the selection footer keeps counting rows a search hides", () => {
+  test("on the Collection page", async () => {
+    serveCollection();
+    const user = await renderPage("/collection");
+    await screen.findByText("co-00");
+    await select(user, "co-00", "co-01", "co-02");
+    await user.type(screen.getByRole("textbox", { name: "Search Collection" }), "co-00");
+    await searchSettles();
+    await waitFor(() => expect(screen.queryByText("co-01")).toBeNull());
+    expect(actionBar()).toContain("3 items selected");
+    expect(footer()).toBe("3 row(s) selected");
+  });
+
+  test("on the Orders page", async () => {
+    serveOrders();
+    const user = await renderPage("/orders");
+    await screen.findByText("od-00");
+    await select(user, "od-00", "od-01", "od-02");
+    await user.type(screen.getByRole("textbox", { name: "Search Orders" }), "od-00");
+    await searchSettles();
+    await waitFor(() => expect(screen.queryByText("od-01")).toBeNull());
+    expect(actionBar()).toContain("3 orders selected");
+    expect(footer()).toBe("3 row(s) selected");
   });
 });
