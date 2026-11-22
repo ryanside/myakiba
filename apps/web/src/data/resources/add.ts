@@ -28,9 +28,8 @@ type AddItemsInput = { readonly itemIds: readonly string[]; readonly newestArriv
 
 export const add = {
   /**
-   * Row details and badges for the draft's Items. Ids the server no longer has are left out. While a
-   * row waits for its read, the draft's `newestArrival` is in the key, so only a read sent since its
-   * newest row arrived answers it.
+   * Row details and badges for the draft's Items. Ids the server no longer has are left out. The
+   * draft's `newestArrival` is in the key, so only a read sent since its newest row arrived answers it.
    */
   items: rootedRead("itemDatabase", {
     key: ({ itemIds, newestArrival }: AddItemsInput) =>

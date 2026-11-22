@@ -62,7 +62,6 @@ export function useAddController(search: AddSearchParams) {
   }, [hasPresetItem, navigate]);
 
   const rowItemIds = rows.map((row) => row.itemId);
-  const deciding = rows.some((row) => row.selected === null);
   const draftItemIds: ReadonlySet<string> = new Set([...rowItemIds, ...waiting]);
   const {
     data: itemData,
@@ -70,7 +69,7 @@ export function useAddController(search: AddSearchParams) {
     isPlaceholderData: itemsStale,
     error: itemsError,
     refetch: refetchItems,
-  } = useRead(add.items, { itemIds: rowItemIds, newestArrival: deciding ? newestArrival : 0 });
+  } = useRead(add.items, { itemIds: rowItemIds, newestArrival });
   const readItems: ReadonlyMap<string, AddItem> = new Map(
     (itemData?.items ?? []).map((item) => [item.itemId, item]),
   );
