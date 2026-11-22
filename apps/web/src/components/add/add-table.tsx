@@ -30,6 +30,7 @@ import { useColumnsFade } from "./destination-motion";
 import { EmptyState } from "./empty-state";
 import { AddFillMenu } from "./fill-menu";
 import { HeldNote } from "./item-badges";
+import type { DraftRow } from "./add-draft";
 import { PickStatus } from "./pick-status";
 import { SearchRow } from "./search-row";
 import {
@@ -48,7 +49,7 @@ import { ReleaseField } from "./row-release";
 type ItemRow = {
   readonly kind: "item";
   readonly id: string;
-  readonly row: AddController["rows"][number];
+  readonly row: DraftRow;
   readonly item: AddItem;
   readonly release: AddItem["latestRelease"];
   /** What its sortable columns sort by, which a blank field takes from its default. */
@@ -60,7 +61,13 @@ type ItemRow = {
 /** What one line of the table holds. Only an `item` has fields, so only it can be selected. */
 type AddRow =
   | ItemRow
-  | { readonly kind: "loading"; readonly id: string; readonly selected: boolean }
+  | {
+      readonly kind: "loading";
+      readonly id: string;
+      readonly selected: boolean;
+      /** A draft row, which can leave while it loads. */
+      readonly removable: boolean;
+    }
   | {
       readonly kind: "missing";
       readonly id: string;
@@ -69,12 +76,14 @@ type AddRow =
   | { readonly kind: "pick"; readonly id: string; readonly pick: PickRow };
 
 const isSelected = (row: AddRow): boolean =>
-  row.kind === "item" ? row.row.selected : row.kind === "loading" && row.selected;
+  row.kind === "item" ? row.row.selected === true : row.kind === "loading" && row.selected;
 
 function tableRows(c: AddController): AddRow[] {
   const form = c.resolvedForm;
   const shared = form.kind === "collection" ? form.shared : null;
-  if (c.awaitingPicks) return [{ kind: "loading", id: "awaiting-picks", selected: false }];
+  if (c.awaitingPicks) {
+    return [{ kind: "loading", id: "awaiting-picks", selected: false, removable: false }];
+  }
   const picks = c.picks.map((pick): AddRow => ({
     kind: "pick",
     id: `pick-${pick.mfcItemId}`,
@@ -96,7 +105,7 @@ function tableRows(c: AddController): AddRow[] {
       };
     }
     return c.lookup === "loading"
-      ? { kind: "loading", id: row.itemId, selected: row.selected }
+      ? { kind: "loading", id: row.itemId, selected: row.selected === true, removable: true }
       : { kind: "missing", id: row.itemId, lookup: c.lookup };
   });
   // Picks go last, where a saved one's row lands, so saving one moves no other row.
@@ -188,8 +197,10 @@ function fieldCell(field: Field) {
 
 function SelectAll() {
   const { c } = useAddTable();
-  const total = c.countedRows.length;
-  const selected = c.countedRows.filter((row) => row.selected).length;
+  // A row still waiting for its read has no choice for Select all to make.
+  const choosable = c.countedRows.filter((row) => row.selected !== null);
+  const total = choosable.length;
+  const selected = choosable.filter((row) => row.selected === true).length;
   return (
     <SelectionCheckbox
       label="Select all items"
@@ -209,7 +220,7 @@ function SelectRow({ row }: CellContext<AddRow, unknown>) {
       {original.kind === "item" ? (
         <SelectionCheckbox
           label={`Select ${original.item.title}`}
-          checked={original.row.selected}
+          checked={original.row.selected === true}
           onCheckedChange={(checked) => c.select(original.id, checked)}
         />
       ) : (
@@ -228,13 +239,13 @@ function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
       image={item.image}
       walkedByKeys
     >
-      {row.selected ? null : <HeldNote item={item} />}
+      {row.selected === true ? null : <HeldNote item={item} />}
     </ItemTitleCell>
   );
 }
 
 function RowActions({ row: { id, item } }: { readonly row: ItemRow }) {
-  const { c, owned, openRows, toggleDetails, fieldsHidden } = useAddTable();
+  const { owned, openRows, toggleDetails, fieldsHidden } = useAddTable();
   const open = owned && openRows.has(id);
   return (
     <div className="flex items-center justify-end gap-0.5">
@@ -258,19 +269,39 @@ function RowActions({ row: { id, item } }: { readonly row: ItemRow }) {
           Details
         </Button>
       )}
-      <Button
-        type="button"
-        id={removeButtonId(id)}
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Remove ${item.title}`}
-        className="text-muted-foreground"
-        onClick={() => c.handleRemove(id)}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-      </Button>
+      <RemoveRowButton id={id} label={`Remove ${item.title}`} />
     </div>
   );
+}
+
+function RemoveRowButton({ id, label }: { readonly id: string; readonly label: string }) {
+  const { c } = useAddTable();
+  return (
+    <Button
+      type="button"
+      id={removeButtonId(id)}
+      variant="ghost"
+      size="icon-sm"
+      aria-label={label}
+      className="text-muted-foreground"
+      onClick={() => c.handleRemove(id)}
+    >
+      <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
+    </Button>
+  );
+}
+
+/** A loading draft row can be removed before its Item arrives, as a missing one can. */
+function actionsCell({ row: { original }, column }: CellContext<AddRow, unknown>) {
+  if (original.kind === "item") return <RowActions row={original} />;
+  if (original.kind === "loading" && original.removable) {
+    return (
+      <div className="flex justify-end">
+        <RemoveRowButton id={original.id} label="Remove this row" />
+      </div>
+    );
+  }
+  return column.columnDef.meta?.skeleton;
 }
 
 const detailsPanelId = (itemId: string) => `add-details-${itemId}`;
@@ -335,23 +366,12 @@ function MissingRow({
   readonly id: string;
   readonly lookup: Exclude<AddController["lookup"], "loading">;
 }) {
-  const { c } = useAddTable();
   return (
     <div className={cn(FRAME_WIDTH_IN_CELL, ROW_CONTENT, "flex items-center gap-3")}>
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
         {lookup === "failed" ? "Could not load this item" : "No longer in myakiba"}
       </p>
-      <Button
-        type="button"
-        id={removeButtonId(id)}
-        variant="ghost"
-        size="icon-sm"
-        className="text-muted-foreground"
-        aria-label="Remove this row"
-        onClick={() => c.handleRemove(id)}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-      </Button>
+      <RemoveRowButton id={id} label="Remove this row" />
     </div>
   );
 }
@@ -461,7 +481,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
   {
     id: "actions",
     header: ActionsHeader,
-    cell: itemCell(RowActions),
+    cell: actionsCell,
     size: 136,
     enableSorting: false,
     enableResizing: false,

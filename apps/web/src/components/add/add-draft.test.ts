@@ -3,17 +3,17 @@ import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
 import { draftReducer as reduce } from "./add-draft";
 import type { DraftAction } from "./add-draft";
 
-const AT = 1_700_000_000_000;
+const AT = 7;
 const draftReducer = (state: Parameters<typeof reduce>[0], action: DraftAction) =>
   reduce(state, { ...action, at: AT });
-const empty = { rows: [], waiting: [] };
+const empty = { rows: [], waiting: [], ticket: 0 };
 const withRows = (...itemIds: string[]) => draftReducer(empty, { type: "add", itemIds });
 
 test("new rows come first, waiting for a read since they arrived, and a known Item is not added twice", () => {
   const state = draftReducer(withRows("a"), { type: "add", itemIds: ["b", "a", "b"] });
   expect(state.rows).toEqual([
-    { itemId: "b", overrides: {}, selected: null, arrivedAt: AT },
-    { itemId: "a", overrides: {}, selected: null, arrivedAt: AT },
+    { itemId: "b", overrides: {}, selected: null },
+    { itemId: "a", overrides: {}, selected: null },
   ]);
 });
 
@@ -40,6 +40,6 @@ test("edits merge into one row and selection changes only what it names", () => 
     [{}, false],
   ]);
   expect(
-    draftReducer(state, { type: "select-all", selected: true }).rows.every((row) => row.selected),
-  ).toBe(true);
+    draftReducer(state, { type: "select-all", selected: true }).rows.map((row) => row.selected),
+  ).toEqual([null, true]);
 });

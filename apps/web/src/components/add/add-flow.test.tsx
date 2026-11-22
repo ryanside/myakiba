@@ -1843,7 +1843,8 @@ test("an Item already in the Collection that waits for room comes in unselected"
   );
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
-  const [firstRemove] = await screen.findAllByRole("button", { name: "Remove this row" });
+  await waitFor(() => expect(screen.queryAllByText("No longer in myakiba").length).toBe(100));
+  const [firstRemove] = screen.getAllByRole("button", { name: "Remove this row" });
   await user.click(firstRemove as HTMLElement);
 
   await waitFor(() => expect(isChecked("Owned waiting")).toBe("false"));
@@ -2043,15 +2044,15 @@ test("a row whose read failed blocks Add for every row until it is removed or re
   server.itemsFailure = refused(503, "down");
 
   await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
-  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  await waitFor(() => expect(screen.queryAllByText("Could not load this item").length).toBe(2));
   expect([
-    isChecked("Rem"),
     addButton() === null,
     screen.queryByRole("button", { name: BLOCKED })?.hasAttribute("disabled"),
-  ]).toEqual(["true", true, true]);
+  ]).toEqual([true, true]);
 
   server.itemsFailure = null;
-  await click(user, "Remove this row");
+  const [waitingRow] = screen.getAllByRole("button", { name: "Remove this row" });
+  await user.click(waitingRow as HTMLElement);
   await waitFor(() => expect(addButton() !== null).toBe(true));
   expect(await tryToCommit()).toBe(true);
   expect(server.commits[0]?.rows.map(({ itemId }) => itemId)).toEqual([OTHER_ID]);

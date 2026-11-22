@@ -28,13 +28,12 @@ const rowOverridesSchema = z.object({
 
 export type RowOverrides = z.infer<typeof rowOverridesSchema>;
 
-const rowBase = { itemId: z.string(), overrides: rowOverridesSchema };
-
-/** A new row waits, unselected, until a read of its Item made since it arrived decides it. */
-const draftRowSchema = z.union([
-  z.object({ ...rowBase, selected: z.boolean() }),
-  z.object({ ...rowBase, selected: z.null(), arrivedAt: z.number() }),
-]);
+const draftRowSchema = z.object({
+  itemId: z.string(),
+  overrides: rowOverridesSchema,
+  /** Null until a read sent since the row arrived decides it. */
+  selected: z.boolean().nullable(),
+});
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
 
@@ -50,21 +49,32 @@ const appRouteApi = getRouteApi("/(app)");
 type DraftState = {
   readonly rows: readonly DraftRow[];
   readonly waiting: readonly string[];
+  /** When the newest row arrived, on this page's own count, which the Items read is keyed by. */
+  readonly ticket: number;
 };
 
-function settle(rows: readonly DraftRow[], queue: readonly string[], at: number): DraftState {
+let lastTicket = 0;
+const nextTicket = () => {
+  lastTicket += 1;
+  return lastTicket;
+};
+
+function settle(
+  state: DraftState,
+  rows: readonly DraftRow[],
+  queue: readonly string[],
+  at: number,
+): DraftState {
   const room = MAX_ADD_ROWS - rows.length;
   const entering = queue
     .slice(0, room)
-    .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: null, arrivedAt: at }));
-  return { rows: [...entering, ...rows], waiting: queue.slice(room) };
+    .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: null }));
+  return {
+    rows: [...entering, ...rows],
+    waiting: queue.slice(room),
+    ticket: entering.length > 0 ? at : state.ticket,
+  };
 }
-
-const chosen = ({ itemId, overrides }: DraftRow, selected: boolean): DraftRow => ({
-  itemId,
-  overrides,
-  selected,
-});
 
 export type DraftAction =
   | { readonly type: "add"; readonly itemIds: readonly string[] }
@@ -82,11 +92,12 @@ export function draftReducer(
     case "add": {
       const known = new Set([...state.rows.map((row) => row.itemId), ...state.waiting]);
       const incoming = [...new Set(action.itemIds)].filter((itemId) => !known.has(itemId));
-      return settle(state.rows, [...state.waiting, ...incoming], action.at);
+      return settle(state, state.rows, [...state.waiting, ...incoming], action.at);
     }
     case "remove": {
       const removed = new Set(action.itemIds);
       return settle(
+        state,
         state.rows.filter((row) => !removed.has(row.itemId)),
         state.waiting.filter((itemId) => !removed.has(itemId)),
         action.at,
@@ -96,7 +107,7 @@ export function draftReducer(
       return {
         ...state,
         rows: state.rows.map((row) =>
-          row.itemId === action.itemId ? chosen(row, action.selected) : row,
+          row.itemId === action.itemId ? { ...row, selected: action.selected } : row,
         ),
       };
     case "decide":
@@ -104,13 +115,15 @@ export function draftReducer(
         ...state,
         rows: state.rows.map((row) => {
           const decided = row.selected === null ? action.selected.get(row.itemId) : undefined;
-          return decided === undefined ? row : chosen(row, decided);
+          return decided === undefined ? row : { ...row, selected: decided };
         }),
       };
     case "select-all":
       return {
         ...state,
-        rows: state.rows.map((row) => chosen(row, action.selected)),
+        rows: state.rows.map((row) =>
+          row.selected === null ? row : { ...row, selected: action.selected },
+        ),
       };
     case "edit":
       return {
@@ -131,10 +144,18 @@ function readDraft({
   readonly userId: string;
   readonly presetItem: string | undefined;
 }): DraftState {
-  return draftReducer(
-    { rows: storedDraft.read(userId) ?? [], waiting: storedWaiting.read(userId) ?? [] },
-    { type: "add", itemIds: presetItem === undefined ? [] : [presetItem], at: Date.now() },
-  );
+  const rows = storedDraft.read(userId) ?? [];
+  // A restored row still waiting arrives again, so no read from before this page can decide it.
+  const restored: DraftState = {
+    rows,
+    waiting: storedWaiting.read(userId) ?? [],
+    ticket: rows.some((row) => row.selected === null) ? nextTicket() : 0,
+  };
+  return draftReducer(restored, {
+    type: "add",
+    itemIds: presetItem === undefined ? [] : [presetItem],
+    at: nextTicket(),
+  });
 }
 
 /**
@@ -146,12 +167,12 @@ export function useAddDraft(presetItem: string | undefined) {
   const userId = appRouteApi.useRouteContext().session.user.id;
   const [state, dispatchAt] = useReducer(draftReducer, { userId, presetItem }, readDraft);
   const dispatch = useCallback(
-    (action: DraftAction) => dispatchAt({ ...action, at: Date.now() }),
+    (action: DraftAction) => dispatchAt({ ...action, at: nextTicket() }),
     [],
   );
   useEffect(() => {
     storedDraft.write(userId, state.rows);
     storedWaiting.write(userId, state.waiting);
   }, [userId, state.rows, state.waiting]);
-  return { rows: state.rows, waiting: state.waiting, dispatch } as const;
+  return { rows: state.rows, waiting: state.waiting, ticket: state.ticket, dispatch } as const;
 }

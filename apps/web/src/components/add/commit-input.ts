@@ -312,11 +312,16 @@ function verbOf({ ownership, wishlist, lists }: Destination): CommitVerb {
 export function commitPlan(
   destination: Destination,
   count: number,
-  context: { readonly emailVerified: boolean },
+  context: {
+    readonly emailVerified: boolean;
+    /** A row whose read failed has no choice yet, so a commit now could not be repeated. */
+    readonly unresolved?: boolean;
+  },
 ): CommitPlan {
   const verb = verbOf(destination);
   const blocked = (label: string): CommitPlan => ({ kind: "blocked", verb, label });
   if (!context.emailVerified) return blocked("Verify your email to add items");
+  if (context.unresolved) return blocked("Retry or remove items that could not load");
   if (count === 0) return blocked("Select items to add");
   const { ownership, wishlist, lists } = destination;
   switch (ownership?.kind) {

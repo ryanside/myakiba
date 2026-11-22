@@ -10,7 +10,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { pickFailureCopy } from "@/lib/pick-failure";
 import { startsSelected, useAddDraft } from "./add-draft";
-import type { DraftRow, RowOverrides } from "./add-draft";
+import type { RowOverrides } from "./add-draft";
 import type { CommitAnswer } from "./commit-button";
 import {
   defaultOrderTitle,
@@ -33,7 +33,7 @@ export function useAddController(search: AddSearchParams) {
   const { emailVerified, email } = session.user;
   const { currency, dateFormat } = useUserPreferences();
   const navigate = useNavigate();
-  const { rows: draftRows, waiting, dispatch } = useAddDraft(search.item);
+  const { rows, waiting, ticket, dispatch } = useAddDraft(search.item);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(search.q));
   const [formState, setFormState] = useState<DestinationForm>(() => presetDestination(search.to));
@@ -61,46 +61,41 @@ export function useAddController(search: AddSearchParams) {
     } as NavigateOptions);
   }, [hasPresetItem, navigate]);
 
-  const rowItemIds = draftRows.map((row) => row.itemId);
+  const rowItemIds = rows.map((row) => row.itemId);
   const draftItemIds: ReadonlySet<string> = new Set([...rowItemIds, ...waiting]);
   const {
     data: itemData,
     isPending: itemsPending,
     isPlaceholderData: itemsStale,
-    dataUpdatedAt: itemsReadAt,
     error: itemsError,
     refetch: refetchItems,
-  } = useRead(add.items, rowItemIds);
+  } = useRead(add.items, { itemIds: rowItemIds, ticket });
   const readItems: ReadonlyMap<string, AddItem> = new Map(
     (itemData?.items ?? []).map((item) => [item.itemId, item]),
   );
-  // `dataUpdatedAt` moves only when a read succeeds, so neither cached data nor a failed refetch counts.
-  const readSinceArrival = (row: DraftRow) =>
-    row.selected !== null || (!itemsStale && itemsReadAt >= row.arrivedAt);
+  const answered = itemData !== undefined && !itemsStale;
   useEffect(() => {
+    if (!answered) return;
     const decided = new Map(
-      draftRows.flatMap((row) => {
+      rows.flatMap((row) => {
         const item = readItems.get(row.itemId);
-        return row.selected === null && item && readSinceArrival(row)
-          ? [[row.itemId, startsSelected(item)] as const]
-          : [];
+        return row.selected === null && item ? [[row.itemId, startsSelected(item)] as const] : [];
       }),
     );
     if (decided.size > 0) dispatch({ type: "decide", selected: decided });
   });
   const items: ReadonlyMap<string, AddItem> = new Map(
-    draftRows.flatMap((row) => {
+    rows.flatMap((row) => {
       const item = readItems.get(row.itemId);
       return item && row.selected !== null ? [[row.itemId, item] as const] : [];
     }),
   );
-  const awaitingDecision = draftRows.some(
-    (row) => row.selected === null && !(readSinceArrival(row) && !readItems.has(row.itemId)),
+  // A row the read answered without its Item is gone, so it decides nothing and blocks nothing.
+  const undecided = rows.some(
+    (row) => row.selected === null && !(answered && !readItems.has(row.itemId)),
   );
   const itemsLoading =
-    rowItemIds.length > 0 &&
-    (itemsPending || itemsStale || (awaitingDecision && itemsError === null));
-  const rows = draftRows.map((row) => ({ ...row, selected: row.selected !== false }));
+    rowItemIds.length > 0 && (itemsPending || itemsStale || (undecided && itemsError === null));
   // A failed refresh leaves the Items it already read, so only a row without one needs the error.
   const itemsReadError =
     itemsError !== null && rows.some((row) => !items.has(row.itemId)) ? itemsError : null;
@@ -127,14 +122,14 @@ export function useAddController(search: AddSearchParams) {
 
   const selectedRows = rows.flatMap((row) => {
     const item = items.get(row.itemId);
-    return row.selected && item ? [{ row, item }] : [];
+    return row.selected === true && item ? [{ row, item }] : [];
   });
   // The draft knows its rows from the first paint, so counting them moves nothing when the Items
   // load. Once the read answers, a row with no Item cannot be committed, so it stops counting.
   const countedRows = itemsLoading ? rows : rows.filter((row) => items.has(row.itemId));
   const savingPicks = intake.rows.filter((pick) => pick.state === "saving").length;
   const rowCount = countedRows.length + savingPicks;
-  const selectedCount = countedRows.filter((row) => row.selected).length + savingPicks;
+  const selectedCount = countedRows.filter((row) => row.selected !== false).length + savingPicks;
   const hasItems = rows.length + savingPicks > 0;
   // The label counts what is still on its way, so a commit now would leave those out.
   const pending = itemsLoading || savingPicks > 0;
@@ -340,6 +335,7 @@ export function useAddController(search: AddSearchParams) {
       destination,
       emailVerified,
       loading: pending,
+      unresolved: undecided && itemsError !== null,
       onIssues: reportIssues,
       onSending: () => setSending(true),
       onFailed: () => setSending(false),
