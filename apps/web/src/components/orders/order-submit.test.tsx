@@ -596,6 +596,34 @@ describe("the merge dialog's Notes", () => {
   );
 
   test(
+    "keeps Merge held and its reason tied to it after a blur on another field and a collapse",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const queryClient = openWithNotes(`${"a".repeat(6000)}\n\n${"b".repeat(6000)}`);
+        await screen.findByRole("button", { name: "Merge" });
+        const title = screen.getByLabelText("Title");
+        fireEvent.focus(title);
+        fireEvent.blur(title);
+        fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+        await waitFor(() => expect(screen.queryByPlaceholderText("Add any notes...")).toBeNull());
+        await settle();
+
+        const merge = screen.getByRole("button", { name: "Merge" });
+        const describedBy = merge.getAttribute("aria-describedby") ?? "";
+        expect({
+          disabled: merge.hasAttribute("disabled"),
+          reason: screen.queryByText(notesLimit) !== null,
+          describedByReason: document.querySelector(`[id="${describedBy}"]`)?.textContent ?? null,
+        }).toEqual({ disabled: true, reason: true, describedByReason: notesLimit });
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
     "takes a paste past 1,000 characters, as the server does",
     untilBodyDone(async () => {
       const previous = answerDraft;
@@ -705,6 +733,67 @@ describe("the merge dialog reads its Orders fresh on every open", () => {
           expect(screen.queryByText("One or more orders not found") !== null).toBe(true),
         );
         expect(mergeShown()).toBe(false);
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "a reopen while the first read is still pending waits for its own read",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      const answers: ((fee: number) => void)[] = [];
+      answerDraft = () =>
+        new Promise<DraftAnswer>((resolve) => {
+          answers.push((fee) => resolve(Result.ok({ ...mergeDraft, shippingFee: fee })));
+        });
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await waitFor(() => expect(answers.length).toBe(1));
+        fireEvent.click(screen.getByRole("button", { name: "Close" }));
+        await waitFor(() => expect(formIsOpen()).toBe(false));
+        merge.open();
+        await settle();
+        const reads = answers.length;
+
+        await act(async () => answers[0]?.(2000));
+        await settle();
+        const mergeAfterOldAnswer = mergeShown();
+        await act(async () => answers[1]?.(2500));
+        await screen.findByRole("button", { name: "Merge" });
+
+        expect({ reads, mergeAfterOldAnswer, shipping: shippingShown() }).toEqual({
+          reads: 2,
+          mergeAfterOldAnswer: false,
+          shipping: "$25.00",
+        });
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "a reopen in the same tick as the close reads the Orders again",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      let reads = 0;
+      answerDraft = async () => {
+        reads++;
+        return Result.ok({ ...mergeDraft, shippingFee: reads === 1 ? 2000 : 2500 });
+      };
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        merge.open();
+        await waitFor(() => expect(reads).toBe(2));
+        await waitFor(() => expect(shippingShown()).toBe("$25.00"));
         merge.queryClient.clear();
       } finally {
         answerDraft = previous;
