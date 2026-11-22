@@ -38,7 +38,6 @@ const draftRowSchema = z.union([
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
 
-/** A new row is selected unless its Item is already in the Collection or an Order. */
 export const startsSelected = (item: {
   readonly collectionCount: number;
   readonly onOrderCount: number;
