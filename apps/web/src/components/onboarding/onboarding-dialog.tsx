@@ -2,6 +2,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useRef, useState }
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import { Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
@@ -20,21 +21,31 @@ import {
 } from "@/components/reui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CurrencySelect } from "@/components/currency-select";
+import { formatCount } from "@/components/page-header";
 import { useResourceMutation } from "@/data/client";
+import { useWaitingPicks } from "@/data/picks";
+import type { WaitingPicks } from "@/data/picks";
 import { settings } from "@/data/resources/settings";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { extensionAvailability } from "@/lib/extension-availability";
 import { localeFormats } from "@/lib/locale";
+import { EXTENSION_STOPPED_TEXT } from "@/lib/pick-failure";
 import { cn } from "@/lib/utils";
 import { ExtensionStep } from "@/components/onboarding/extension-step";
-import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
+import {
+  ExtensionNotice,
+  pickExtensionCopy,
+  pickHowTo,
+} from "@/components/extension/extension-notice";
+import type { ExtensionNoticeCopy } from "@/components/extension/extension-notice";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import { isGeneratedUsername } from "@myakiba/contracts/shared/generated-username";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { formSubmitHandler, runSubmit } from "@/lib/form-submit";
-import { NextIcon, PreviousIcon } from "@/lib/icons";
+import { NavigateIcon, NextIcon, PreviousIcon } from "@/lib/icons";
 
 type StepId = "preferences" | "extension" | "add";
 
@@ -124,6 +135,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
   const currentMeta = STEPS.find((meta) => meta.step === currentStep) ?? STEPS[0];
   const isFirst = currentStep === FIRST_STEP;
   const isLast = currentStep === LAST_STEP;
+  const picks = useWaitingPicks(open && isLast);
 
   const atExtensionStep = open && currentMeta.id === "extension";
   const lastWrittenExtensionStep = useRef(atExtensionStep);
@@ -335,7 +347,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                     </form>
                   ) : null}
                   {meta.id === "extension" ? <ExtensionStep /> : null}
-                  {meta.id === "add" ? <AddStep /> : null}
+                  {meta.id === "add" ? <AddStep picks={picks} /> : null}
                 </StepperContent>
               ))}
             </StepperPanel>
@@ -349,7 +361,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
               {({ isSubmitting, canSubmit }) => (
                 <StepFooter
                   isFirst={isFirst}
-                  isLast={isLast}
+                  finish={isLast ? finishButton(picks) : null}
                   isSaving={isSubmitting}
                   canContinue={currentMeta.id !== "preferences" || canSubmit}
                   onBack={handleBack}
@@ -381,25 +393,40 @@ function StepHeader({ meta }: StepHeaderProps) {
   );
 }
 
-function AddStep() {
-  return (
-    <div className="flex flex-col gap-3 text-sm">
-      <MissingExtensionNotice copyOf={pickExtensionCopy} />
-      <ol className="flex list-decimal flex-col gap-2 pl-5 text-pretty">
-        <li>Open an item on MyFigureCollection.</li>
-        <li>
-          Click <span className="font-medium">Pick for myakiba</span>, next to MFC&apos;s own
-          buttons.
-        </li>
-        <li>Open the Add page, choose where your picks go and add them.</li>
-      </ol>
-    </div>
-  );
+/** The user's next step, from what the extension holds now. */
+function AddStep({ picks }: { readonly picks: WaitingPicks }) {
+  switch (picks.kind) {
+    case "checking":
+      return null;
+    case "absent":
+      return <ExtensionNotice copy={pickExtensionCopy(extensionAvailability())} />;
+    case "outdated":
+      return <ExtensionStep />;
+    case "stopped":
+      return <ExtensionNotice copy={{ title: EXTENSION_STOPPED_TEXT, body: null, link: null }} />;
+    case "ready":
+      return <ExtensionNotice copy={picksCopy(picks.count)} />;
+  }
+}
+
+function picksCopy(count: number): ExtensionNoticeCopy {
+  if (count === 0) return { title: "No picks yet", body: pickHowTo("on the Add page"), link: null };
+  return { title: `${formatCount(count, "pick", "picks")} waiting`, body: null, link: null };
+}
+
+type FinishButton = { readonly label: string; readonly icon: IconSvgElement };
+
+/** Finishing always closes onboarding on the Add page. With picks waiting, that is the next step. */
+function finishButton(picks: WaitingPicks): FinishButton {
+  return picks.kind === "ready" && picks.count > 0
+    ? { label: "Open the Add page", icon: NavigateIcon }
+    : { label: "Get started", icon: Tick02Icon };
 }
 
 type StepFooterProps = {
   readonly isFirst: boolean;
-  readonly isLast: boolean;
+  /** The last step's button, or null on every step before it. */
+  readonly finish: FinishButton | null;
   readonly isSaving: boolean;
   readonly canContinue: boolean;
   readonly onBack: () => void;
@@ -409,7 +436,7 @@ type StepFooterProps = {
 
 function StepFooter({
   isFirst,
-  isLast,
+  finish,
   isSaving,
   canContinue,
   onBack,
@@ -418,8 +445,7 @@ function StepFooter({
 }: StepFooterProps) {
   const getContinueIcon = () => {
     if (isSaving) return Loading03Icon;
-    if (isLast) return Tick02Icon;
-    return NextIcon;
+    return finish?.icon ?? NextIcon;
   };
   const continueIcon = getContinueIcon();
   const skipLabel = "Close";
@@ -437,7 +463,7 @@ function StepFooter({
           </Button>
         )}
         <Button onClick={onContinue} disabled={isSaving || !canContinue}>
-          {isLast ? "Get started" : "Continue"}
+          {finish?.label ?? "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
             data-icon="inline-end"

@@ -2,9 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PuzzleIcon } from "@hugeicons/core-free-icons";
 import { EXTENSION_MIN_BROWSER_VERSION } from "@myakiba/contracts/shared/extension-browsers";
 import { buttonVariants } from "@/components/ui/button";
-import { extensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionAvailability, ExtensionListing } from "@/lib/extension-availability";
-import { useExtensionStatus } from "@/lib/extension-gate";
 import type { ExtensionStore } from "@/lib/extension-listings";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +18,7 @@ const STORE_BROWSERS = {
 
 export type ExtensionNoticeCopy = {
   readonly title: string;
-  readonly body: string;
+  readonly body: string | null;
   readonly link: { readonly label: string; readonly href: string } | null;
 };
 
@@ -50,6 +48,11 @@ export const PICK: Task = {
 
 export const RUNS_IN = `on a computer in Chrome, Edge or another Chromium browser, or in Firefox ${EXTENSION_MIN_BROWSER_VERSION} or later`;
 
+/** How a pick reaches the Add page, said from where the reader is. */
+export function pickHowTo(landing: "here" | "on the Add page"): string {
+  return `Click Pick for myakiba on any MyFigureCollection item and it lands ${landing}.`;
+}
+
 export function installLink(listing: ExtensionListing): NonNullable<ExtensionNoticeCopy["link"]> {
   return { label: `Install from ${STORE_NAMES[listing.store]}`, href: listing.url };
 }
@@ -58,11 +61,11 @@ export function reviewTitle(store: ExtensionStore): string {
   return `The myakiba extension is in review at ${STORE_NAMES[store]}`;
 }
 
+/** A notice's body and link, for a page that writes its own title. */
+type NoticeLines = { readonly body: string; readonly link: ExtensionNoticeCopy["link"] };
+
 /** What to do while this browser's store reviews the extension: use another store's, or wait. */
-export function meanwhile(
-  task: Task,
-  alternative: ExtensionListing | null,
-): Pick<ExtensionNoticeCopy, "body" | "link"> {
+export function meanwhile(task: Task, alternative: ExtensionListing | null): NoticeLines {
   if (alternative === null) return { body: `${task.doing} works once it's approved.`, link: null };
   return {
     body: `${task.does} in ${STORE_BROWSERS[alternative.store]} until then.`,
@@ -119,7 +122,9 @@ export function ExtensionNotice({
       />
       <div className="flex min-w-0 flex-col items-start gap-1">
         <p className="text-sm font-medium text-foreground">{copy.title}</p>
-        <p className="text-pretty text-sm text-muted-foreground">{copy.body}</p>
+        {copy.body ? (
+          <p className="text-pretty text-sm text-muted-foreground">{copy.body}</p>
+        ) : null}
         {copy.link ? <ExtensionLink link={copy.link} className="mt-2" /> : null}
       </div>
     </div>
@@ -144,17 +149,4 @@ export function ExtensionLink({
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
-}
-
-/** Says how to get the extension where it is needed, only while it is not installed. */
-export function MissingExtensionNotice({
-  copyOf,
-  className,
-}: {
-  readonly copyOf: (availability: ExtensionAvailability) => ExtensionNoticeCopy;
-  readonly className?: string;
-}) {
-  const status = useExtensionStatus();
-  if (status.kind !== "absent") return null;
-  return <ExtensionNotice copy={copyOf(extensionAvailability())} className={className} />;
 }

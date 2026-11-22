@@ -14,7 +14,7 @@ A user gathers Items in a table, chooses where they go, and commits them in one 
 
 ## How to get to it (user POV)
 
-- The header's `Add` link, or `<url>/add`. Onboarding's `Get started` lands here too.
+- The header's `Add` link, or `<url>/add`. Onboarding's last button lands here too: `Get started`, or `Open the Add page` while the extension holds picks.
 - The `Add` link in a page's toolbar, which presets the destination and the way back:
   - `/collection` links to `/add?to=collection&returnTo=%2Fcollection`.
   - `/orders` links to `/add?to=order-new&returnTo=%2Forders`.
