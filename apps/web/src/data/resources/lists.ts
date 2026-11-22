@@ -156,12 +156,7 @@ export const removeListMembersCommand = defineCommand({
     readonly listId: string;
     readonly memberIds: readonly string[];
   }) => removeListMembers(listId, memberIds),
-  failureToast: (_input, failure) => ({
-    title: "Failed to remove from List",
-    ...(failure instanceof ApiNotFound && {
-      description: "This List changed elsewhere. Reload to see it.",
-    }),
-  }),
+  failureToast: () => ({ title: "Failed to remove from List" }),
 });
 
 export const restoreListMembersCommand = defineCommand({
