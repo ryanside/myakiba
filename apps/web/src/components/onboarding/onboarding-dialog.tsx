@@ -112,7 +112,6 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
   const sessionUsername = session.user.username ?? "";
   const sessionCurrency = session.user.currency as Currency;
   const sessionDateFormat = session.user.dateFormat as DateFormat;
-  // A Google sign-up could not choose a username, so onboarding asks for one.
   const needsUsername = isGeneratedUsername(sessionUsername);
   const startingValues = useMemo(() => {
     const savedFormats = { currency: sessionCurrency, dateFormat: sessionDateFormat };

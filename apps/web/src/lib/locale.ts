@@ -123,7 +123,6 @@ export function formatReleasePrice(
   );
 }
 
-/** The regions that use each currency, by ISO 3166 region code. */
 const CURRENCY_REGIONS = {
   AED: ["AE"],
   AUD: ["AU", "CC", "CX", "KI", "NF", "NR", "TV"],
