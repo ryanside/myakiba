@@ -41,6 +41,8 @@ const server = {
   removeFailure: null as { status: number; value: string } | null,
   restoreFailures: [] as { status: number; value: string }[],
   restoreDefect: false,
+  heldRestores: [] as (() => void)[],
+  holdRestores: false,
 };
 
 const written = async <Data,>(label: string, data: Data) => {
@@ -102,6 +104,11 @@ const listEndpoint = ({ listId }: { listId: string }) => ({
         server.writes.push(
           `restore ${members.map(({ id, position }) => `${id}@${position}`).join(",")} to ${listId}`,
         );
+        if (server.holdRestores) {
+          await new Promise<void>((resolve) => {
+            server.heldRestores.push(resolve);
+          });
+        }
         if (server.restoreDefect) throw new Panic({ message: "restore answer could not be read" });
         const failure = server.restoreFailures.shift();
         return failure
@@ -231,6 +238,8 @@ afterEach(() => {
   server.removeFailure = null;
   server.restoreFailures.length = 0;
   server.restoreDefect = false;
+  server.heldRestores.length = 0;
+  server.holdRestores = false;
   toastAdd.mockClear();
   toastUpdate.mockClear();
   moves.clear();
@@ -946,11 +955,7 @@ describe("Undo after Remove from List", () => {
 
     await act(async () => lastToastAction()());
 
-    await waitFor(() =>
-      expect(shownToasts().at(-1)).toBe(
-        "error: Failed to undo: Something went wrong. Reload the page and try again",
-      ),
-    );
+    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo"));
   });
 
   test("an Undo answered 401 offers no Retry", async () => {
@@ -962,7 +967,43 @@ describe("Undo after Remove from List", () => {
     await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo"));
   });
 
-  test("a 404 on Undo closes the List's open Retry, since nothing can go back to it", async () => {
+  test("the List reports a restore in flight, so its Remove controls can wait for it", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1"]);
+    server.holdRestores = true;
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    await waitFor(() => expect(server.heldRestores.length).toBe(1));
+    const restoring = currentActions?.removeMembers.isRestoring;
+    await act(async () => server.heldRestores.shift()?.());
+
+    await waitFor(() => expect(currentActions?.removeMembers.isRestoring).toBe(false));
+    expect(restoring).toBe(true);
+  });
+
+  test("while an Undo is restoring a removal opens no second Undo, and a 404 leaves nothing to reopen", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1"]);
+    server.holdRestores = true;
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    await waitFor(() => expect(server.heldRestores.length).toBe(1));
+
+    await removeEach(["m2"]);
+    const undoWhileRestoring = screen.queryAllByRole("button", { name: "Undo" }).length;
+    server.restoreFailures.push({ status: 404, value: "List not found" });
+    await act(async () => server.heldRestores.shift()?.());
+
+    await waitFor(() => expect(screen.queryAllByText("List not found").length).toBe(1));
+    expect({
+      undoWhileRestoring,
+      undo: screen.queryAllByRole("button", { name: "Undo" }).length,
+      retry: screen.queryAllByRole("button", { name: "Retry" }).length,
+    }).toEqual({ undoWhileRestoring: 0, undo: 0, retry: 0 });
+  });
+
+  test("a removal while an Undo has failed joins Retry's payload", async () => {
     renderListScreens();
     await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
     await removeEach(["m1"]);
@@ -971,11 +1012,32 @@ describe("Undo after Remove from List", () => {
     await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(1));
 
     await removeEach(["m2"]);
+    server.writes.length = 0;
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
+
+    await waitFor(() => expect(server.writes).toEqual(["restore item-m1@0,item-m2@0 to l1"]));
+    expect(screen.queryAllByRole("button", { name: "Undo" }).length).toBe(0);
+  });
+
+  test("an Undo that fails after the user left shows only its title", async () => {
+    const queryClient = new QueryClient();
+    const page = (open: boolean) => (
+      <QueryClientProvider client={queryClient}>
+        <Toaster>{open ? <ListScreens /> : null}</Toaster>
+      </QueryClientProvider>
+    );
+    const view = render(page(true));
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1"]);
+    server.holdRestores = true;
     server.restoreFailures.push({ status: 404, value: "List not found" });
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    await waitFor(() => expect(server.heldRestores.length).toBe(1));
 
-    await waitFor(() => expect(screen.queryAllByText("List not found").length).toBe(1));
-    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(0));
+    view.rerender(page(false));
+    await act(async () => server.heldRestores.shift()?.());
+
+    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo"));
   });
 
   test("removing the same target twice inside one toast's life sends it once", async () => {
@@ -1018,41 +1080,6 @@ describe("Undo after Remove from List", () => {
         ["600 removed from List"],
       ),
     );
-  });
-
-  test("an open Retry and a later removal's Undo each send only their own members", async () => {
-    renderListScreens();
-    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
-    await removeEach(["m1"]);
-    server.restoreFailures.push({ status: 500, value: "Failed to undo" });
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
-    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(1));
-    await removeEach(["m2"]);
-    server.writes.length = 0;
-
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
-    await waitFor(() => expect(server.writes).toEqual(["restore item-m2@0 to l1"]));
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
-    await waitFor(() =>
-      expect(server.writes).toEqual(["restore item-m2@0 to l1", "restore item-m1@0 to l1"]),
-    );
-  });
-
-  test("two failed Undos on one List keep one Retry that puts both back", async () => {
-    renderListScreens();
-    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
-    for (const memberId of ["m1", "m2"]) {
-      await removeEach([memberId]);
-      server.restoreFailures.push({ status: 500, value: "Failed to undo" });
-      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
-      await waitFor(() => expect(server.restoreFailures.length).toBe(0));
-    }
-    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(1));
-    server.writes.length = 0;
-
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
-
-    await waitFor(() => expect(server.writes).toEqual(["restore item-m1@0,item-m2@0 to l1"]));
   });
 
   test("an Undo into a deleted List says so and offers no Retry", async () => {
