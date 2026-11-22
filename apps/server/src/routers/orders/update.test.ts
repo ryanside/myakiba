@@ -253,8 +253,7 @@ describe("an Order edit writes each shape the app sends", () => {
 });
 
 describe("an Order edit copies to its items only what it changed", () => {
-  /** An item whose user set its own Shop, status, Paid, dates and shipping method. */
-  const handSet = {
+  const itemWithOwnValues = {
     id: "collection-2",
     userId,
     itemId: "item-2",
@@ -271,13 +270,12 @@ describe("an Order edit copies to its items only what it changed", () => {
     await db
       .insert(item)
       .values({ id: "item-2", ownerId: userId, externalId: 187, title: "figma Rin" });
-    await db.insert(collection).values(handSet);
+    await db.insert(collection).values(itemWithOwnValues);
   });
 
   const readItems = async () =>
     db.select().from(collection).where(eq(collection.orderId, "order-1")).orderBy(collection.id);
 
-  /** The item that holds the Order's values, then the item with its own. */
   const readPair = async () => {
     const [following, own, ...rest] = await readItems();
     if (!following || !own || rest.length > 0) throw new Error("order-1 should hold two items");
