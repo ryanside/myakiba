@@ -69,3 +69,17 @@ describe("QuickFilterChips", () => {
     expect(cleared).toEqual([[]]);
   });
 });
+
+test("the chip row wraps, so a chip past the row's width moves to the next line instead of being clipped", () => {
+  render(
+    <QuickFilterChips
+      options={["Ordered", "Shipped", "Owned", "Paid", "Unpaid", "Fees paid"]}
+      selected={["Fees paid"]}
+      onChange={() => {}}
+    />,
+  );
+
+  expect(screen.getByRole("group", { name: "Quick filters" }).classList.contains("flex-wrap")).toBe(
+    true,
+  );
+});

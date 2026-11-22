@@ -113,3 +113,22 @@ test("pressing Fees paid again clears it", async () => {
 
   expect(searchAfter(filters, change)).toEqual({ offset: 0 });
 });
+
+test("a URL with both feesPaid and paid shows both payment chips pressed", () => {
+  filters = { feesPaid: true, paid: false };
+  render(<OrdersQuickFilters />);
+
+  expect({
+    feesPaid: pressed("Fees paid"),
+    unpaid: pressed("Unpaid"),
+    all: pressed("All"),
+  }).toEqual({ feesPaid: "true", unpaid: "true", all: "false" });
+});
+
+test("on a URL with both, toggling off the pressed Unpaid chip keeps Fees paid", async () => {
+  filters = { feesPaid: true, paid: false };
+
+  const [change] = await press("Unpaid");
+
+  expect(searchAfter(filters, change)).toEqual({ feesPaid: true, offset: 0 });
+});
