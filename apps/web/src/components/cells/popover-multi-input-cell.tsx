@@ -10,7 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { formatCurrencyFromMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { FieldError } from "@/components/ui/field";
 import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
@@ -37,12 +37,6 @@ interface PopoverMultiInputCellProps {
   readonly description?: string;
 }
 
-function sumValues(values: Iterable<number>): number {
-  let sum = 0;
-  for (const v of values) sum += v;
-  return sum;
-}
-
 export function PopoverMultiInputCell({
   inputs,
   totalAmount,
@@ -54,27 +48,11 @@ export function PopoverMultiInputCell({
   description,
 }: PopoverMultiInputCellProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const [pending, setPending] = useState<Record<string, number> | null>(null);
-
-  const inputsSum = useMemo(() => sumValues(inputs.map((input) => input.value)), [inputs]);
-
-  const pendingMatchesInputs = useMemo<boolean>(() => {
-    if (!pending) return false;
-    if (Object.keys(pending).length !== inputs.length) return false;
-    return inputs.every((input) => pending[input.name] === input.value);
-  }, [pending, inputs]);
-
-  const displayInputsSum =
-    pending && !pendingMatchesInputs ? sumValues(Object.values(pending)) : inputsSum;
-  const displayTotal = totalAmount - inputsSum + displayInputsSum;
-  const formattedTotal = formatCurrencyFromMinorUnits(displayTotal, currency, locale);
+  // The Total is the row's own, so it changes only when the server's row does.
+  const formattedTotal = formatCurrencyFromMinorUnits(totalAmount, currency, locale);
 
   const handleSubmit = async (newValues: Record<string, number>): Promise<void> => {
-    setPending(newValues);
-    const saved = await onSubmit(newValues);
-    if (saved.isErr()) {
-      setPending(null);
-    }
+    await onSubmit(newValues);
   };
 
   return (

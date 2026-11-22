@@ -98,31 +98,17 @@ export const editOrderCommand = defineCommand({
   }: { readonly values: EditedOrder; readonly cascadeOptions: CascadeOptions } & OnList) =>
     editOrder(values, cascadeOptions),
   optimistic: async (queryClient, { values, cascadeOptions, list }) => {
-    const cascadedPayment = cascadeOptions.includes("paid")
-      ? { payment: paymentOf(values.paid) }
-      : {};
+    // The Total, payment state and Unpaid Costs come from one server row. Paying an Order in full
+    // draws no Unpaid Costs, so only that payment state is patched here.
+    const cascadedPayment =
+      cascadeOptions.includes("paid") && values.paid ? { payment: paymentOf(true) } : {};
     // Always patch the order detail cache; it is keyed by id, so it is safe to update
     // regardless of any list-page filter state.
     const orderDetailKey = orders.detail.key(values.orderId);
     await queryClient.cancelQueries({ queryKey: orderDetailKey });
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
-    const detailNewTotal = previousOrderDetail
-      ? previousOrderDetail.total +
-        (values.shippingFee - previousOrderDetail.shippingFee) +
-        (values.taxes - previousOrderDetail.taxes) +
-        (values.duties - previousOrderDetail.duties) +
-        (values.tariffs - previousOrderDetail.tariffs) +
-        (values.miscFees - previousOrderDetail.miscFees)
-      : undefined;
     queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-      old
-        ? {
-            ...old,
-            ...values,
-            ...cascadedPayment,
-            ...(detailNewTotal !== undefined && { total: detailNewTotal }),
-          }
-        : old,
+      old ? { ...old, ...values, ...cascadedPayment } : old,
     );
 
     const listKey = orders.list.key(list);
@@ -130,29 +116,13 @@ export const editOrderCommand = defineCommand({
     if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
       previousList = queryClient.getQueryData<OrdersPage>(listKey);
-      const oldOrder = previousList?.items.find((o) => o.orderId === values.orderId);
-
-      const newTotal = oldOrder
-        ? oldOrder.total +
-          (values.shippingFee - oldOrder.shippingFee) +
-          (values.taxes - oldOrder.taxes) +
-          (values.duties - oldOrder.duties) +
-          (values.tariffs - oldOrder.tariffs) +
-          (values.miscFees - oldOrder.miscFees)
-        : undefined;
-
       queryClient.setQueryData<OrdersPage>(listKey, (old) =>
         old
           ? {
               ...old,
               items: old.items.map((order) =>
                 order.orderId === values.orderId
-                  ? {
-                      ...order,
-                      ...values,
-                      ...cascadedPayment,
-                      ...(newTotal !== undefined && { total: newTotal }),
-                    }
+                  ? { ...order, ...values, ...cascadedPayment }
                   : order,
               ),
             }
@@ -308,71 +278,27 @@ export const editOrderItemCommand = defineCommand({
   refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
-  optimistic: async (queryClient, { values, list }) => {
+  optimistic: async (queryClient, { values }) => {
     const itemOrderId = values.orderId;
     if (!itemOrderId) return Result.ok(null);
 
+    // Only the item changes here: its Order's Total and Unpaid Costs come with the server's row.
     await queryClient.cancelQueries({ queryKey: orderItemsOf(itemOrderId) });
     const previousOrderItems = queryClient.getQueriesData<Page<OrderItem>>({
       queryKey: orderItemsOf(itemOrderId),
     });
-
-    let oldPrice: number | undefined;
-    queryClient.setQueriesData<Page<OrderItem>>({ queryKey: orderItemsOf(itemOrderId) }, (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        items: old.items.map((item) => {
-          if (item.id === values.id) {
-            oldPrice = item.price;
-            return { ...item, ...values };
+    queryClient.setQueriesData<Page<OrderItem>>({ queryKey: orderItemsOf(itemOrderId) }, (old) =>
+      old
+        ? {
+            ...old,
+            items: old.items.map((item) => (item.id === values.id ? { ...item, ...values } : item)),
           }
-          return item;
-        }),
-      };
-    });
-
-    const priceChanged = oldPrice !== undefined && oldPrice !== values.price;
-    const priceDelta = priceChanged ? values.price - (oldPrice as number) : 0;
-
-    const orderDetailKey = orders.detail.key(itemOrderId);
-    await queryClient.cancelQueries({ queryKey: orderDetailKey });
-    const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
-    if (priceChanged) {
-      queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-        old ? { ...old, total: old.total + priceDelta } : old,
-      );
-    }
-
-    const listKey = orders.list.key(list);
-    let previousOrders: OrdersPage | undefined;
-
-    if (!hasActiveFiltersOrSorting(list) && priceChanged) {
-      await queryClient.cancelQueries({ queryKey: listKey });
-      previousOrders = queryClient.getQueryData<OrdersPage>(listKey);
-      queryClient.setQueryData<OrdersPage>(listKey, (old) =>
-        old
-          ? {
-              ...old,
-              items: old.items.map((order) =>
-                order.orderId === itemOrderId
-                  ? { ...order, total: order.total + priceDelta }
-                  : order,
-              ),
-            }
-          : old,
-      );
-    }
+        : old,
+    );
 
     return Result.ok(() => {
       for (const [queryKey, data] of previousOrderItems) {
         queryClient.setQueryData(queryKey, data);
-      }
-      if (previousOrders) {
-        queryClient.setQueryData<OrdersPage>(listKey, previousOrders);
-      }
-      if (previousOrderDetail) {
-        queryClient.setQueryData<Order>(orderDetailKey, previousOrderDetail);
       }
     });
   },
@@ -391,11 +317,8 @@ export const deleteOrderItemCommand = defineCommand({
       queryKey: orderItemsOf(orderId),
     });
 
-    let removedPrice = 0;
     queryClient.setQueriesData<Page<OrderItem>>({ queryKey: orderItemsOf(orderId) }, (old) => {
       if (!old) return old;
-      const removedItem = old.items.find((item) => item.id === itemId);
-      if (removedItem) removedPrice = removedItem.price;
       return {
         items: old.items.filter((item) => item.id !== itemId),
         totalCount: old.totalCount - 1,
@@ -409,7 +332,6 @@ export const deleteOrderItemCommand = defineCommand({
       old
         ? {
             ...old,
-            total: old.total - removedPrice,
             itemCount: old.itemCount - 1,
           }
         : old,
@@ -429,7 +351,6 @@ export const deleteOrderItemCommand = defineCommand({
                 order.orderId === orderId
                   ? {
                       ...order,
-                      total: order.total - removedPrice,
                       itemCount: order.itemCount - 1,
                     }
                   : order,

@@ -240,6 +240,7 @@ describe("a fee edit from the Total cell", () => {
     await waitFor(() => expect(server.writes.length).toBe(2));
     const duringBoth = shown();
     server.releaseReads();
+    server.writes[1]?.settle("ok");
 
     await waitFor(() => expect(shown()).toEqual(NEW));
     expect(duringBoth).toEqual(OLD);
