@@ -606,6 +606,25 @@ describe("a dashboard kanban card's Paid checkbox", () => {
     });
   });
 
+  test("unticking a paid card leaves its checkbox to the server and takes no second click until the write lands", async () => {
+    await renderBoard([order("miku", "Shipped", { paid: true, payment: "paid" })]);
+
+    await clickPaid("miku");
+    const whileSaving = {
+      paid: shownPaid("miku"),
+      saving: Object.hasOwn(paidBox("miku").dataset, "disabled"),
+    };
+    await clickPaid("miku");
+    const writesAfterSecondClick = writes.length;
+    await settle(writes[0]);
+
+    expect({ whileSaving, writesAfterSecondClick, after: shownPaid("miku") }).toEqual({
+      whileSaving: { paid: "true", saving: true },
+      writesAfterSecondClick: 1,
+      after: "false",
+    });
+  });
+
   test("a click on a paid card unpays it and leaves its status and column alone", async () => {
     await renderBoard([order("miku", "Shipped", { paid: true, payment: "paid" })]);
 

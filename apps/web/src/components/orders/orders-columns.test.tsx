@@ -220,7 +220,7 @@ test("draws the row's open-order link with a different icon from its expand butt
   expect(glyph(open)).not.toEqual(glyph(expand));
 });
 
-test("the Unpaid Costs column shows what each row still owes and leaves a row that owes nothing blank", () => {
+test("the Total cell draws a Partly paid row's Unpaid Costs under its Total, and nothing for an unpaid or paid row", () => {
   render(
     <OrderPendingContext
       value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
@@ -231,31 +231,37 @@ test("the Unpaid Costs column shows what each row still owes and leaves a row th
           { ...order("unpaid"), total: 3000, unpaidCosts: 3000 },
           { ...order("paid"), paid: true, payment: "paid", total: 3000, unpaidCosts: 0 },
         ]}
-        columnId="unpaidCosts"
+        columnId="total"
       />
     </OrderPendingContext>,
   );
 
   expect(["partly", "unpaid", "paid"].map((id) => screen.getByTestId(id).textContent)).toEqual([
-    "$12.00",
+    "$30.00Unpaid Costs$12.00",
     "$30.00",
-    "",
+    "$30.00",
   ]);
 });
 
-test("the Unpaid Costs column leaves a row blank when a negative fee takes its amount below zero", () => {
+test("the Total cell draws no Unpaid Costs when a negative fee takes the amount below zero", () => {
   render(
     <OrderPendingContext
       value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
     >
       <ColumnCells
         orders={[
-          { ...order("credit"), payment: "partly", shippingFee: -10_000, unpaidCosts: -10_000 },
+          {
+            ...order("credit"),
+            payment: "partly",
+            shippingFee: -10_000,
+            total: -7900,
+            unpaidCosts: -10_000,
+          },
         ]}
-        columnId="unpaidCosts"
+        columnId="total"
       />
     </OrderPendingContext>,
   );
 
-  expect(screen.getByTestId("credit").textContent).toBe("");
+  expect(screen.getByTestId("credit").textContent).toBe("-$79.00");
 });
