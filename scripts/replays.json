@@ -5391,6 +5391,20 @@
       "fixed": [
         "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
       ]
+    },
+    {
+      "fix": "dbfbb9ba7e50e89d398c024ea03e1a4077abbc8d",
+      "bug": "An Order's tab read 'Order <internal id> - myakiba', an Item's 'Item <MFC id> - myakiba' and every List's 'List - myakiba', because each route built its title in head from params, which never sees the record.",
+      "test": "apps/web/src/components/record-title.test.tsx",
+      "fixed": [
+        "an Order's tab names the kind while its read is pending, then the Order's title",
+        "a hover then a click shows the Order's title at once, from the one read the hover started",
+        "a reload, a move to another Order, the back button and leaving for Orders each show the page's own title",
+        "an Order's tab follows a rename made on its page",
+        "a missing Order and an Order with no title name only the kind",
+        "an Item's tab names the kind while pending or missing, then the Item's whole title",
+        "a List's tab names the kind while pending or failed, then follows the List's title through a rename"
+      ]
     }
   ],
   "lint": [
