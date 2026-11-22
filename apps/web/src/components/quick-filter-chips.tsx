@@ -27,6 +27,7 @@ export function QuickFilterChips<T extends string>({
       variant="pill"
       size="sm"
       spacing={1.5}
+      className="max-w-full flex-wrap"
       aria-label="Quick filters"
     >
       <ToggleGroupItem value={ALL}>{ALL}</ToggleGroupItem>
