@@ -1,15 +1,19 @@
 import { expect, test } from "bun:test";
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
-import { draftReducer } from "./add-draft";
+import { draftReducer as reduce } from "./add-draft";
+import type { DraftAction } from "./add-draft";
 
+const AT = 1_700_000_000_000;
+const draftReducer = (state: Parameters<typeof reduce>[0], action: DraftAction) =>
+  reduce(state, { ...action, at: AT });
 const empty = { rows: [], waiting: [] };
 const withRows = (...itemIds: string[]) => draftReducer(empty, { type: "add", itemIds });
 
-test("new rows come first, unticked, and a known Item is not added twice", () => {
+test("new rows come first, waiting for a read since they arrived, and a known Item is not added twice", () => {
   const state = draftReducer(withRows("a"), { type: "add", itemIds: ["b", "a", "b"] });
-  expect(state.rows.map(({ itemId, selected }) => [itemId, selected])).toEqual([
-    ["b", undefined],
-    ["a", undefined],
+  expect(state.rows).toEqual([
+    { itemId: "b", overrides: {}, selected: null, arrivedAt: AT },
+    { itemId: "a", overrides: {}, selected: null, arrivedAt: AT },
   ]);
 });
 
@@ -32,7 +36,7 @@ test("edits merge into one row and selection changes only what it names", () => 
   state = draftReducer(state, { type: "edit", itemId: "a", overrides: { count: 2 } });
   state = draftReducer(state, { type: "select", itemId: "b", selected: false });
   expect(state.rows.map(({ overrides, selected }) => [overrides, selected])).toEqual([
-    [{ price: "1", count: 2 }, undefined],
+    [{ price: "1", count: 2 }, null],
     [{}, false],
   ]);
   expect(

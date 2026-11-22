@@ -9,8 +9,8 @@ import { orders } from "@/data/resources/orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { pickFailureCopy } from "@/lib/pick-failure";
-import { isRowSelected, useAddDraft } from "./add-draft";
-import type { RowOverrides } from "./add-draft";
+import { startsSelected, useAddDraft } from "./add-draft";
+import type { DraftRow, RowOverrides } from "./add-draft";
 import type { CommitAnswer } from "./commit-button";
 import {
   defaultOrderTitle,
@@ -67,29 +67,41 @@ export function useAddController(search: AddSearchParams) {
     data: itemData,
     isPending: itemsPending,
     isPlaceholderData: itemsStale,
-    isFetching: itemsFetching,
+    dataUpdatedAt: itemsReadAt,
     error: itemsError,
     refetch: refetchItems,
   } = useRead(add.items, rowItemIds);
-  const itemsLoading = rowItemIds.length > 0 && (itemsPending || itemsStale);
-  const items: ReadonlyMap<string, AddItem> = new Map(
+  const readItems: ReadonlyMap<string, AddItem> = new Map(
     (itemData?.items ?? []).map((item) => [item.itemId, item]),
   );
-  const rows = draftRows.map((row) => ({
-    ...row,
-    selected: isRowSelected(row, items.get(row.itemId)),
-  }));
-  // A failed refresh leaves the Items it already read, so only a row without one needs the error.
+  // `dataUpdatedAt` moves only when a read succeeds, so neither cached data nor a failed refetch counts.
+  const readSinceArrival = (row: DraftRow) =>
+    row.selected !== null || (!itemsStale && itemsReadAt >= row.arrivedAt);
   useEffect(() => {
-    if (itemsLoading || itemsFetching) return;
     const decided = new Map(
       draftRows.flatMap((row) => {
-        const item = items.get(row.itemId);
-        return row.selected === undefined && item ? [[row.itemId, isRowSelected(row, item)]] : [];
+        const item = readItems.get(row.itemId);
+        return row.selected === null && item && readSinceArrival(row)
+          ? [[row.itemId, startsSelected(item)] as const]
+          : [];
       }),
     );
     if (decided.size > 0) dispatch({ type: "decide", selected: decided });
   });
+  const items: ReadonlyMap<string, AddItem> = new Map(
+    draftRows.flatMap((row) => {
+      const item = readItems.get(row.itemId);
+      return item && row.selected !== null ? [[row.itemId, item] as const] : [];
+    }),
+  );
+  const awaitingDecision = draftRows.some(
+    (row) => row.selected === null && !(readSinceArrival(row) && !readItems.has(row.itemId)),
+  );
+  const itemsLoading =
+    rowItemIds.length > 0 &&
+    (itemsPending || itemsStale || (awaitingDecision && itemsError === null));
+  const rows = draftRows.map((row) => ({ ...row, selected: row.selected !== false }));
+  // A failed refresh leaves the Items it already read, so only a row without one needs the error.
   const itemsReadError =
     itemsError !== null && rows.some((row) => !items.has(row.itemId)) ? itemsError : null;
   const lookup = lookupOf(itemsLoading, itemsReadError !== null);

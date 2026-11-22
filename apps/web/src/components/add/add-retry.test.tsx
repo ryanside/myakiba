@@ -81,8 +81,8 @@ test("the same choices after a commit that answered start a new commitId", async
 
 test("a reload after a lost answer keeps each row's selection, so the retry repeats the commit", async () => {
   seedDraft([
-    { itemId: ITEM_ID, overrides: {} },
-    { itemId: OTHER_ID, overrides: {} },
+    { itemId: ITEM_ID, overrides: {}, selected: null, arrivedAt: 0 },
+    { itemId: OTHER_ID, overrides: {}, selected: null, arrivedAt: 0 },
   ]);
   const { commitAnswer } = server;
   server.commitAnswer = () => new Promise(() => {});

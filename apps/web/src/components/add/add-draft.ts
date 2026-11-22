@@ -1,7 +1,7 @@
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { getRouteApi } from "@tanstack/react-router";
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import * as z from "zod";
 import { accountSlot } from "@/lib/account-storage";
 
@@ -28,20 +28,21 @@ const rowOverridesSchema = z.object({
 
 export type RowOverrides = z.infer<typeof rowOverridesSchema>;
 
-const draftRowSchema = z.object({
-  itemId: z.string(),
-  overrides: rowOverridesSchema,
-  selected: z.boolean().optional(),
-});
+const rowBase = { itemId: z.string(), overrides: rowOverridesSchema };
+
+/** A new row waits, unselected, until a read of its Item made since it arrived decides it. */
+const draftRowSchema = z.union([
+  z.object({ ...rowBase, selected: z.boolean() }),
+  z.object({ ...rowBase, selected: z.null(), arrivedAt: z.number() }),
+]);
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
 
-export function isRowSelected(
-  { selected }: DraftRow,
-  item: { readonly collectionCount: number; readonly onOrderCount: number } | undefined,
-): boolean {
-  return selected ?? (item === undefined || item.collectionCount + item.onOrderCount === 0);
-}
+/** A new row is selected unless its Item is already in the Collection or an Order. */
+export const startsSelected = (item: {
+  readonly collectionCount: number;
+  readonly onOrderCount: number;
+}): boolean => item.collectionCount + item.onOrderCount === 0;
 
 const storedDraft = accountSlot("add-draft", z.array(draftRowSchema).max(MAX_ADD_ROWS).readonly());
 const storedWaiting = accountSlot("add-waiting", z.array(z.string()).readonly());
@@ -52,11 +53,19 @@ type DraftState = {
   readonly waiting: readonly string[];
 };
 
-function settle(rows: readonly DraftRow[], queue: readonly string[]): DraftState {
+function settle(rows: readonly DraftRow[], queue: readonly string[], at: number): DraftState {
   const room = MAX_ADD_ROWS - rows.length;
-  const entering = queue.slice(0, room).map((itemId): DraftRow => ({ itemId, overrides: {} }));
+  const entering = queue
+    .slice(0, room)
+    .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: null, arrivedAt: at }));
   return { rows: [...entering, ...rows], waiting: queue.slice(room) };
 }
+
+const chosen = ({ itemId, overrides }: DraftRow, selected: boolean): DraftRow => ({
+  itemId,
+  overrides,
+  selected,
+});
 
 export type DraftAction =
   | { readonly type: "add"; readonly itemIds: readonly string[] }
@@ -66,39 +75,43 @@ export type DraftAction =
   | { readonly type: "decide"; readonly selected: ReadonlyMap<string, boolean> }
   | { readonly type: "edit"; readonly itemId: string; readonly overrides: RowOverrides };
 
-export function draftReducer(state: DraftState, action: DraftAction): DraftState {
+export function draftReducer(
+  state: DraftState,
+  action: DraftAction & { readonly at: number },
+): DraftState {
   switch (action.type) {
     case "add": {
       const known = new Set([...state.rows.map((row) => row.itemId), ...state.waiting]);
       const incoming = [...new Set(action.itemIds)].filter((itemId) => !known.has(itemId));
-      return settle(state.rows, [...state.waiting, ...incoming]);
+      return settle(state.rows, [...state.waiting, ...incoming], action.at);
     }
     case "remove": {
       const removed = new Set(action.itemIds);
       return settle(
         state.rows.filter((row) => !removed.has(row.itemId)),
         state.waiting.filter((itemId) => !removed.has(itemId)),
+        action.at,
       );
     }
     case "select":
       return {
         ...state,
         rows: state.rows.map((row) =>
-          row.itemId === action.itemId ? { ...row, selected: action.selected } : row,
+          row.itemId === action.itemId ? chosen(row, action.selected) : row,
         ),
       };
     case "decide":
       return {
         ...state,
-        rows: state.rows.map((row) => ({
-          ...row,
-          selected: row.selected ?? action.selected.get(row.itemId),
-        })),
+        rows: state.rows.map((row) => {
+          const decided = row.selected === null ? action.selected.get(row.itemId) : undefined;
+          return decided === undefined ? row : chosen(row, decided);
+        }),
       };
     case "select-all":
       return {
         ...state,
-        rows: state.rows.map((row) => ({ ...row, selected: action.selected })),
+        rows: state.rows.map((row) => chosen(row, action.selected)),
       };
     case "edit":
       return {
@@ -121,7 +134,7 @@ function readDraft({
 }): DraftState {
   return draftReducer(
     { rows: storedDraft.read(userId) ?? [], waiting: storedWaiting.read(userId) ?? [] },
-    { type: "add", itemIds: presetItem === undefined ? [] : [presetItem] },
+    { type: "add", itemIds: presetItem === undefined ? [] : [presetItem], at: Date.now() },
   );
 }
 
@@ -132,7 +145,11 @@ function readDraft({
  */
 export function useAddDraft(presetItem: string | undefined) {
   const userId = appRouteApi.useRouteContext().session.user.id;
-  const [state, dispatch] = useReducer(draftReducer, { userId, presetItem }, readDraft);
+  const [state, dispatchAt] = useReducer(draftReducer, { userId, presetItem }, readDraft);
+  const dispatch = useCallback(
+    (action: DraftAction) => dispatchAt({ ...action, at: Date.now() }),
+    [],
+  );
   useEffect(() => {
     storedDraft.write(userId, state.rows);
     storedWaiting.write(userId, state.waiting);
