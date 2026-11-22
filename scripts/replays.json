@@ -5444,7 +5444,8 @@
       "test": "apps/web/src/components/add/add-flow.test.tsx",
       "fixed": [
         "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
-        "when a failed read leaves nothing to add, Add says to retry or remove, beside the button too"
+        "when a failed read leaves nothing to add, Add says to retry or remove, beside the button too",
+        "a New Order with its default title is blocked with the read's reason when the current read fails"
       ]
     },
     {
@@ -5465,6 +5466,16 @@
         "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
         "a row that loaded on its first read keeps its Item and edits when a later row fails and is removed during the failure",
         "an unverified user whose read failed sees only the verify reason at the button"
+      ]
+    },
+    {
+      "fix": "2d65bfa963683877d71ba7efba79a27193dcb9b6",
+      "bug": "A New Order's default title came from a summary a row kept from an earlier key, so after a row was removed Create could send an old title before the new key answered, and a lost answer then a reload sent another title under a new commitId.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "a New Order with its default title waits for the current read of its rows, and a typed title does not",
+        "a New Order with its default title is blocked with the read's reason when the current read fails",
+        "a New Order created from the current read retries a lost answer with the same title and commitId"
       ]
     }
   ],
