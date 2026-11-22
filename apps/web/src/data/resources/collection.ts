@@ -144,7 +144,7 @@ export const deleteCollectionItemsCommand = defineCommand({
         const retainedItems: CollectionItem[] = [];
         for (const item of old.items) {
           if (idSet.has(item.id)) {
-            deletedValue += item.price;
+            if (item.paid) deletedValue += item.price;
           } else {
             retainedItems.push(item);
           }
