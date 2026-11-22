@@ -183,7 +183,6 @@ async function seedPaidApartFromStatus() {
   ]);
 }
 
-/** A received Order with paid fees, one paid Order Item and one Order Item still to pay. */
 async function seedOwnedUnpaid() {
   await db.insert(item).values([
     {

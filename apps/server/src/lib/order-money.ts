@@ -7,7 +7,6 @@ import type { OrderPayment } from "@myakiba/contracts/shared/types";
 const itemIsUnpaid = sql`NOT ${collection.paid}`;
 export const itemIsPaid = sql`${collection.paid}`;
 
-/** What a Collection Item adds to Collection Spend: its price once it is paid. */
 export const paidItemPrice = sql<number>`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`;
 
 export const orderIsUnpaid = sql`NOT ${order.paid}`;
