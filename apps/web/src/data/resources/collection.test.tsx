@@ -160,7 +160,7 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
   let actions: Actions | null = null;
   function CollectionPage() {
     const { filters } = useCollectionFilters();
-    const { items, totalCount, totalValue, paidItemCount } = useCollectionQuery();
+    const { items, totalCount, totalValue, paidItemCount, averageItemCost } = useCollectionQuery();
     const mutations = useCollectionMutations({ filters });
     useEffect(() => {
       actions = mutations;
@@ -169,6 +169,7 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
       <>
         <p aria-label="totals">{`${totalCount} items worth ${totalValue}`}</p>
         <p aria-label="paid items">{paidItemCount}</p>
+        <p aria-label="average cost">{averageItemCost}</p>
         <ul aria-label="collection">
           {items.map((item) => (
             <li key={item.id}>{`${item.itemTitle} ${item.price}`}</li>
@@ -282,6 +283,22 @@ describe("a Collection Item write on the collection page", () => {
     await answer(0, "finish");
     expect(await deleting).toBe("ok");
     await waitFor(() => expect(paidItems()).toBe("1"));
+  });
+
+  test("Average Cost is the mean of the paid prices, before and after a delete", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+    const averageCost = () => screen.getByLabelText("average cost").textContent;
+    expect(averageCost()).toBe("750");
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
+    );
+    await waitFor(() => expect(averageCost()).toBe("500"));
+
+    await answer(0, "finish");
+    expect(await deleting).toBe("ok");
+    await waitFor(() => expect(averageCost()).toBe("500"));
   });
 
   test("a failed edit restores the row and the Item page's copy and says so", async () => {
