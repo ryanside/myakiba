@@ -23,13 +23,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { PickRow } from "@/data/picks";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
-import type { DraftRow } from "./add-draft";
 import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
 import { onTableKeys, revealFocus } from "./add-table-keys";
 import { useColumnsFade } from "./destination-motion";
 import { EmptyState } from "./empty-state";
 import { AddFillMenu } from "./fill-menu";
+import { HeldNote } from "./item-badges";
 import { PickStatus } from "./pick-status";
 import { SearchRow } from "./search-row";
 import {
@@ -48,7 +48,7 @@ import { ReleaseField } from "./row-release";
 type ItemRow = {
   readonly kind: "item";
   readonly id: string;
-  readonly row: DraftRow;
+  readonly row: AddController["rows"][number];
   readonly item: AddItem;
   readonly release: AddItem["latestRelease"];
   /** What its sortable columns sort by, which a blank field takes from its default. */
@@ -219,7 +219,7 @@ function SelectRow({ row }: CellContext<AddRow, unknown>) {
   );
 }
 
-function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
+function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
   return (
     <ItemTitleCell
       itemId={id}
@@ -227,7 +227,9 @@ function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
       externalId={item.externalId}
       image={item.image}
       walkedByKeys
-    />
+    >
+      {row.selected ? null : <HeldNote item={item} />}
+    </ItemTitleCell>
   );
 }
 

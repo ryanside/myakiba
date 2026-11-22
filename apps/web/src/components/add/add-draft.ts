@@ -31,10 +31,19 @@ export type RowOverrides = z.infer<typeof rowOverridesSchema>;
 const draftRowSchema = z.object({
   itemId: z.string(),
   overrides: rowOverridesSchema,
-  selected: z.boolean(),
+  /** Unset until the user ticks or unticks the row. */
+  selected: z.boolean().optional(),
 });
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
+
+/** A row nobody has ticked or unticked is selected unless its Item is already in the Collection or an Order. */
+export function isRowSelected(
+  { selected }: DraftRow,
+  item: { readonly collectionCount: number; readonly onOrderCount: number } | undefined,
+): boolean {
+  return selected ?? (item === undefined || item.collectionCount + item.onOrderCount === 0);
+}
 
 const storedDraft = accountSlot("add-draft", z.array(draftRowSchema).max(MAX_ADD_ROWS).readonly());
 const storedWaiting = accountSlot("add-waiting", z.array(z.string()).readonly());
@@ -47,9 +56,7 @@ type DraftState = {
 
 function settle(rows: readonly DraftRow[], queue: readonly string[]): DraftState {
   const room = MAX_ADD_ROWS - rows.length;
-  const entering = queue
-    .slice(0, room)
-    .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: true }));
+  const entering = queue.slice(0, room).map((itemId): DraftRow => ({ itemId, overrides: {} }));
   return { rows: [...entering, ...rows], waiting: queue.slice(room) };
 }
 

@@ -1819,6 +1819,9 @@ test("a picked Item already in the Collection or an Order arrives unselected, sa
 
   await waitFor(() => expect(rowCheckboxes()).toHaveLength(2));
   await user.click(screen.getByRole("checkbox", { name: "Select Owned pick" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Add 1 to collection" }) !== null).toBe(true),
+  );
   await click(user, "Add 1 to collection");
   await waitFor(() => expect(server.commits).toHaveLength(2));
   expect(server.commits[1]?.rows.map(({ itemId }) => itemId)).toEqual(["item-30001"]);

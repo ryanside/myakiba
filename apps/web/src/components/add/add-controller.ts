@@ -9,7 +9,7 @@ import { orders } from "@/data/resources/orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { pickFailureCopy } from "@/lib/pick-failure";
-import { useAddDraft } from "./add-draft";
+import { isRowSelected, useAddDraft } from "./add-draft";
 import type { RowOverrides } from "./add-draft";
 import type { CommitAnswer } from "./commit-button";
 import {
@@ -33,7 +33,7 @@ export function useAddController(search: AddSearchParams) {
   const { emailVerified, email } = session.user;
   const { currency, dateFormat } = useUserPreferences();
   const navigate = useNavigate();
-  const { rows, waiting, dispatch } = useAddDraft(search.item);
+  const { rows: draftRows, waiting, dispatch } = useAddDraft(search.item);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(search.q));
   const [formState, setFormState] = useState<DestinationForm>(() => presetDestination(search.to));
@@ -61,7 +61,7 @@ export function useAddController(search: AddSearchParams) {
     } as NavigateOptions);
   }, [hasPresetItem, navigate]);
 
-  const rowItemIds = rows.map((row) => row.itemId);
+  const rowItemIds = draftRows.map((row) => row.itemId);
   const draftItemIds: ReadonlySet<string> = new Set([...rowItemIds, ...waiting]);
   const {
     data: itemData,
@@ -74,6 +74,10 @@ export function useAddController(search: AddSearchParams) {
   const items: ReadonlyMap<string, AddItem> = new Map(
     (itemData?.items ?? []).map((item) => [item.itemId, item]),
   );
+  const rows = draftRows.map((row) => ({
+    ...row,
+    selected: isRowSelected(row, items.get(row.itemId)),
+  }));
   // A failed refresh leaves the Items it already read, so only a row without one needs the error.
   const itemsReadError =
     itemsError !== null && rows.some((row) => !items.has(row.itemId)) ? itemsError : null;
@@ -105,7 +109,7 @@ export function useAddController(search: AddSearchParams) {
   // The draft knows its rows from the first paint, so counting them moves nothing when the Items
   // load. Once the read answers, a row with no Item cannot be committed, so it stops counting.
   const countedRows = itemsLoading ? rows : rows.filter((row) => items.has(row.itemId));
-  // A saving pick lands as a selected row, so the page says so from the moment it knows of the pick.
+  // A saving pick counts as selected from the moment the page knows of it, as most land selected.
   const savingPicks = intake.rows.filter((pick) => pick.state === "saving").length;
   const rowCount = countedRows.length + savingPicks;
   const selectedCount = countedRows.filter((row) => row.selected).length + savingPicks;
