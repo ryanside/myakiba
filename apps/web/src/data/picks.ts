@@ -1,8 +1,6 @@
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
-import { useEffect, useState, useSyncExternalStore } from "react";
 import { reportDefect } from "@/lib/as-panic";
-import { extensionBridge } from "@/lib/extension-bridge";
 import type { ExtensionBridge, TakenPick } from "@/lib/extension-bridge";
 import type { PickFailure } from "@/lib/pick-failure";
 
@@ -181,57 +179,4 @@ export function createPickIntake(deps: PickIntakeDeps) {
     /** Whether the extension has answered a take yet, so the page knows what picks it holds. */
     answered: () => answered,
   };
-}
-
-export type WaitingPicks =
-  | { readonly kind: "checking" }
-  | { readonly kind: "absent" }
-  | { readonly kind: "outdated" }
-  | { readonly kind: "stopped" }
-  | { readonly kind: "ready"; readonly count: number };
-
-type Taken = Extract<WaitingPicks, { readonly kind: "stopped" | "ready" }>;
-
-const CHECKING: WaitingPicks = { kind: "checking" };
-
-export function useWaitingPicks(active: boolean): WaitingPicks {
-  const status = useSyncExternalStore(extensionBridge.subscribe, extensionBridge.status);
-  const [taken, setTaken] = useState<Taken | null>(null);
-  const ready = active && status.kind === "ready";
-
-  useEffect(() => {
-    if (active) void extensionBridge.probe();
-  }, [active]);
-
-  useEffect(() => {
-    if (!ready) return;
-    let latest = 0;
-    const take = async () => {
-      latest += 1;
-      const mine = latest;
-      try {
-        const picks = await extensionBridge.takePicks();
-        if (mine !== latest) return;
-        setTaken(picks.isOk() ? { kind: "ready", count: picks.value.length } : { kind: "stopped" });
-      } catch (error) {
-        reportDefect(error);
-      }
-    };
-    const refresh = () => {
-      if (document.visibilityState === "visible") void take();
-    };
-    refresh();
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
-    return () => {
-      latest += 1;
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
-      setTaken(null);
-    };
-  }, [ready]);
-
-  if (!active || status.kind === "checking") return CHECKING;
-  if (status.kind !== "ready") return { kind: status.kind };
-  return taken ?? CHECKING;
 }

@@ -2,7 +2,6 @@ import { createContext, use, useCallback, useEffect, useMemo, useRef, useState }
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { IconSvgElement } from "@hugeicons/react";
 import { Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
@@ -21,31 +20,26 @@ import {
 } from "@/components/reui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CurrencySelect } from "@/components/currency-select";
-import { formatCount } from "@/components/page-header";
 import { useResourceMutation } from "@/data/client";
-import { useWaitingPicks } from "@/data/picks";
-import type { WaitingPicks } from "@/data/picks";
 import { settings } from "@/data/resources/settings";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { extensionAvailability } from "@/lib/extension-availability";
 import { localeFormats } from "@/lib/locale";
-import { EXTENSION_STOPPED_TEXT } from "@/lib/pick-failure";
 import { cn } from "@/lib/utils";
 import { ExtensionStep } from "@/components/onboarding/extension-step";
 import {
-  ExtensionNotice,
+  MissingExtensionNotice,
   pickExtensionCopy,
   pickHowTo,
 } from "@/components/extension/extension-notice";
-import type { ExtensionNoticeCopy } from "@/components/extension/extension-notice";
+import { useExtensionStatus } from "@/lib/extension-gate";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import { isGeneratedUsername } from "@myakiba/contracts/shared/generated-username";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { formSubmitHandler, runSubmit } from "@/lib/form-submit";
-import { NavigateIcon, NextIcon, PreviousIcon } from "@/lib/icons";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 type StepId = "preferences" | "extension" | "add";
 
@@ -135,7 +129,6 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
   const currentMeta = STEPS.find((meta) => meta.step === currentStep) ?? STEPS[0];
   const isFirst = currentStep === FIRST_STEP;
   const isLast = currentStep === LAST_STEP;
-  const picks = useWaitingPicks(open && isLast);
 
   const atExtensionStep = open && currentMeta.id === "extension";
   const lastWrittenExtensionStep = useRef(atExtensionStep);
@@ -347,7 +340,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                     </form>
                   ) : null}
                   {meta.id === "extension" ? <ExtensionStep /> : null}
-                  {meta.id === "add" ? <NextAction picks={picks} /> : null}
+                  {meta.id === "add" ? <NextAction /> : null}
                 </StepperContent>
               ))}
             </StepperPanel>
@@ -361,7 +354,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
               {({ isSubmitting, canSubmit }) => (
                 <StepFooter
                   isFirst={isFirst}
-                  finish={isLast ? finishButton(picks) : null}
+                  isLast={isLast}
                   isSaving={isSubmitting}
                   canContinue={currentMeta.id !== "preferences" || canSubmit}
                   onBack={handleBack}
@@ -393,37 +386,23 @@ function StepHeader({ meta }: StepHeaderProps) {
   );
 }
 
-function NextAction({ picks }: { readonly picks: WaitingPicks }) {
-  switch (picks.kind) {
+function NextAction() {
+  const status = useExtensionStatus();
+  switch (status.kind) {
     case "checking":
       return null;
     case "absent":
-      return <ExtensionNotice copy={pickExtensionCopy(extensionAvailability())} />;
+      return <MissingExtensionNotice copyOf={pickExtensionCopy} />;
     case "outdated":
       return <ExtensionStep />;
-    case "stopped":
-      return <ExtensionNotice copy={{ title: EXTENSION_STOPPED_TEXT, body: null, link: null }} />;
     case "ready":
-      return <ExtensionNotice copy={picksCopy(picks.count)} />;
+      return <p className="text-pretty text-sm">{pickHowTo("on the Add page")}</p>;
   }
-}
-
-function picksCopy(count: number): ExtensionNoticeCopy {
-  if (count === 0) return { title: "No picks yet", body: pickHowTo("on the Add page"), link: null };
-  return { title: `${formatCount(count, "pick", "picks")} waiting`, body: null, link: null };
-}
-
-type FinishButton = { readonly label: string; readonly icon: IconSvgElement };
-
-function finishButton(picks: WaitingPicks): FinishButton {
-  return picks.kind === "ready" && picks.count > 0
-    ? { label: "Go to Add", icon: NavigateIcon }
-    : { label: "Get started", icon: Tick02Icon };
 }
 
 type StepFooterProps = {
   readonly isFirst: boolean;
-  readonly finish: FinishButton | null;
+  readonly isLast: boolean;
   readonly isSaving: boolean;
   readonly canContinue: boolean;
   readonly onBack: () => void;
@@ -433,7 +412,7 @@ type StepFooterProps = {
 
 function StepFooter({
   isFirst,
-  finish,
+  isLast,
   isSaving,
   canContinue,
   onBack,
@@ -442,7 +421,8 @@ function StepFooter({
 }: StepFooterProps) {
   const getContinueIcon = () => {
     if (isSaving) return Loading03Icon;
-    return finish?.icon ?? NextIcon;
+    if (isLast) return Tick02Icon;
+    return NextIcon;
   };
   const continueIcon = getContinueIcon();
   const skipLabel = "Close";
@@ -460,7 +440,7 @@ function StepFooter({
           </Button>
         )}
         <Button onClick={onContinue} disabled={isSaving || !canContinue}>
-          {finish?.label ?? "Continue"}
+          {isLast ? "Get started" : "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
             data-icon="inline-end"

@@ -2,7 +2,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PuzzleIcon } from "@hugeicons/core-free-icons";
 import { EXTENSION_MIN_BROWSER_VERSION } from "@myakiba/contracts/shared/extension-browsers";
 import { buttonVariants } from "@/components/ui/button";
+import { extensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionAvailability, ExtensionListing } from "@/lib/extension-availability";
+import { useExtensionStatus } from "@/lib/extension-gate";
 import type { ExtensionStore } from "@/lib/extension-listings";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +20,7 @@ const STORE_BROWSERS = {
 
 export type ExtensionNoticeCopy = {
   readonly title: string;
-  readonly body: string | null;
+  readonly body: string;
   readonly link: { readonly label: string; readonly href: string } | null;
 };
 
@@ -60,10 +62,11 @@ export function reviewTitle(store: ExtensionStore): string {
   return `The myakiba extension is in review at ${STORE_NAMES[store]}`;
 }
 
-type NoticeLines = { readonly body: string; readonly link: ExtensionNoticeCopy["link"] };
-
 /** What to do while this browser's store reviews the extension: use another store's, or wait. */
-export function meanwhile(task: Task, alternative: ExtensionListing | null): NoticeLines {
+export function meanwhile(
+  task: Task,
+  alternative: ExtensionListing | null,
+): Pick<ExtensionNoticeCopy, "body" | "link"> {
   if (alternative === null) return { body: `${task.doing} works once it's approved.`, link: null };
   return {
     body: `${task.does} in ${STORE_BROWSERS[alternative.store]} until then.`,
@@ -120,9 +123,7 @@ export function ExtensionNotice({
       />
       <div className="flex min-w-0 flex-col items-start gap-1">
         <p className="text-sm font-medium text-foreground">{copy.title}</p>
-        {copy.body ? (
-          <p className="text-pretty text-sm text-muted-foreground">{copy.body}</p>
-        ) : null}
+        <p className="text-pretty text-sm text-muted-foreground">{copy.body}</p>
         {copy.link ? <ExtensionLink link={copy.link} className="mt-2" /> : null}
       </div>
     </div>
@@ -147,4 +148,17 @@ export function ExtensionLink({
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
+}
+
+/** Says how to get the extension where it is needed, only while it is not installed. */
+export function MissingExtensionNotice({
+  copyOf,
+  className,
+}: {
+  readonly copyOf: (availability: ExtensionAvailability) => ExtensionNoticeCopy;
+  readonly className?: string;
+}) {
+  const status = useExtensionStatus();
+  if (status.kind !== "absent") return null;
+  return <ExtensionNotice copy={copyOf(extensionAvailability())} className={className} />;
 }
