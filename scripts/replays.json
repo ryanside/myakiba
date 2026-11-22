@@ -5461,7 +5461,36 @@
         "Undo after Remove from List > removing the same target twice inside one toast's life sends it once",
         "Undo after Remove from List > a removal that would take the open Undo past the route's limit starts a new one",
         "Undo after Remove from List > a failed remove says what happened and offers no Undo"
+      ],
+      "testAt": "7d81a81bd605cba8c3dda66c858f8ac06284cebb",
+      "atHead": [
+        "Undo after Remove from List > leaving the List page closes its Undo, and the Undo it held cannot fire",
+        "Undo after Remove from List > an Undo that hits a defect offers no Retry",
+        "Undo after Remove from List > an Undo answered 401 offers no Retry",
+        "Undo after Remove from List > while an Undo is restoring a removal opens no second Undo, and a 404 leaves nothing to reopen",
+        "Undo after Remove from List > removing the same target twice inside one toast's life sends it once",
+        "Undo after Remove from List > a removal that would take the open Undo past the route's limit starts a new one",
+        "Undo after Remove from List > a failed remove says what happened and offers no Undo"
+      ],
+      "reason": "A later round in this PR made the page Undo one state value and removed its second toast slot, so its harness stays at the fix."
+    },
+    {
+      "fix": "d7ae52de1a4852ab02d16dd7f9778a0cd041ba7e",
+      "bug": "The page Undo kept two toast slots and let two restores run at once: a late 500 reopened Retry after a 404, a removal while an Undo had failed opened a second Undo beside the Retry, the hook did not report a restore in flight so Remove could not wait for it, and a failed Undo showed the runner's reload line or a 404 reason on another page.",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
+      "fixed": [
+        "Undo after Remove from List > the List reports a restore in flight, so its Remove controls can wait for it",
+        "Undo after Remove from List > while an Undo is restoring a removal opens no second Undo, and a 404 leaves nothing to reopen",
+        "Undo after Remove from List > a removal while an Undo has failed joins Retry's payload",
+        "Undo after Remove from List > an Undo that fails after the user left shows only its title",
+        "Undo after Remove from List > an Undo that hits a defect offers no Retry"
       ]
+    },
+    {
+      "fix": "d7ae52de1a4852ab02d16dd7f9778a0cd041ba7e",
+      "bug": "After a failed remove's refetch, the selection still held a member the List no longer had, so the bar counted it and the next Remove failed again.",
+      "test": "apps/web/src/hooks/use-selection.test.ts",
+      "fixed": ["a selected member the List no longer has drops out of the selection"]
     }
   ],
   "lint": [
