@@ -7,6 +7,7 @@ import {
   itemIsPaid,
   orderFees,
   orderIsPaid,
+  paidItemCount,
   paidItemPrice,
   selectUnpaidCosts,
 } from "@/lib/order-money";
@@ -27,7 +28,7 @@ export interface OrderTotalRow {
 export interface ItemSeriesRow {
   readonly bucket: string;
   readonly itemSpend: number;
-  readonly itemCount: number;
+  readonly paidItemCount: number;
 }
 
 export interface OrderSeriesRow {
@@ -60,6 +61,7 @@ export interface BundleEfficiencyRow {
 export interface CollectionSummaryRow {
   readonly spend: number;
   readonly itemCount: number;
+  readonly paidItemCount: number;
   readonly orderLinkedSpend: number;
   readonly orderLinkedCount: number;
   readonly standaloneSpend: number;
@@ -114,6 +116,7 @@ export async function getCollectionSummary(
     .select({
       spend: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`,
       itemCount: sql<number>`${count(collection.id)}::integer`,
+      paidItemCount: sql<number>`${paidItemCount}::integer`,
       orderLinkedSpend: sql<number>`COALESCE(${sum(
         sql`CASE WHEN ${collection.orderId} IS NOT NULL THEN ${paidItemPrice} ELSE 0 END`,
       )}, 0)::double precision`,
@@ -132,6 +135,7 @@ export async function getCollectionSummary(
     row ?? {
       spend: 0,
       itemCount: 0,
+      paidItemCount: 0,
       orderLinkedSpend: 0,
       orderLinkedCount: 0,
       standaloneSpend: 0,
@@ -284,7 +288,7 @@ export function getOwnedItemSeries(
     .select({
       bucket: itemBucket,
       itemSpend,
-      itemCount: count(),
+      paidItemCount: sql<number>`${paidItemCount}::integer`,
     })
     .from(collection)
     .leftJoin(order, eq(collection.orderId, order.id))

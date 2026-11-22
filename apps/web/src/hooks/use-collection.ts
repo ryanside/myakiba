@@ -32,6 +32,7 @@ export function useCollectionQuery() {
     items: data?.items ?? [],
     totalCount: data?.totalCount ?? 0,
     totalValue: data?.totalValue ?? 0,
+    paidItemCount: data?.paidItemCount ?? 0,
     totalItemsThisMonth: data?.totalItemsThisMonth ?? 0,
     isPending,
     isError,
