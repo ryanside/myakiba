@@ -9,10 +9,6 @@ const dates = (values: readonly (string | null)[]) =>
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 
-/**
- * The Order a merge of these source Orders starts from, so an untouched merge loses none of
- * their fees or dates.
- */
 export function mergedOrder(sources: readonly MergedOrder[]): MergedOrder {
   const stage = Math.min(...sources.map((source) => ORDER_STATUSES.indexOf(source.status)));
   return {

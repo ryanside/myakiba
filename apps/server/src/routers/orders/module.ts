@@ -380,7 +380,6 @@ export const Orders = {
     },
   ),
 
-  /** The Order a merge of these Orders starts from. */
   mergeDraft: query(
     { action: "orders.merge_draft", failure: "Failed to get the merged order" },
     async (scope, input: { readonly orderIds: string[] }) => {
@@ -411,7 +410,6 @@ export const Orders = {
     },
   ),
 
-  /** Moves the Orders' items into a new Order, leaving each item's own values, and deletes them. */
   merge: command(
     { action: "orders.merge", failure: "Failed to merge orders" },
     async (
@@ -457,7 +455,6 @@ export const Orders = {
     },
   ),
 
-  /** Moves the items into a new Order, leaving each item's own values. */
   split: command(
     { action: "orders.split", failure: "Failed to split orders" },
     async (

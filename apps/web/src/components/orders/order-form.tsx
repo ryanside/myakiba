@@ -104,7 +104,6 @@ export function OrderForm(props: OrderFormProps) {
 
 const MERGED_ORDER_TITLE = "New Merged Order";
 
-/** Opens the merge form on the Order the server derives from the selected Orders. */
 function MergeOrderFormContent(
   props: DeferredMergeOrderFormProps & { readonly close: () => void },
 ) {
