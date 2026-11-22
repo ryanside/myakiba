@@ -2,7 +2,6 @@ import { Badge } from "@/components/reui/badge";
 
 type Held = { readonly collectionCount: number; readonly onOrderCount: number };
 
-/** The viewer's Collection Items of an Item: those owned, then those still on order. */
 function heldLabels({ collectionCount, onOrderCount }: Held): readonly string[] {
   const counted = (label: string, count: number) =>
     count === 0 ? [] : [count > 1 ? `${label} (${count})` : label];
@@ -27,7 +26,6 @@ export function ItemBadges({ item }: { readonly item: Held & { readonly wishlist
   );
 }
 
-/** The same Collection Items as text, for a line that keeps its height. */
 export function HeldNote({ item }: { readonly item: Held }) {
   const labels = heldLabels(item);
   if (labels.length === 0) return null;

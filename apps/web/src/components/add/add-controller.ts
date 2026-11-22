@@ -109,7 +109,6 @@ export function useAddController(search: AddSearchParams) {
   // The draft knows its rows from the first paint, so counting them moves nothing when the Items
   // load. Once the read answers, a row with no Item cannot be committed, so it stops counting.
   const countedRows = itemsLoading ? rows : rows.filter((row) => items.has(row.itemId));
-  // A saving pick counts as selected from the moment the page knows of it, as most land selected.
   const savingPicks = intake.rows.filter((pick) => pick.state === "saving").length;
   const rowCount = countedRows.length + savingPicks;
   const selectedCount = countedRows.filter((row) => row.selected).length + savingPicks;

@@ -31,13 +31,11 @@ export type RowOverrides = z.infer<typeof rowOverridesSchema>;
 const draftRowSchema = z.object({
   itemId: z.string(),
   overrides: rowOverridesSchema,
-  /** Unset until the user ticks or unticks the row. */
   selected: z.boolean().optional(),
 });
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
 
-/** A row nobody has ticked or unticked is selected unless its Item is already in the Collection or an Order. */
 export function isRowSelected(
   { selected }: DraftRow,
   item: { readonly collectionCount: number; readonly onOrderCount: number } | undefined,
