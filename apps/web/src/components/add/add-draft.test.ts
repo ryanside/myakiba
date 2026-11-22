@@ -6,7 +6,7 @@ import type { DraftAction } from "./add-draft";
 const AT = 7;
 const draftReducer = (state: Parameters<typeof reduce>[0], action: DraftAction) =>
   reduce(state, { ...action, at: AT });
-const empty = { rows: [], waiting: [], newestArrival: 0 };
+const empty = { rows: [], waiting: [], newestArrival: 0, kept: new Map() };
 const withRows = (...itemIds: string[]) => draftReducer(empty, { type: "add", itemIds });
 
 test("new rows come first, waiting for a read since they arrived, and a known Item is not added twice", () => {

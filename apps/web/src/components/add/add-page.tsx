@@ -45,7 +45,7 @@ function AccountAddPage({ search }: { readonly search: AddSearchParams }) {
             <DestinationSentence controller={c} disabled={!c.hasItems}>
               <CommitButton {...c.commitProps} />
             </DestinationSentence>
-            {c.commitProps.rowsFailedToLoad ? (
+            {c.failedReadBlocksAdd ? (
               <p
                 aria-hidden="true"
                 className={cn(SHORT_LABEL, "pt-1.5 text-end text-xs text-muted-foreground")}

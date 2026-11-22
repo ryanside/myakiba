@@ -9,10 +9,12 @@ import { orders } from "@/data/resources/orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { pickFailureCopy } from "@/lib/pick-failure";
-import { startsSelected, useAddDraft } from "./add-draft";
+import { useAddDraft } from "./add-draft";
 import type { DraftRow, RowOverrides } from "./add-draft";
 import type { CommitAnswer } from "./commit-button";
 import {
+  ROWS_FAILED_TO_LOAD,
+  commitPlan,
   defaultOrderTitle,
   destinationOf,
   presetDestination,
@@ -33,7 +35,7 @@ export function useAddController(search: AddSearchParams) {
   const { emailVerified, email } = session.user;
   const { currency, dateFormat } = useUserPreferences();
   const navigate = useNavigate();
-  const { rows, waiting, newestArrival, dispatch } = useAddDraft(search.item);
+  const { rows, waiting, newestArrival, kept, dispatch } = useAddDraft(search.item);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(search.q));
   const [formState, setFormState] = useState<DestinationForm>(() => presetDestination(search.to));
@@ -65,41 +67,28 @@ export function useAddController(search: AddSearchParams) {
   const draftItemIds: ReadonlySet<string> = new Set([...rowItemIds, ...waiting]);
   const {
     data: itemData,
-    isPending: itemsPending,
-    isPlaceholderData: itemsStale,
     error: itemsError,
     refetch: refetchItems,
   } = useRead(add.items, { itemIds: rowItemIds, newestArrival });
-  const readItems: ReadonlyMap<string, AddItem> = new Map(
-    (itemData?.items ?? []).map((item) => [item.itemId, item]),
-  );
-  const answered = itemData !== undefined && !itemsStale;
+  // Data under this key came from a read sent since the newest row arrived. A failed read sends none.
   useEffect(() => {
-    if (!answered) return;
-    const decided = new Map(
-      rows.flatMap((row) => {
-        const item = readItems.get(row.itemId);
-        return row.selected === null && item ? [[row.itemId, startsSelected(item)] as const] : [];
-      }),
-    );
-    if (decided.size > 0) dispatch({ type: "decide", selected: decided });
-  });
+    if (itemData !== undefined) dispatch({ type: "answer", items: itemData.items });
+  }, [itemData, dispatch]);
+  const answered: ReadonlyMap<string, AddItem> | undefined =
+    itemData && new Map(itemData.items.map((item) => [item.itemId, item]));
+  // A decided row draws on the newest answer, or on the one it kept when this key has none.
   const items: ReadonlyMap<string, AddItem> = new Map(
     rows.flatMap((row) => {
-      const item = readItems.get(row.itemId);
-      return item && row.selected !== null ? [[row.itemId, item] as const] : [];
+      if (row.selected === null) return [];
+      const item = answered ? answered.get(row.itemId) : kept.get(row.itemId);
+      return item ? [[row.itemId, item] as const] : [];
     }),
   );
-  const gone = (row: DraftRow) => answered && !readItems.has(row.itemId);
+  const gone = (row: DraftRow) => answered !== undefined && !answered.has(row.itemId);
+  const unread = rows.some((row) => !items.has(row.itemId) && !gone(row));
   const undecided = rows.some((row) => row.selected === null && !gone(row));
-  const itemsLoading =
-    rowItemIds.length > 0 &&
-    (itemsPending ||
-      (itemsStale && rows.some((row) => !readItems.has(row.itemId))) ||
-      (undecided && itemsError === null));
-  // A failed refresh leaves the Items it already read, so only a row without one needs the error.
-  const itemsReadError =
-    itemsError !== null && rows.some((row) => !items.has(row.itemId)) ? itemsError : null;
+  const itemsLoading = unread && itemsError === null;
+  const itemsReadError = unread ? itemsError : null;
   const lookup = lookupOf(itemsLoading, itemsReadError !== null);
 
   const presetOrderId =
@@ -139,6 +128,11 @@ export function useAddController(search: AddSearchParams) {
     title: item.title,
   }));
   const newOrderTitle = defaultOrderTitle(commitRows.map(({ title }) => title));
+  const rowsFailedToLoad = itemsReadError !== null && (undecided || items.size === 0);
+  // The line under a narrow sentence says what the button would, so it shows only for this reason.
+  const failedReadBlocksAdd =
+    commitPlan(destination, selectedCount, { emailVerified, rowsFailedToLoad }).label ===
+    ROWS_FAILED_TO_LOAD;
   const releaseOf = useRowReleases(rows);
   const failedPicks = intake.rows.filter((pick) => pick.state === "failed").length;
   const unverifiedPick = intake.rows.some(
@@ -314,6 +308,7 @@ export function useAddController(search: AddSearchParams) {
     handleDiscardPick,
 
     waiting: waiting.length,
+    failedReadBlocksAdd,
     stopped: intake.stopped,
     failedPicks,
     unverifiedPick,
@@ -336,7 +331,7 @@ export function useAddController(search: AddSearchParams) {
       destination,
       emailVerified,
       loading: pending,
-      rowsFailedToLoad: itemsError !== null && (undecided || items.size === 0),
+      rowsFailedToLoad,
       onIssues: reportIssues,
       onSending: () => setSending(true),
       onFailed: () => setSending(false),

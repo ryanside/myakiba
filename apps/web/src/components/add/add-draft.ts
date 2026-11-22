@@ -1,4 +1,5 @@
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
+import type { addItemSchema } from "@myakiba/contracts/add/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { getRouteApi } from "@tanstack/react-router";
 import { useCallback, useEffect, useReducer } from "react";
@@ -37,7 +38,7 @@ const draftRowSchema = z.object({
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
 
-export const startsSelected = (item: {
+const startsSelected = (item: {
   readonly collectionCount: number;
   readonly onOrderCount: number;
 }): boolean => item.collectionCount + item.onOrderCount === 0;
@@ -46,10 +47,14 @@ const storedDraft = accountSlot("add-draft", z.array(draftRowSchema).max(MAX_ADD
 const storedWaiting = accountSlot("add-waiting", z.array(z.string()).readonly());
 const appRouteApi = getRouteApi("/(app)");
 
+type AddItem = z.infer<typeof addItemSchema>;
+
 type DraftState = {
   readonly rows: readonly DraftRow[];
   readonly waiting: readonly string[];
   readonly newestArrival: number;
+  /** Each row's Item as the read that last answered for it found it. It lives only in memory. */
+  readonly kept: ReadonlyMap<string, AddItem>;
 };
 
 let lastTicket = 0;
@@ -69,6 +74,7 @@ function settle(
     .slice(0, room)
     .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: null }));
   return {
+    ...state,
     rows: [...entering, ...rows],
     waiting: queue.slice(room),
     newestArrival: entering.length > 0 ? at : state.newestArrival,
@@ -80,7 +86,8 @@ export type DraftAction =
   | { readonly type: "remove"; readonly itemIds: readonly string[] }
   | { readonly type: "select"; readonly itemId: string; readonly selected: boolean }
   | { readonly type: "select-all"; readonly selected: boolean }
-  | { readonly type: "decide"; readonly selected: ReadonlyMap<string, boolean> }
+  /** What the Items read found for the current rows, which a read that failed never sends. */
+  | { readonly type: "answer"; readonly items: readonly AddItem[] }
   | { readonly type: "edit"; readonly itemId: string; readonly overrides: RowOverrides };
 
 export function draftReducer(
@@ -95,8 +102,9 @@ export function draftReducer(
     }
     case "remove": {
       const removed = new Set(action.itemIds);
+      const kept = new Map([...state.kept].filter(([itemId]) => !removed.has(itemId)));
       return settle(
-        state,
+        { ...state, kept },
         state.rows.filter((row) => !removed.has(row.itemId)),
         state.waiting.filter((itemId) => !removed.has(itemId)),
         action.at,
@@ -109,14 +117,20 @@ export function draftReducer(
           row.itemId === action.itemId ? { ...row, selected: action.selected } : row,
         ),
       };
-    case "decide":
-      return {
-        ...state,
-        rows: state.rows.map((row) => {
-          const decided = row.selected === null ? action.selected.get(row.itemId) : undefined;
-          return decided === undefined ? row : { ...row, selected: decided };
-        }),
-      };
+    case "answer": {
+      const found = new Map(action.items.map((item) => [item.itemId, item]));
+      const kept = new Map(state.kept);
+      const rows = state.rows.map((row) => {
+        const item = found.get(row.itemId);
+        if (item === undefined) {
+          kept.delete(row.itemId);
+          return row;
+        }
+        kept.set(row.itemId, item);
+        return row.selected === null ? { ...row, selected: startsSelected(item) } : row;
+      });
+      return { ...state, rows, kept };
+    }
     case "select-all":
       return {
         ...state,
@@ -145,6 +159,7 @@ function readDraft({
 }): DraftState {
   const rows = storedDraft.read(userId) ?? [];
   const restored: DraftState = {
+    kept: new Map(),
     rows,
     waiting: storedWaiting.read(userId) ?? [],
     newestArrival: rows.some((row) => row.selected === null) ? nextTicket() : 0,
@@ -176,6 +191,7 @@ export function useAddDraft(presetItem: string | undefined) {
     rows: state.rows,
     waiting: state.waiting,
     newestArrival: state.newestArrival,
+    kept: state.kept,
     dispatch,
   } as const;
 }
