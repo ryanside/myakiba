@@ -37,13 +37,22 @@ const draftRowSchema = z.object({
 export type DraftRow = z.infer<typeof draftRowSchema>;
 
 const storedDraft = accountSlot("add-draft", z.array(draftRowSchema).max(MAX_ADD_ROWS).readonly());
+const storedWaiting = accountSlot("add-waiting", z.array(z.string()).readonly());
 const appRouteApi = getRouteApi("/(app)");
 
 type DraftState = {
   readonly rows: readonly DraftRow[];
-  /** A pick or search result did not fit, so the page says to add these rows first. */
-  readonly full: boolean;
+  /** Items past the row cap, oldest first. Each becomes a row once a row leaves. */
+  readonly waiting: readonly string[];
 };
+
+function settle(rows: readonly DraftRow[], queue: readonly string[]): DraftState {
+  const room = MAX_ADD_ROWS - rows.length;
+  const entering = queue
+    .slice(0, room)
+    .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: true }));
+  return { rows: [...entering, ...rows], waiting: queue.slice(room) };
+}
 
 export type DraftAction =
   | { readonly type: "add"; readonly itemIds: readonly string[] }
@@ -55,19 +64,16 @@ export type DraftAction =
 export function draftReducer(state: DraftState, action: DraftAction): DraftState {
   switch (action.type) {
     case "add": {
-      const known = new Set(state.rows.map((row) => row.itemId));
-      const incoming = [...new Set(action.itemIds)]
-        .filter((itemId) => !known.has(itemId))
-        .map((itemId): DraftRow => ({ itemId, overrides: {}, selected: true }));
-      const room = MAX_ADD_ROWS - state.rows.length;
-      return {
-        rows: [...incoming.slice(0, room), ...state.rows],
-        full: incoming.length > room,
-      };
+      const known = new Set([...state.rows.map((row) => row.itemId), ...state.waiting]);
+      const incoming = [...new Set(action.itemIds)].filter((itemId) => !known.has(itemId));
+      return settle(state.rows, [...state.waiting, ...incoming]);
     }
     case "remove": {
       const removed = new Set(action.itemIds);
-      return { rows: state.rows.filter((row) => !removed.has(row.itemId)), full: false };
+      return settle(
+        state.rows.filter((row) => !removed.has(row.itemId)),
+        state.waiting.filter((itemId) => !removed.has(itemId)),
+      );
     }
     case "select":
       return {
@@ -101,21 +107,22 @@ function readDraft({
   readonly presetItem: string | undefined;
 }): DraftState {
   return draftReducer(
-    { rows: storedDraft.read(userId) ?? [], full: false },
+    { rows: storedDraft.read(userId) ?? [], waiting: storedWaiting.read(userId) ?? [] },
     { type: "add", itemIds: presetItem === undefined ? [] : [presetItem] },
   );
 }
 
 /**
- * The signed-in account's Add rows. They live in `sessionStorage`, so a reload keeps them and
- * closing the tab drops them, and another account in the tab starts empty. A link's preset Item
- * is a row from the first render.
+ * The signed-in account's Add rows and the Items waiting for one. They live in `sessionStorage`,
+ * so a reload keeps them and closing the tab drops them, and another account in the tab starts
+ * empty. A link's preset Item is a row from the first render, or waits when the page is full.
  */
 export function useAddDraft(presetItem: string | undefined) {
   const userId = appRouteApi.useRouteContext().session.user.id;
   const [state, dispatch] = useReducer(draftReducer, { userId, presetItem }, readDraft);
   useEffect(() => {
     storedDraft.write(userId, state.rows);
-  }, [userId, state.rows]);
-  return { rows: state.rows, full: state.full, dispatch } as const;
+    storedWaiting.write(userId, state.waiting);
+  }, [userId, state.rows, state.waiting]);
+  return { rows: state.rows, waiting: state.waiting, dispatch } as const;
 }

@@ -1294,7 +1294,7 @@ test("?q= opens the search with its words, and focus in it", async () => {
   await waitFor(() => expect(document.activeElement).toBe(box));
 });
 
-test("a full page says so, in a status region too, and removing a row clears it", async () => {
+test("a full page says how many wait, in a status region too, and a removed row lets one in", async () => {
   seedDraft(
     Array.from({ length: 100 }, (_, index) => ({
       itemId: `row${String(index).padStart(9, "0")}`,
@@ -1312,15 +1312,19 @@ test("a full page says so, in a status region too, and removing a row clears it"
   await user.keyboard("{Enter}");
   await user.keyboard("{Escape}");
 
-  await screen.findByText(/This page holds 100 items at a time\. Add these first/u);
-  expect(
-    screen
-      .getAllByRole("status")
-      .some(({ textContent }) => textContent === "This page holds 100 items at a time."),
-  ).toBe(true);
+  const waitingText = "1 more item waits and comes in as you add or remove these.";
+  await waitFor(() =>
+    expect(screen.getAllByRole("note").some(({ textContent }) => textContent === waitingText)).toBe(
+      true,
+    ),
+  );
+  expect(screen.getAllByRole("status").some(({ textContent }) => textContent === waitingText)).toBe(
+    true,
+  );
 
   await user.click(screen.getAllByRole("button", { name: "Remove this row" })[0] as HTMLElement);
-  await waitFor(() => expect(screen.queryByText(/Add these first/u)).toBeNull());
+  await waitFor(() => expect(screen.queryAllByText(waitingText)).toEqual([]));
+  expect(draftItemIds()).toContain(ITEM_ID);
 });
 
 test("picks past the row cap wait on the page and come in as rows are committed", async () => {

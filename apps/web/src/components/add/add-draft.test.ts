@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
 import { draftReducer } from "./add-draft";
 
-const empty = { rows: [], full: false };
+const empty = { rows: [], waiting: [] };
 const withRows = (...itemIds: string[]) => draftReducer(empty, { type: "add", itemIds });
 
 test("new rows come first, selected, and a known Item is not added twice", () => {
@@ -13,13 +13,20 @@ test("new rows come first, selected, and a known Item is not added twice", () =>
   ]);
 });
 
-test("a row past the limit is left out and the draft says it is full", () => {
+test("rows past the limit wait, oldest first, and join as rows leave", () => {
   const ids = Array.from({ length: MAX_ADD_ROWS }, (_, index) => `item-${index}`);
-  const full = draftReducer(withRows(...ids), { type: "add", itemIds: ["one-more"] });
-  expect(full.rows).toHaveLength(MAX_ADD_ROWS);
-  expect(full.rows.some(({ itemId }) => itemId === "one-more")).toBe(false);
-  expect(full.full).toBe(true);
-  expect(draftReducer(full, { type: "remove", itemIds: ["item-0"] }).full).toBe(false);
+  let state = draftReducer(withRows(...ids), { type: "add", itemIds: ["late-1", "late-2"] });
+  state = draftReducer(state, { type: "add", itemIds: ["late-1", "item-0", "late-3"] });
+  expect(state.rows).toHaveLength(MAX_ADD_ROWS);
+  expect(state.waiting).toEqual(["late-1", "late-2", "late-3"]);
+
+  state = draftReducer(state, { type: "remove", itemIds: ["item-0", "item-1", "late-3"] });
+  expect(state.rows.slice(0, 2).map(({ itemId, selected }) => [itemId, selected])).toEqual([
+    ["late-1", true],
+    ["late-2", true],
+  ]);
+  expect(state.rows).toHaveLength(MAX_ADD_ROWS);
+  expect(state.waiting).toEqual([]);
 });
 
 test("edits merge into one row and selection changes only what it names", () => {
