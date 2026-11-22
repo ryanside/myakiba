@@ -1,6 +1,21 @@
 {
   "test": [
     {
+      "fix": "e4d32b679fda3f47958fdf4f17cb766518111566",
+      "bug": "A pick that arrived when the Add page held 100 rows was reported saved, so the extension deleted it, while the draft threw its row away, so its Item left the page.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "picks past the row cap wait on the page and come in as rows are committed",
+        "a full page says how many wait, in a status region too, and a removed row lets one in"
+      ]
+    },
+    {
+      "fix": "e4d32b679fda3f47958fdf4f17cb766518111566",
+      "bug": "The Add draft dropped every Item past its 100-row cap instead of keeping it until a row left.",
+      "test": "apps/web/src/components/add/add-draft.test.ts",
+      "fixed": ["rows past the limit wait, oldest first, and join as rows leave"]
+    },
+    {
       "fix": "ad5283a57b0732628d6fe1706d103eab820030d6",
       "bug": "The barcode reader read only text after a bullet, so a barcode link with no bullet before it, as on a release with no price, stored no barcode where the old pattern read it.",
       "test": "packages/mfc/src/parse.test.ts",
