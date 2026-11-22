@@ -5442,6 +5442,17 @@
       "bug": "The Dashboard showed the unpaid Order count under Active Orders, but the count includes Owned Orders, so an Owned, partly paid Order read 1 unpaid under 0 active.",
       "test": "apps/web/src/components/count-and-sum-figures.test.tsx",
       "fixed": ["an Owned, partly paid Order counts beside Unpaid Costs, not under Active Orders"]
+    },
+    {
+      "fix": "01531798158c7fd669b18fe224163aa55e069313",
+      "bug": "An Expenses Paid Orders or Shipping link lands with feesPaid and no paid, so the Orders chip row showed All pressed while feesPaid still hid every Order whose fees are unpaid, and pressing All, or a status then All, left it in place.",
+      "test": "apps/web/src/components/orders/orders-quick-filters.test.tsx",
+      "fixed": [
+        "after an Expenses Paid Orders link, the row shows Fees paid as the filter on, not All",
+        "All clears an Expenses link's feesPaid",
+        "after a status is chosen on an Expenses link's list, All clears both",
+        "pressing Fees paid again clears it"
+      ]
     }
   ],
   "lint": [
