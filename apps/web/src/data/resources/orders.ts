@@ -31,7 +31,7 @@ import {
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import { FILL_FIELD } from "@/lib/fill-fields";
-import { paymentOf, withUnpaidCostsPending } from "@/lib/orders";
+import { paymentOf } from "@/lib/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, messageAs, rootedRead } from "../client";
 
@@ -89,21 +89,6 @@ export const orders = {
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
 type OnList = { readonly list: OrderFilters };
 
-const UNPAID_COSTS_INPUTS = [
-  "paid",
-  "shippingFee",
-  "taxes",
-  "duties",
-  "tariffs",
-  "miscFees",
-] as const;
-
-function afterEdit(old: Order, edited: Order, values: EditedOrder): Order {
-  return UNPAID_COSTS_INPUTS.some((field) => old[field] !== values[field])
-    ? withUnpaidCostsPending(edited)
-    : edited;
-}
-
 export const editOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
   refetchBy: "settled",
@@ -131,16 +116,12 @@ export const editOrderCommand = defineCommand({
       : undefined;
     queryClient.setQueryData<Order>(orderDetailKey, (old) =>
       old
-        ? afterEdit(
-            old,
-            {
-              ...old,
-              ...values,
-              ...cascadedPayment,
-              ...(detailNewTotal !== undefined && { total: detailNewTotal }),
-            },
-            values,
-          )
+        ? {
+            ...old,
+            ...values,
+            ...cascadedPayment,
+            ...(detailNewTotal !== undefined && { total: detailNewTotal }),
+          }
         : old,
     );
 
@@ -166,16 +147,12 @@ export const editOrderCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === values.orderId
-                  ? afterEdit(
-                      order,
-                      {
-                        ...order,
-                        ...values,
-                        ...cascadedPayment,
-                        ...(newTotal !== undefined && { total: newTotal }),
-                      },
-                      values,
-                    )
+                  ? {
+                      ...order,
+                      ...values,
+                      ...cascadedPayment,
+                      ...(newTotal !== undefined && { total: newTotal }),
+                    }
                   : order,
               ),
             }
@@ -217,9 +194,7 @@ export const setOrderPaidCommand = defineCommand({
         ? {
             ...old,
             items: old.items.map((order) =>
-              order.orderId === orderId
-                ? withUnpaidCostsPending({ ...order, paid, payment: paymentOf(paid) })
-                : order,
+              order.orderId === orderId ? { ...order, paid, payment: paymentOf(paid) } : order,
             ),
           }
         : old,
@@ -365,7 +340,7 @@ export const editOrderItemCommand = defineCommand({
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
     if (priceChanged) {
       queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-        old ? withUnpaidCostsPending({ ...old, total: old.total + priceDelta }) : old,
+        old ? { ...old, total: old.total + priceDelta } : old,
       );
     }
 
@@ -381,7 +356,7 @@ export const editOrderItemCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === itemOrderId
-                  ? withUnpaidCostsPending({ ...order, total: order.total + priceDelta })
+                  ? { ...order, total: order.total + priceDelta }
                   : order,
               ),
             }
@@ -432,11 +407,11 @@ export const deleteOrderItemCommand = defineCommand({
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
     queryClient.setQueryData<Order>(orderDetailKey, (old) =>
       old
-        ? withUnpaidCostsPending({
+        ? {
             ...old,
             total: old.total - removedPrice,
             itemCount: old.itemCount - 1,
-          })
+          }
         : old,
     );
 
@@ -452,11 +427,11 @@ export const deleteOrderItemCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === orderId
-                  ? withUnpaidCostsPending({
+                  ? {
                       ...order,
                       total: order.total - removedPrice,
                       itemCount: order.itemCount - 1,
-                    })
+                    }
                   : order,
               ),
             }
