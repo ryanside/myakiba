@@ -121,14 +121,23 @@ export function useAddController(search: AddSearchParams) {
   const rowCount = countedRows.length + savingPicks;
   const selectedCount = countedRows.filter((row) => row.selected !== false).length + savingPicks;
   const hasItems = rows.length + savingPicks > 0;
+  // A New Order's default title is the one value a commit takes from a summary, so it takes it
+  // from this key's answer, never from one a row kept from an earlier key.
+  const { ownership } = destination;
+  const titleAwaitsRead =
+    ownership?.kind === "order" &&
+    ownership.order.kind === "new" &&
+    !ownership.order.fields.title?.trim() &&
+    selectedRows.some(({ row }) => !answered?.has(row.itemId));
   // The label counts what is still on its way, so a commit now would leave those out.
-  const pending = itemsLoading || savingPicks > 0;
+  const pending = itemsLoading || savingPicks > 0 || (titleAwaitsRead && itemsError === null);
+  const readError = itemsReadError ?? (titleAwaitsRead ? itemsError : null);
   const commitRows: readonly CommitRow[] = selectedRows.map(({ row, item }) => ({
     row,
     title: item.title,
   }));
   const newOrderTitle = defaultOrderTitle(commitRows.map(({ title }) => title));
-  const rowsFailedToLoad = itemsReadError !== null && (undecided || items.size === 0);
+  const rowsFailedToLoad = readError !== null && (undecided || items.size === 0 || titleAwaitsRead);
   // The line under a narrow sentence says what the button would, so it shows only for this reason.
   const failedReadBlocksAdd =
     commitPlan(destination, selectedCount, { emailVerified, rowsFailedToLoad }).label ===
@@ -282,7 +291,7 @@ export function useAddController(search: AddSearchParams) {
     pending,
     items,
     lookup,
-    itemsReadError,
+    itemsReadError: readError,
     retryItems,
 
     resolvedForm,
