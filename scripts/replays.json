@@ -5408,6 +5408,18 @@
       "test": "apps/web/src/components/add/add-retry.test.tsx",
       "fixed": [
         "a reload after a lost answer keeps each row's selection, so the retry repeats the commit"
+      ],
+      "testAt": "3052fa16c79e002ea1dce07c5bfcd9c550681751",
+      "reason": "The later fix gave a waiting row selected: null and arrivedAt, so this test now seeds its rows that way, and that seed does not parse at this fix. Its harness stays at the commit that added the test."
+    },
+    {
+      "fix": "07e8fa8b6d47242a015428492c3d4ecba39f1bf6",
+      "bug": "A cached read of the same Add rows, or one whose refetch failed, decided a new row's selection from old counts, so a re-added Item already owned showed checked and could be committed, and a failed refetch recorded a choice from stale data.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "an Item added again waits for a fresh read of what you own, and cannot be added from the old one",
+        "a row waiting for its first fresh read stays out of a commit, so a retry after a reload repeats it",
+        "a failed read decides nothing: the row says it could not load, and the next good read decides it"
       ]
     }
   ],
