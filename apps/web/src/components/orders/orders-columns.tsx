@@ -19,8 +19,7 @@ import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
-import { ORDER_STATUS_COLORS, shownUnpaidCosts } from "@/lib/orders";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaidCheckbox } from "./payment";
 import type {
   Currency,
@@ -33,7 +32,7 @@ import { ImageThumbnail } from "../ui/image-thumbnail";
 import type { Saving } from "@/data/client";
 import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
-import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
+import { OrderActionsCell, OrderItemCountCell, UnpaidCostsCell } from "./order-row-cells";
 import { withOrderPending } from "./order-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
 import { NavigateIcon } from "@/lib/icons";
@@ -432,12 +431,9 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Unpaid Costs" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const unpaidCosts = shownUnpaidCosts(row.original);
-        return unpaidCosts === null
-          ? null
-          : formatCurrencyFromMinorUnits(unpaidCosts, currency, locale);
-      },
+      cell: ({ row }) => (
+        <UnpaidCostsCell order={row.original} currency={currency} locale={locale} />
+      ),
       enableSorting: false,
       enableHiding: true,
       enableResizing: true,

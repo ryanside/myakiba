@@ -20,6 +20,7 @@ import {
 import { moveItem, splitOrders } from "@/queries/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, messageAs, rootedRead } from "../client";
+import { holdsUnpaidCosts } from "./order-unpaid-costs";
 
 // Shape of the cache backing the item detail route at `["item", externalId, "itemRelatedCollection"]`.
 // The route returns a subset of CollectionItem fields under `collection`.
@@ -61,6 +62,10 @@ type OnList = { readonly list: CollectionFilters };
 
 export const updateCollectionItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(({ values }: { readonly values: CollectionItemFormValues }) => ({
+    edits: "item",
+    values,
+  })),
   refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
@@ -116,6 +121,7 @@ export const updateCollectionItemCommand = defineCommand({
 
 export const deleteCollectionItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(() => ({ edits: "membership", orderIds: "unknown" })),
   refetchBy: "settled",
   persist: ({ ids }: { readonly ids: readonly string[] } & OnList) =>
     deleteCollectionItems([...ids]),
@@ -179,6 +185,10 @@ export const deleteCollectionItemsCommand = defineCommand({
 
 export const fillCollectionItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(({ fill }: { readonly fill: ItemFill }) => ({
+    edits: "item fill",
+    field: fill.field,
+  })),
   refetchBy: "settled",
   persist: ({ ids, fill }: { readonly ids: readonly string[]; readonly fill: ItemFill }) =>
     fillCollectionItems(ids, fill),
@@ -189,6 +199,15 @@ export const fillCollectionItemsCommand = defineCommand({
 
 export const assignToOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(
+    ({
+      targetOrderId,
+      orderIds,
+    }: {
+      readonly targetOrderId: string;
+      readonly orderIds?: ReadonlySet<string>;
+    }) => ({ edits: "membership", orderIds: orderIds ? [targetOrderId, ...orderIds] : "unknown" }),
+  ),
   refetchBy: "settled",
   persist: ({
     targetOrderId,
@@ -208,6 +227,7 @@ export const assignToOrderCommand = defineCommand({
 
 export const assignToNewOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(() => ({ edits: "membership", orderIds: "unknown" })),
   refetchBy: "settled",
   persist: ({
     values,

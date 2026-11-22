@@ -4,6 +4,7 @@ import { app } from "@/lib/treaty-client";
 import { call } from "../api";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, messageAs, rootedRead } from "../client";
+import { holdsUnpaidCosts } from "./order-unpaid-costs";
 
 export const vocabulary = rootedRead("vocabulary", {
   key: () => ["vocabulary"] as const,
@@ -24,6 +25,7 @@ const renameShops = (rename: RenameShop) =>
 
 export const renameShopsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(() => ({ edits: "nothing they depend on" })),
   refetchBy: "settled",
   persist: renameShops,
   successTitle: ({ to }) => `Saved as “${to.trim()}”`,

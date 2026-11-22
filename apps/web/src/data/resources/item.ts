@@ -10,6 +10,7 @@ import {
 import { refreshResultFamilies } from "../catalog";
 import { defineCommand, rootedRead, useResourceMutation } from "../client";
 import { refreshFailureText, refreshItemWithExtension } from "../item-refresh";
+import { holdsUnpaidCosts } from "./order-unpaid-costs";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -38,6 +39,7 @@ export const items = {
 
 export const refreshItemCommand = defineCommand({
   invalidates: refreshResultFamilies,
+  holds: holdsUnpaidCosts(() => ({ edits: "nothing they depend on" })),
   persist: (externalId: number) => refreshItemWithExtension(externalId),
   successTitle: (_externalId, refreshed) => {
     if (refreshed.picture === "over_quota") return;

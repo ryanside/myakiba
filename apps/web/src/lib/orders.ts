@@ -29,21 +29,17 @@ export function paymentOf(paid: boolean): OrderPayment {
   return paid ? "paid" : "unpaid";
 }
 
-type UnpaidCostsRow = { readonly unpaidCosts: number; readonly unpaidCostsPending?: true };
-
-/** Set by an optimistic patch of a Total, fee or Paid; the refetched row has no such field. */
-export function withUnpaidCostsPending<Row extends object>(
-  row: Row,
-): Row & { readonly unpaidCostsPending: true } {
-  return { ...row, unpaidCostsPending: true };
-}
-
-export function shownUnpaidCosts(order: UnpaidCostsRow): number | null {
-  return order.unpaidCostsPending || order.unpaidCosts <= 0 ? null : order.unpaidCosts;
+/** An Order's Unpaid Costs, or null while a write moves them or when nothing is owed. */
+export function shownUnpaidCosts(
+  order: { readonly unpaidCosts: number },
+  held: boolean,
+): number | null {
+  return held || order.unpaidCosts <= 0 ? null : order.unpaidCosts;
 }
 
 export function partlyPaidUnpaidCosts(
-  order: UnpaidCostsRow & { readonly payment: OrderPayment },
+  order: { readonly payment: OrderPayment; readonly unpaidCosts: number },
+  held: boolean,
 ): number | null {
-  return order.payment === "partly" ? shownUnpaidCosts(order) : null;
+  return order.payment === "partly" ? shownUnpaidCosts(order, held) : null;
 }

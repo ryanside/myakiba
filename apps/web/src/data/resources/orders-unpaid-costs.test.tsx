@@ -1,6 +1,6 @@
 import { afterEach, expect, mock, test } from "bun:test";
 import { act, cleanup, render, renderHook, screen, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable, flexRender } from "@tanstack/react-table";
 import { Result } from "better-result";
 import type { ReactNode } from "react";
@@ -89,6 +89,13 @@ function cacheWith(shown: Order) {
     ["orderItems", shown.orderId, { limit: 12, offset: 0, sort: "createdAt", order: "desc" }],
     { items: [unpaidItem], totalCount: 1 },
   );
+  // The Order page and the Orders table are on screen, so their queries are active.
+  for (const queryKey of [orders.detail.key(shown.orderId), orders.list.key(list)])
+    new QueryObserver(client, {
+      queryKey,
+      queryFn: () => client.getQueryData(queryKey) ?? null,
+      staleTime: Number.POSITIVE_INFINITY,
+    }).subscribe(() => {});
   return client;
 }
 

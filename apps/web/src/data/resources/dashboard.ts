@@ -5,6 +5,7 @@ import { updateOrderDate, fillOrderPaid, updateOrderStatus } from "@/queries/ord
 import type { OrderDateField } from "@/queries/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
+import { holdsUnpaidCosts } from "./order-unpaid-costs";
 
 type Month = { readonly month: number; readonly year: number };
 
@@ -26,6 +27,7 @@ export const dashboard = {
 /** The Kanban queues each card's writes and refetches once the card's queue drains. */
 export const updateKanbanOrderStatusCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(() => ({ edits: "nothing they depend on" })),
   refetchBy: "caller",
   persist: ({ orderId, status }: { readonly orderId: string; readonly status: OrderStatus }) =>
     updateOrderStatus(orderId, status),
@@ -37,6 +39,7 @@ export const updateKanbanOrderStatusCommand = defineCommand({
 
 export const updateKanbanOrderDateCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(() => ({ edits: "nothing they depend on" })),
   refetchBy: "caller",
   persist: ({
     orderId,
@@ -55,6 +58,10 @@ export const updateKanbanOrderDateCommand = defineCommand({
 
 export const updateKanbanOrderPaidCommand = defineCommand({
   invalidates: collectionWriteFamilies,
+  holds: holdsUnpaidCosts(({ orderId }: { readonly orderId: string }) => ({
+    edits: "paid",
+    orderIds: [orderId],
+  })),
   refetchBy: "caller",
   persist: ({ orderId, paid }: { readonly orderId: string; readonly paid: boolean }) =>
     fillOrderPaid(orderId, paid),
