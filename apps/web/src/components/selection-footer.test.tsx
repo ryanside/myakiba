@@ -22,7 +22,6 @@ afterEach(() => {
   localStorage.clear();
 });
 
-/** Serves `rows` a page at a time, as the server pages by `offset` and `limit`. */
 function page<T>(rows: readonly T[], url: URL) {
   const offset = Number(url.searchParams.get("offset") ?? 0);
   const limit = Number(url.searchParams.get("limit") ?? rows.length);
