@@ -38,6 +38,7 @@ const oneOrder = "user-one-order";
 const twoOrders = "user-two-orders";
 const paidApart = "user-paid-apart";
 const ownedUnpaid = "user-owned-unpaid";
+const feesPaid = "user-fees-paid";
 
 async function seedOrderedOrder(userId: string) {
   await db.insert(item).values([
@@ -89,6 +90,7 @@ beforeAll(async () => {
     { id: twoOrders, name: "Aki", email: "a@example.com", username: "aki" },
     { id: paidApart, name: "Mei", email: "m@example.com", username: "mei" },
     { id: ownedUnpaid, name: "Yui", email: "y@example.com", username: "yui" },
+    { id: feesPaid, name: "Ren", email: "n@example.com", username: "ren" },
   ]);
   await seedOrderedOrder(oneOrder);
   await seedOrderedOrder(twoOrders);
@@ -131,6 +133,7 @@ beforeAll(async () => {
   ]);
   await seedPaidApartFromStatus();
   await seedOwnedUnpaid();
+  await seedFeesPaid();
 });
 
 async function seedPaidApartFromStatus() {
@@ -247,7 +250,79 @@ async function seedOwnedUnpaid() {
   ]);
 }
 
+async function seedFeesPaid() {
+  await db.insert(item).values([
+    { id: "una", ownerId: feesPaid, externalId: 109, title: "Una", category: "Prepainted" },
+    { id: "ia", ownerId: feesPaid, externalId: 110, title: "IA", category: "Prepainted" },
+    { id: "miki", ownerId: feesPaid, externalId: 111, title: "Miki", category: "Prepainted" },
+  ]);
+  await db.insert(order).values([
+    {
+      id: "fees-paid",
+      userId: feesPaid,
+      title: "Fees paid",
+      shop: "AmiAmi",
+      status: "Ordered",
+      paid: true,
+      orderDate: "2024-07-01",
+      releaseDate: "2024-07-10",
+      shippingFee: 500,
+    },
+    {
+      id: "paid-in-full",
+      userId: feesPaid,
+      title: "Paid in full",
+      shop: "HLJ",
+      status: "Ordered",
+      paid: true,
+      orderDate: "2024-07-02",
+      releaseDate: "2024-07-20",
+      shippingFee: 300,
+    },
+    {
+      id: "not-yet-priced",
+      userId: feesPaid,
+      title: "Not yet priced",
+      shop: "HLJ",
+      status: "Ordered",
+      paid: false,
+      orderDate: "2024-07-03",
+      releaseDate: "2024-07-25",
+    },
+  ]);
+  await db.insert(collection).values([
+    {
+      id: "fees-paid-una",
+      userId: feesPaid,
+      itemId: "una",
+      orderId: "fees-paid",
+      status: "Ordered",
+      paid: false,
+      price: 30_000,
+    },
+    {
+      id: "fees-paid-ia",
+      userId: feesPaid,
+      itemId: "ia",
+      orderId: "fees-paid",
+      status: "Ordered",
+      paid: false,
+      price: 30_000,
+    },
+    {
+      id: "paid-in-full-miki",
+      userId: feesPaid,
+      itemId: "miki",
+      orderId: "paid-in-full",
+      status: "Ordered",
+      paid: true,
+      price: 5000,
+    },
+  ]);
+}
+
 type Dashboard = {
+  readonly unpaidOrderCount: number;
   readonly unpaidCosts: number;
   readonly collectionStats: { readonly totalSpent: number };
   readonly categoriesOwned: readonly { readonly name: string; readonly totalValue: number }[];
@@ -282,7 +357,11 @@ type AnalyticsSection = {
   };
 };
 type OrdersList = {
-  readonly items: readonly { readonly title: string; readonly total: number }[];
+  readonly items: readonly {
+    readonly title: string;
+    readonly total: number;
+    readonly payment: string;
+  }[];
   readonly totalSpent: number;
   readonly unpaidCosts: number;
 };
@@ -414,6 +493,58 @@ describe("each item's price follows its own Paid and each Order's fees follow th
       unpaidAmount: monthly.unpaidAmount,
       unpaidOrderCount: monthly.unpaidOrderCount,
     }).toEqual({ paidAmount: 10_500, unpaidAmount: 5500, unpaidOrderCount: 1 });
+  });
+});
+
+describe("an Order whose Order Fees are paid and whose two Order Items are not is Partly paid", () => {
+  test("it counts as unpaid beside its Unpaid Costs, as an Order marked unpaid with nothing priced does", async () => {
+    const dashboard = await get<Dashboard>(feesPaid, "/dashboard");
+    const monthly = await get<Monthly>(feesPaid, "/dashboard/monthly?month=7&year=2024");
+    const expenses = await get<ExpensesOrders>(feesPaid, "/expenses/orders");
+
+    expect({
+      dashboard: [dashboard.unpaidOrderCount, dashboard.unpaidCosts],
+      monthly: [monthly.unpaidOrderCount, monthly.unpaidAmount],
+      expenses: [expenses.kpis.unpaidOrderCount, expenses.kpis.unpaidCosts],
+      paidOrderCount: expenses.kpis.paidOrderCount,
+    }).toEqual({
+      dashboard: [2, 60_000],
+      monthly: [2, 60_000],
+      expenses: [2, 60_000],
+      paidOrderCount: 2,
+    });
+  });
+
+  test("the Unpaid filter lists it and the Paid filter lists only the Order paid in full", async () => {
+    const unpaid = await get<OrdersList>(
+      feesPaid,
+      "/orders?limit=10&sort=title&order=asc&paid=false",
+    );
+    const paid = await get<OrdersList>(feesPaid, "/orders?limit=10&paid=true");
+
+    expect({
+      unpaid: unpaid.items.map((row) => [row.title, row.payment]),
+      unpaidCosts: unpaid.unpaidCosts,
+      paid: paid.items.map((row) => [row.title, row.payment]),
+    }).toEqual({
+      unpaid: [
+        ["Fees paid", "partly"],
+        ["Not yet priced", "unpaid"],
+      ],
+      unpaidCosts: 60_000,
+      paid: [["Paid in full", "paid"]],
+    });
+  });
+
+  test("an Expenses Paid Orders count links to every Order whose own Paid is yes", async () => {
+    const expenses = await get<ExpensesOrders>(feesPaid, "/expenses/orders");
+    const linked = await get<OrdersList>(
+      feesPaid,
+      "/orders?limit=10&sort=title&order=asc&feesPaid=true",
+    );
+
+    expect(linked.items.map((row) => row.title)).toEqual(["Fees paid", "Paid in full"]);
+    expect(linked.items.length).toBe(expenses.kpis.paidOrderCount);
   });
 });
 
