@@ -849,6 +849,10 @@ async function answerRemovalWhileRestoring() {
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
   await waitFor(() => expect(server.heldRestores.length).toBe(1));
   await answerRemoval();
+  expect({
+    actions: shownActions(),
+    toasts: screen.queryAllByText(/removed from List/u).length,
+  }).toEqual({ actions: 0, toasts: 0 });
   return () => act(async () => server.heldRestores.shift()?.());
 }
 
@@ -1147,6 +1151,10 @@ describe("Undo after Remove from List", () => {
       undo: screen.queryAllByText(/removed from List/u).map((title) => title.textContent),
       restores: server.writes.filter((write) => write.startsWith("restore")).length,
     }).toEqual({ undo: ["600 removed from List"], restores: 1 });
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    const restoredB = batch("b").map((id, index) => `item-${id}@${index}`);
+    await waitFor(() => expect(server.writes.at(-1)).toBe(`restore ${restoredB.join(",")} to l1`));
   });
 
   test("an Undo that fails after the user left shows only its title", async () => {

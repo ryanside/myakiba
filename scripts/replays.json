@@ -5496,7 +5496,7 @@
     },
     {
       "fix": "d7ae52de1a4852ab02d16dd7f9778a0cd041ba7e",
-      "bug": "After a failed remove's refetch, the selection still held a member the List no longer had, so the bar counted it and the next Remove failed again.",
+      "bug": "useSelection kept a selected member in its selected ids after the List's loaded members no longer had it.",
       "test": "apps/web/src/hooks/use-selection.test.ts",
       "fixed": ["a selected member the List no longer has drops out of the selection"]
     },
