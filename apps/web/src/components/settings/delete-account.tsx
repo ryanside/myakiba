@@ -92,8 +92,7 @@ export function DeleteAccount() {
           <DialogHeader>
             <DialogTitle>Delete your account?</DialogTitle>
             <DialogDescription>
-              This deletes your Item Database, Collection, Orders, Lists and Wishlist, and signs you
-              out on every device. myakiba has no export, so nothing can be recovered.
+              This deletes your Item Database, Collection, Orders, Lists and Wishlist for good.
             </DialogDescription>
           </DialogHeader>
           {needsFreshSignIn ? (

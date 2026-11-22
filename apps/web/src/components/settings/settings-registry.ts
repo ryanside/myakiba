@@ -82,8 +82,7 @@ export const SETTINGS = {
   currency: {
     section: "preferences",
     title: "Currency",
-    description:
-      "Your prices and totals are in this currency. Switching it relabels your amounts and converts nothing. Release prices keep the currency they were listed in.",
+    description: "Switching relabels your amounts without converting them.",
     keywords: ["money", "price", "cost", "display", "usd", "jpy", "yen", "eur"],
   },
   "date-format": {
@@ -209,7 +208,7 @@ export const SETTINGS = {
   "delete-account": {
     section: "account",
     title: "Delete account",
-    description: "Permanently delete your account and your data. myakiba has no export.",
+    description: "Permanently delete your account and your data.",
     keywords: ["remove", "close", "erase", "danger"],
   },
   version: {

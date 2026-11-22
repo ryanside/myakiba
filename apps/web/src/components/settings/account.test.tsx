@@ -187,9 +187,8 @@ test("Delete Account says what it deletes and still asks for the password", asyn
 
   const dialog = await screen.findByRole("dialog", { name: "Delete your account?" });
   expect(dialog.textContent).toContain(
-    "This deletes your Item Database, Collection, Orders, Lists and Wishlist, and signs you out on every device.",
+    "This deletes your Item Database, Collection, Orders, Lists and Wishlist for good.",
   );
-  expect(dialog.textContent).toContain("myakiba has no export, so nothing can be recovered.");
   const submit = screen.getByRole("button", { name: "Delete Account Permanently" });
   expect(submit.hasAttribute("disabled")).toBe(false);
   await pointer.click(submit);

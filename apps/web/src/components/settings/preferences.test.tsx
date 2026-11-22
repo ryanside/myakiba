@@ -123,7 +123,7 @@ test("the currency row says a switch relabels amounts and converts nothing", asy
   renderPreferences();
   expect(await screen.findByRole("button", { name: "Currency" })).toBeDefined();
   expect(
-    screen.getByText(/Switching it relabels your amounts and converts nothing\./),
+    screen.getByText("Switching relabels your amounts without converting them."),
   ).toBeDefined();
 });
 
