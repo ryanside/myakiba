@@ -5435,7 +5435,8 @@
         "Select all leaves a row waiting for its read to that read",
         "an unselected row says where the Item is, without counting its Collection Items",
         "a re-picked owned Item keeps its note when an older read answers late",
-        "a New Order's default title comes from the read that decided its row, so a retry after a reload repeats it"
+        "a New Order's default title comes from the read that decided its row, so a retry after a reload repeats it",
+        "when a row failed to load and the title also waits, Add says to retry or remove those items"
       ]
     },
     {
@@ -5472,8 +5473,7 @@
       "fixed": [
         "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
         "a row that loaded on its first read keeps its Item and edits when a later row fails and is removed during the failure",
-        "an unverified user whose read failed sees only the verify reason at the button",
-        "when a row failed to load and the title also waits, Add says to retry or remove those items"
+        "an unverified user whose read failed sees only the verify reason at the button"
       ]
     },
     {
@@ -5499,6 +5499,14 @@
       "test": "apps/web/src/components/add/add-flow.test.tsx",
       "fixed": [
         "a New Order with its default title asks for an Order title when the current read fails, and typing one enables Create"
+      ]
+    },
+    {
+      "fix": "3d238cf92c381dc353ab7fc88f1b77ce9b141e65",
+      "bug": "At 360 px the pinned actions covered the Add row's item cell, so an unselected held row's note read 'In' and did not say why the row started unselected.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "each place an unselected row's Item is in also has a line of its own that nothing truncates"
       ]
     }
   ],
