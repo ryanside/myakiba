@@ -90,10 +90,10 @@ export function DeleteAccount() {
         />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogTitle>Delete your account?</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. This will permanently delete your account and remove all
-              your data from our servers.
+              This deletes your Item Database, Collection, Orders, Lists and Wishlist, and signs you
+              out on every device. myakiba has no export, so nothing can be recovered.
             </DialogDescription>
           </DialogHeader>
           {needsFreshSignIn ? (
