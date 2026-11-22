@@ -5391,6 +5391,30 @@
       "fixed": [
         "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
       ]
+    },
+    {
+      "fix": "ea9132723fcc35815f21d019ef66dcaef9e418f0",
+      "bug": "Merge and Split copied the form's values onto every moved item, and the forms opened blank with Cascade to Items set to every field, so an untouched merge wrote Ordered, unpaid, no Shop and no dates over each item and dropped the source Orders' fees.",
+      "test": "apps/server/src/routers/orders/merge-split.test.ts",
+      "fixed": [
+        "merge and split leave every moved item's own values > merge with the form's blank values keeps each moved item's columns",
+        "merge and split leave every moved item's own values > split with the form's blank values keeps each moved item's columns",
+        "merge and split leave every moved item's own values > merge that still names Cascade to Items copies nothing",
+        "merge and split leave every moved item's own values > split that still names Cascade to Items copies nothing",
+        "a merge starts from its source Orders > the draft takes the shared Shop, the earliest Order Date, the latest other dates, the least advanced status and the summed fees",
+        "a merge starts from its source Orders > the draft leaves the Shop blank when the sources differ and Paid off when one source is unpaid",
+        "a merge starts from its source Orders > merging with the draft keeps the source fees and every item's own values"
+      ]
+    },
+    {
+      "fix": "ea9132723fcc35815f21d019ef66dcaef9e418f0",
+      "bug": "Merge and Split copied the form's values onto every moved item, and the forms opened blank with Cascade to Items set to every field, so an untouched merge wrote Ordered, unpaid, no Shop and no dates over each item and dropped the source Orders' fees.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the merge dialog > opens on the values derived from the source Orders and sends them unchanged",
+        "the merge dialog > says why it cannot open when the source Orders do not load",
+        "moving items to a new order offers no Cascade to Items choice"
+      ]
     }
   ],
   "lint": [

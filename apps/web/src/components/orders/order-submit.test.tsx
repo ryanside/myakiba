@@ -455,8 +455,8 @@ describe("the merge dialog", () => {
       expect({
         shop: (screen.getByLabelText("Shop") as HTMLInputElement).value,
         shipping: (screen.getByLabelText("Shipping") as HTMLInputElement).value,
-        cascade: screen.queryByText("Cascade to Items") === null,
-      }).toEqual({ shop: "AmiAmi", shipping: "$20.00", cascade: true });
+        options: screen.queryByText("Options") === null,
+      }).toEqual({ shop: "AmiAmi", shipping: "$20.00", options: true });
 
       await userEvent.setup().click(merge);
       await waitFor(() => expect(send.mock.calls.length).toBe(1));
@@ -503,7 +503,7 @@ test("moving items to a new order offers no Cascade to Items choice", () => {
   );
   fireEvent.click(screen.getByRole("button", { name: "Open" }));
   fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
-  expect(screen.queryByText("Cascade to Items") === null).toBe(true);
+  expect(screen.queryByText("Options") === null).toBe(true);
   cleanup();
   queryClient.clear();
 });
