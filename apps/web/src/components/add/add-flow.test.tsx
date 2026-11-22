@@ -2307,7 +2307,7 @@ test("a New Order with its default title waits for the current read of its rows,
   await release();
 });
 
-test("a New Order with its default title is blocked with the read's reason when the current read fails", async () => {
+test("a New Order with its default title asks for an Order title when the current read fails, and typing one enables Create", async () => {
   draft(ITEM_ID, OTHER_ID);
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
@@ -2316,13 +2316,38 @@ test("a New Order with its default title is blocked with the read's reason when 
   await click(user, "Remove Hatsune Miku");
 
   await waitFor(() =>
-    expect(screen.queryByRole("button", { name: BLOCKED })?.hasAttribute("disabled")).toBe(true),
+    expect(
+      screen.queryByRole("button", { name: "Enter an Order title" })?.hasAttribute("disabled"),
+    ).toBe(true),
   );
   expect([
-    enabledButton("Create order with 1") === null,
+    isChecked("Rem"),
     screen.queryByRole("button", { name: "Retry" }) !== null,
+    screen.queryAllByText(BLOCKED).length,
+    shows("Could not load this item"),
     server.commits.length,
-  ]).toEqual([true, true, 0]);
+  ]).toEqual(["true", true, 0, false, 0]);
+
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
+  await user.keyboard("Spring preorders{Enter}");
+  await waitFor(() => expect(enabledButton("Create order with 1") !== null).toBe(true));
+  expect(screen.queryAllByText("Enter an Order title").length).toBe(0);
+});
+
+test("when a row failed to load and the title also waits, Add says to retry or remove those items", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  server.itemsFailure = refused(503, "down");
+  seedItems(item("third0000001", { title: "Third" }));
+  await addFromSearch(user, "Third", /Third/u);
+
+  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  expect([
+    screen.queryByRole("button", { name: BLOCKED })?.hasAttribute("disabled"),
+    screen.queryAllByText("Enter an Order title").length,
+  ]).toEqual([true, 0]);
 });
 
 test("a New Order created from the current read retries a lost answer with the same title and commitId", async () => {
