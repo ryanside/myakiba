@@ -145,7 +145,6 @@
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
-        "@paralleldrive/cuid2": "catalog:",
         "better-auth": "catalog:",
         "better-auth-harmony": "^1.3.2",
         "better-result": "catalog:",
@@ -174,6 +173,7 @@
       "name": "@myakiba/contracts",
       "version": "0.0.0",
       "dependencies": {
+        "@paralleldrive/cuid2": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

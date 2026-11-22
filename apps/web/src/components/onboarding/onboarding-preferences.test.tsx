@@ -4,11 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toast";
 import { answerAuth, refuse, resetAuthAnswers, type } from "../../../test/better-auth";
 import type { AuthRequest } from "../../../test/better-auth";
+import { generateUsername } from "@myakiba/contracts/shared/generated-username";
 
 configure({ asyncUtilTimeout: 3000 });
 
 let invalidations = 0;
-const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "fixture" } };
+const session = {
+  user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: generateUsername() },
+};
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
   ...realRouter,
@@ -31,7 +34,7 @@ function GettingStartedButton() {
   );
 }
 
-const PREFERENCES_STEP_TITLE = "Set your username, currency, and date format.";
+const PREFERENCES_STEP_TITLE = "Welcome to myakiba.";
 
 afterEach(() => {
   cleanup();
@@ -60,9 +63,6 @@ async function openPreferencesStep() {
     </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
-  // Getting Started opens at the welcome step.
-  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: PREFERENCES_STEP_TITLE });
 }
 
@@ -84,7 +84,7 @@ test("saved onboarding preferences move on to the next step", async () => {
   expect(requests.filter(({ path }) => path === "/update-user")).toEqual([
     {
       path: "/update-user",
-      body: { username: "collector", currency: "USD", dateFormat: "MM/DD/YYYY" },
+      body: { username: "collector" },
     },
   ]);
 });

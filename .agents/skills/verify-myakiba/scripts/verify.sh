@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: verify.sh up | doctor RUN | seed-user RUN [EMAIL] [PASSWORD] | seed-items RUN | psql RUN SQL | logs RUN | down RUN | list
+# Usage: verify.sh up | doctor RUN | seed-user RUN [EMAIL] [PASSWORD] [--generated-username] | seed-items RUN | psql RUN SQL | logs RUN | down RUN | list
 # Run from a myakiba checkout. up builds that checkout's db-push and server images and runs them against throwaway Postgres, Redis and S3
 # on one free 127.0.0.1 port. Every Docker resource carries the label verify-myakiba.run=RUN.
 # State and evidence live in ${VERIFY_HOME:-~/.cache/verify-myakiba}/RUN. down keeps evidence/.
@@ -154,15 +154,26 @@ doctor() {
 
 seed_user() {
   load "$1"
-  local email=${2:-verify@example.com} password=${3:-verify-password-1} body code
+  local email=${2:-verify@example.com} password=${3:-verify-password-1} generated=${4:-} body code username
+  # The sign-up form sends a username. A Google sign-up sends none, and the server generates one.
+  username=$(printf %s "${email%%@*}" | tr -cd 'A-Za-z0-9_.')
+  [ -n "$generated" ] && username=""
   body=$(curl -s -w '\n%{http_code}' "$url/api/auth/sign-up/email" -H 'content-type: application/json' \
     -H "origin: $url" -H 'x-captcha-response: XXXX.DUMMY.TOKEN.XXXX' \
-    -d "{\"email\":\"$email\",\"password\":\"$password\",\"name\":\"Verify User\"}")
+    -d "{\"email\":\"$email\",\"password\":\"$password\",\"name\":\"Verify User\"${username:+,\"username\":\"$username\"}}")
   code=${body##*$'\n'}
-  [ "$code" = 200 ] || die "sign-up for $email answered $code: ${body%$'\n'*}"
-  [ "$(psql_run "update \"user\" set email_verified = true where email = '$email' returning email")" = "$email" ] ||
-    die "no user row for $email after sign-up"
-  echo "user: $email / $password (email verified)"
+  if [ "$code" != 200 ]; then
+    # Better Auth checks the username before it hides an existing email, so a repeat seed of
+    # the same email answers that the username is taken.
+    case $body in
+      *USERNAME_IS_ALREADY_TAKEN*) [ -n "$(psql_run "select id from \"user\" where email = '$email'")" ] ||
+        die "sign-up for $email answered $code: ${body%$'\n'*}" ;;
+      *) die "sign-up for $email answered $code: ${body%$'\n'*}" ;;
+    esac
+  fi
+  username=$(psql_run "update \"user\" set email_verified = true where email = '$email' returning username")
+  [ -n "$username" ] || die "no user row for $email after sign-up"
+  echo "user: $email / $password, username $username (email verified)"
 }
 
 seed_items() {
@@ -202,7 +213,14 @@ down() {
 case ${1:-} in
   up) up ;;
   doctor) doctor "${2:-}" ;;
-  seed-user) seed_user "${2:-}" "${3:-}" "${4:-}" ;;
+  seed-user)
+    generated=""
+    args=()
+    for arg in "${@:2}"; do
+      if [ "$arg" = --generated-username ]; then generated=1; else args+=("$arg"); fi
+    done
+    seed_user "${args[0]:-}" "${args[1]:-}" "${args[2]:-}" "$generated"
+    ;;
   seed-items) seed_items "${2:-}" "${3:-}" ;;
   psql)
     load "${2:-}"
@@ -218,5 +236,5 @@ case ${1:-} in
       if [ -f "$state" ]; then (. "$state" && echo "$run $url $build"); fi
     done
     ;;
-  *) die "usage: verify.sh up | doctor RUN | seed-user RUN [EMAIL] [PASSWORD] | seed-items RUN | psql RUN SQL | logs RUN | down RUN | list" ;;
+  *) die "usage: verify.sh up | doctor RUN | seed-user RUN [EMAIL] [PASSWORD] [--generated-username] | seed-items RUN | psql RUN SQL | logs RUN | down RUN | list" ;;
 esac

@@ -23,6 +23,7 @@
     "test": "bun test --isolate"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
