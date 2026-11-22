@@ -182,6 +182,7 @@ export function useInfiniteRead<
 type ReadCache = {
   readonly placeholderData?: typeof keepPreviousData;
   readonly staleTime?: number;
+  readonly gcTime?: 0;
   readonly retry?: false;
   readonly refetchOnWindowFocus?: true;
   readonly refetchInterval?: number;

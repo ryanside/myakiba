@@ -27,14 +27,7 @@ const catalog = {
   lists: { kind: "persisted", roots: ["lists"], collectionWrites: true },
   orders: {
     kind: "persisted",
-    roots: [
-      "order",
-      "orders",
-      "orderItems",
-      "orderItemReleases",
-      "orderIdsAndTitles",
-      "orderMergeDraft",
-    ],
+    roots: ["order", "orders", "orderItems", "orderItemReleases", "orderIdsAndTitles"],
     collectionWrites: true,
   },
   releases: { kind: "persisted", roots: ["itemReleases"], collectionWrites: false },
@@ -44,6 +37,7 @@ const catalog = {
   devices: { kind: "account", roots: ["devices"] },
   linkedAccounts: { kind: "account", roots: ["linked-accounts"] },
   usernameAvailability: { kind: "live", roots: ["username-availability"] },
+  orderMergeDraft: { kind: "live", roots: ["orderMergeDraft"] },
   version: { kind: "static", roots: ["version"] },
 } as const satisfies Record<string, FamilySpec>;
 

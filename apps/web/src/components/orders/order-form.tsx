@@ -114,9 +114,17 @@ const mergedNotes = z
 function MergeOrderFormContent(
   props: DeferredMergeOrderFormProps & { readonly close: () => void },
 ) {
-  const draft = useRead(orders.mergeDraft, [...props.orderIds].toSorted());
-  if (draft.data) {
-    return <OrderFormContent {...props} initial={{ ...draft.data, title: MERGED_ORDER_TITLE }} />;
+  const orderIds = [...props.orderIds].toSorted();
+  const draft = useRead(orders.mergeDraft, orderIds);
+  if (draft.isSuccess) {
+    return (
+      <OrderFormContent
+        key={orderIds.join(",")}
+        {...props}
+        orderIds={new Set(orderIds)}
+        initial={{ ...draft.data, title: MERGED_ORDER_TITLE }}
+      />
+    );
   }
 
   return (

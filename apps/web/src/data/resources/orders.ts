@@ -85,10 +85,12 @@ export const orders = {
     load: getOrderItemReleases,
     staleTime: 30_000,
   }),
-  mergeDraft: rootedRead("orders", {
+  mergeDraft: rootedRead("orderMergeDraft", {
     key: (orderIds: readonly string[]) => ["orderMergeDraft", orderIds] as const,
     load: getMergeDraft,
     retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
   }),
 };
 
