@@ -34,9 +34,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
-import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
-import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import { Textarea } from "../ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useRootedInfiniteRead } from "@/data/client";
@@ -73,11 +71,7 @@ type UnifiedItemMoveFormProps = {
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
   ) => Saving;
-  onMoveToNew: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-  ) => Saving;
+  onMoveToNew: (values: NewOrder, collectionIds: ReadonlySet<string>) => Saving;
   readonly clearSelections?: () => void;
   readonly currency: Currency;
   readonly intent?: "move" | "add";
@@ -127,15 +121,6 @@ function UnifiedItemMoveFormContent({
   const dialogTitle = intent === "add" ? "Assign Order" : "Move Items";
   const existingSubmitLabel = intent === "add" ? "Assign Order" : "Move Items";
   const newSubmitLabel = intent === "add" ? "Assign to New Order" : "Move to New Order";
-
-  const {
-    cascadeOptions,
-    handleSelectAll,
-    handleSelectNone,
-    handleCascadeOptionChange,
-    cascadeDisplayText,
-    cascadeOptionsList,
-  } = useCascadeOptions();
 
   const [orderSearch, setOrderSearch] = useState({
     title: "",
@@ -213,7 +198,7 @@ function UnifiedItemMoveFormContent({
         notes: value.notes,
       };
       const moved = await run(
-        () => onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds),
+        () => onMoveToNew(transformedValue, selectedItems.collectionIds),
         closesOnSuccess,
       );
       if (moved.isErr()) return;
@@ -657,20 +642,6 @@ function UnifiedItemMoveFormContent({
                     placeholder="0.00"
                     label="Miscellaneous"
                   />
-                </FormSection>
-
-                <FormSection title="Options" defaultOpen={false}>
-                  <div className="grid gap-1.5">
-                    <Label>Cascade to Items</Label>
-                    <CascadeOptionsDropdown
-                      cascadeOptions={cascadeOptions}
-                      cascadeDisplayText={cascadeDisplayText}
-                      cascadeOptionsList={cascadeOptionsList}
-                      handleSelectAll={handleSelectAll}
-                      handleSelectNone={handleSelectNone}
-                      handleCascadeOptionChange={handleCascadeOptionChange}
-                    />
-                  </div>
                 </FormSection>
 
                 <FormSection title="Notes" defaultOpen={false}>

@@ -27,7 +27,14 @@ const catalog = {
   lists: { kind: "persisted", roots: ["lists"], collectionWrites: true },
   orders: {
     kind: "persisted",
-    roots: ["order", "orders", "orderItems", "orderItemReleases", "orderIdsAndTitles"],
+    roots: [
+      "order",
+      "orders",
+      "orderItems",
+      "orderItemReleases",
+      "orderIdsAndTitles",
+      "orderMergeDraft",
+    ],
     collectionWrites: true,
   },
   releases: { kind: "persisted", roots: ["itemReleases"], collectionWrites: false },

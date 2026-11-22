@@ -94,5 +94,7 @@ export type OrderItemsQuery = z.infer<typeof orderItemsQuerySchema>;
 export type NewOrder = z.infer<typeof newOrderSchema>;
 export type OrderEdit = z.infer<typeof orderEditSchema>;
 export type EditedOrder = z.infer<typeof editedOrderSchema>;
+/** The Order a merge starts from, derived from its source Orders: everything but its title. */
+export type MergedOrder = Omit<NewOrder, "title">;
 export type CascadeOption = z.infer<typeof cascadeOptionSchema>;
 export type CascadeOptions = z.infer<typeof cascadeOptionsSchema>;

@@ -22,6 +22,7 @@ import {
   getOrder,
   getOrderItemReleases,
   getOrderItems,
+  getMergeDraft,
   getOrders,
   mergeOrders,
   moveItem,
@@ -83,6 +84,11 @@ export const orders = {
     key: (orderId: string) => ["orderItemReleases", orderId] as const,
     load: getOrderItemReleases,
     staleTime: 30_000,
+  }),
+  mergeDraft: rootedRead("orders", {
+    key: (orderIds: readonly string[]) => ["orderMergeDraft", orderIds] as const,
+    load: getMergeDraft,
+    retry: false,
   }),
 };
 
@@ -260,12 +266,10 @@ export const mergeOrdersCommand = defineCommand({
   persist: ({
     values,
     orderIds,
-    cascadeOptions,
   }: {
     readonly values: NewOrder;
     readonly orderIds: Set<string>;
-    readonly cascadeOptions: CascadeOptions;
-  } & OnList) => mergeOrders(values, orderIds, cascadeOptions),
+  } & OnList) => mergeOrders(values, orderIds),
   optimistic: async (queryClient, { orderIds, list }) => {
     if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
 
@@ -292,12 +296,10 @@ export const splitOrdersCommand = defineCommand({
   persist: ({
     values,
     collectionIds,
-    cascadeOptions,
   }: {
     readonly values: NewOrder;
     readonly collectionIds: Set<string>;
-    readonly cascadeOptions: CascadeOptions;
-  }) => splitOrders(values, collectionIds, cascadeOptions),
+  }) => splitOrders(values, collectionIds),
   successTitle: ({ collectionIds }) =>
     `Successfully moved ${collectionIds.size} items to a new order!`,
   failureToast: () => ({ title: "Failed to move items to a new order. Please try again." }),

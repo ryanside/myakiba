@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { Saving } from "@/data/client";
@@ -37,7 +37,6 @@ interface CollectionCardGridProps {
   ) => Saving;
   readonly onAddCollectionItemsToNewOrder: (
     values: NewOrder,
-    cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
   ) => Saving;
   readonly currency: Currency;

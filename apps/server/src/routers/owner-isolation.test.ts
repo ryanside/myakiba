@@ -519,6 +519,11 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       { status: 200, body: [] },
     ],
     [
+      "the merge draft of her Order",
+      (held) => call(BOB, "GET", `/orders/merge-draft?orderIds=${held.orderId}`),
+      { status: 404, body: "One or more orders not found" },
+    ],
+    [
       "a merge of her Order",
       (held) =>
         call(BOB, "POST", "/orders/merge", {

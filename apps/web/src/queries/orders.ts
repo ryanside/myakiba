@@ -7,6 +7,7 @@ import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import type {
   CascadeOptions,
   EditedOrder,
+  MergedOrder,
   NewOrder,
   OrderFilters,
   OrderItemsQuery,
@@ -89,34 +90,25 @@ export function getOrderItems(
   });
 }
 
-export function mergeOrders(
-  values: NewOrder,
-  orderIds: Set<string>,
-  cascadeOptions: CascadeOptions,
-) {
-  return call(
-    app.api.orders.merge.post({
-      orderIds: [...orderIds],
-      newOrder: values,
-      cascadeOptions,
-    }),
-    { fallback: "Failed to merge orders" },
-  );
+export function getMergeDraft(
+  orderIds: readonly string[],
+): Promise<Result<MergedOrder, ApiFailure>> {
+  return call(app.api.orders["merge-draft"].get({ query: { orderIds: [...orderIds] } }), {
+    fallback: "Couldn't load the orders to merge.",
+    empty: "Couldn't load the orders to merge.",
+  });
 }
 
-export function splitOrders(
-  values: NewOrder,
-  collectionIds: ReadonlySet<string>,
-  cascadeOptions: CascadeOptions,
-) {
-  return call(
-    app.api.orders.split.post({
-      collectionIds: [...collectionIds],
-      newOrder: values,
-      cascadeOptions,
-    }),
-    { fallback: "Failed to split orders" },
-  );
+export function mergeOrders(values: NewOrder, orderIds: Set<string>) {
+  return call(app.api.orders.merge.post({ orderIds: [...orderIds], newOrder: values }), {
+    fallback: "Failed to merge orders",
+  });
+}
+
+export function splitOrders(values: NewOrder, collectionIds: ReadonlySet<string>) {
+  return call(app.api.orders.split.post({ collectionIds: [...collectionIds], newOrder: values }), {
+    fallback: "Failed to split orders",
+  });
 }
 
 export function editOrder({ orderId, ...edited }: EditedOrder, cascadeOptions: CascadeOptions) {

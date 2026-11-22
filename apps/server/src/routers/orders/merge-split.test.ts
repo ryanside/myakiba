@@ -164,37 +164,6 @@ describe("merge and split accept only the fields a user edits", () => {
   });
 });
 
-describe("merge and split copy Paid to the moved items only when Cascade to Items names it", () => {
-  const send = (route: Route, cascadeOptions: string[]) =>
-    app.handle(
-      new Request(`http://localhost/api/orders/${route}`, {
-        method: "POST",
-        headers: { "x-test-user": userId, "content-type": "application/json" },
-        body: JSON.stringify({ ...writes[route](newOrder), cascadeOptions }),
-      }),
-    );
-  const movedPaid = async () => {
-    const rows = await db
-      .select({ paid: collection.paid })
-      .from(collection)
-      .where(eq(collection.id, "collection-1"));
-    return rows.map((row) => row.paid);
-  };
-
-  test.each(routes)(
-    "%s with Paid in Cascade to Items marks the moved items paid",
-    async (route) => {
-      expect(await send(route, ["paid"])).toMatchObject({ status: 200 });
-      expect(await movedPaid()).toEqual([true]);
-    },
-  );
-
-  test.each(routes)("%s without it leaves each moved item's own Paid", async (route) => {
-    expect(await send(route, ["status"])).toMatchObject({ status: 200 });
-    expect(await movedPaid()).toEqual([false]);
-  });
-});
-
 const itemsWithoutOrder = async () => {
   const rows = await db.select().from(collection).orderBy(collection.id);
   return rows.map(({ orderId: _orderId, updatedAt: _updatedAt, ...own }) => own);

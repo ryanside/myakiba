@@ -4,9 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { MergedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { Result } from "better-result";
 import type { Saving } from "@/data/client";
+import { ApiNotFound } from "@/lib/errors/api-not-found";
 import { WriteFailed } from "@/lib/errors/write-failed";
 
 type Answered = Awaited<Saving>;
@@ -16,6 +18,31 @@ const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order", 
 await mock.module("@/queries/search", () => ({
   ...realSearch,
   searchOrders: async () => Result.ok(targets),
+}));
+
+const mergeDraft: MergedOrder = {
+  shop: "AmiAmi",
+  status: "Shipped",
+  paid: true,
+  orderDate: "2026-01-05",
+  releaseDate: "2026-04-01",
+  paymentDate: "2026-01-20",
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "EMS",
+  shippingFee: 2000,
+  taxes: 300,
+  duties: 0,
+  tariffs: 0,
+  miscFees: 0,
+  notes: "Box 1",
+};
+let answerDraft = async (): Promise<Awaited<ReturnType<(typeof realOrders)["getMergeDraft"]>>> =>
+  Result.ok(mergeDraft);
+const realOrders = await import("@/queries/orders");
+await mock.module("@/queries/orders", () => ({
+  ...realOrders,
+  getMergeDraft: () => answerDraft(),
 }));
 
 const { OrderForm } = await import("./order-form");
@@ -159,7 +186,9 @@ const SUBMIT_PATHS: SubmitPath[] = [
         currency="USD"
       />
     ),
-    submit: clickSubmit("Merge"),
+    submit: async (user) => {
+      await user.click(await screen.findByRole("button", { name: "Merge" }));
+    },
     clearsSelection: true,
   },
   {
@@ -313,9 +342,10 @@ describe.each(FOOTER_PATHS)("$name footer", (path) => {
       if (path.name === "move to a new order") {
         fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
       }
+      const cancel = await screen.findByRole("button", { name: "Cancel" });
       const dialog = screen.getByRole("dialog");
       expect(dialog.querySelectorAll('[data-slot$="footer"] button button').length).toBe(0);
-      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      fireEvent.click(cancel);
       await waitFor(() => expect(formIsOpen()).toBe(false));
     } finally {
       cleanup();
@@ -394,4 +424,86 @@ describe("the edit-order sheet", () => {
       expect(call?.[1]).toEqual(["paid"]);
     }),
   );
+});
+
+describe("the merge dialog", () => {
+  function openMerge(send: (...args: unknown[]) => Saving) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="merge"
+          renderTrigger={trigger}
+          orderIds={ids}
+          callbackFn={send}
+          clearSelections={() => {}}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    return queryClient;
+  }
+
+  test(
+    "opens on the values derived from the source Orders and sends them unchanged",
+    untilBodyDone(async () => {
+      const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+      const queryClient = openMerge(send);
+      const merge = await screen.findByRole("button", { name: "Merge" });
+
+      expect({
+        shop: (screen.getByLabelText("Shop") as HTMLInputElement).value,
+        shipping: (screen.getByLabelText("Shipping") as HTMLInputElement).value,
+        cascade: screen.queryByText("Cascade to Items") === null,
+      }).toEqual({ shop: "AmiAmi", shipping: "$20.00", cascade: true });
+
+      await userEvent.setup().click(merge);
+      await waitFor(() => expect(send.mock.calls.length).toBe(1));
+      expect(send.mock.calls[0]).toEqual([{ ...mergeDraft, title: "New Merged Order" }, ids]);
+      queryClient.clear();
+    }),
+  );
+
+  test(
+    "says why it cannot open when the source Orders do not load",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      answerDraft = async () =>
+        Result.err(
+          new ApiNotFound({
+            body: "One or more orders not found",
+            message: "One or more orders not found",
+          }),
+        );
+      try {
+        const queryClient = openMerge(mock(async (): Saving => Result.ok()));
+        expect(Boolean(await screen.findByText("One or more orders not found"))).toBe(true);
+        expect(screen.queryByRole("button", { name: "Merge" }) === null).toBe(true);
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+});
+
+test("moving items to a new order offers no Cascade to Items choice", () => {
+  const queryClient = new QueryClient();
+  render(
+    <QueryClientProvider client={queryClient}>
+      <UnifiedItemMoveForm
+        renderTrigger={trigger}
+        selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
+        onMoveToExisting={async () => Result.ok()}
+        onMoveToNew={async () => Result.ok()}
+        currency="USD"
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Open" }));
+  fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
+  expect(screen.queryByText("Cascade to Items") === null).toBe(true);
+  cleanup();
+  queryClient.clear();
 });

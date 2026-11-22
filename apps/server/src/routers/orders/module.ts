@@ -24,6 +24,7 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { mergedOrder } from "./merged-order";
 import {
   paidItemCount,
   orderPayment,
@@ -379,6 +380,38 @@ export const Orders = {
     },
   ),
 
+  /** The Order a merge of these Orders starts from. */
+  mergeDraft: query(
+    { action: "orders.merge_draft", failure: "Failed to get the merged order" },
+    async (scope, input: { readonly orderIds: string[] }) => {
+      scope.log.set({ merge: { orderCount: input.orderIds.length } });
+      const sources = await scope.tx
+        .select({
+          shop: order.shop,
+          status: order.status,
+          paid: order.paid,
+          orderDate: order.orderDate,
+          releaseDate: order.releaseDate,
+          paymentDate: order.paymentDate,
+          shippingDate: order.shippingDate,
+          collectionDate: order.collectionDate,
+          shippingMethod: order.shippingMethod,
+          shippingFee: order.shippingFee,
+          taxes: order.taxes,
+          duties: order.duties,
+          tariffs: order.tariffs,
+          miscFees: order.miscFees,
+          notes: order.notes,
+        })
+        .from(order)
+        .where(and(eq(order.userId, scope.viewer.userId), inArray(order.id, input.orderIds)))
+        .orderBy(asc(order.createdAt), asc(order.id));
+      if (!foundAll(input.orderIds, sources.length)) return Result.err(new SomeOrdersNotFound());
+      return Result.ok(mergedOrder(sources));
+    },
+  ),
+
+  /** Moves the Orders' items into a new Order, leaving each item's own values, and deletes them. */
   merge: command(
     { action: "orders.merge", failure: "Failed to merge orders" },
     async (
@@ -386,7 +419,6 @@ export const Orders = {
       input: {
         readonly orderIds: string[];
         readonly newOrder: NewOrder;
-        readonly cascadeOptions: CascadeOptions;
       },
     ) => {
       const userId = scope.viewer.userId;
@@ -401,19 +433,9 @@ export const Orders = {
           "Inserting the merged order returned no row, so orders.merge has no order to move items into",
         );
 
-      const cascadeProperties =
-        input.cascadeOptions.length > 0
-          ? Object.fromEntries(
-              input.cascadeOptions.map((option) => [
-                option,
-                input.newOrder[option as keyof typeof input.newOrder],
-              ]),
-            )
-          : {};
-
       const moved = await scope.tx
         .update(collection)
-        .set({ orderId: inserted.id, ...cascadeProperties })
+        .set({ orderId: inserted.id })
         .where(and(eq(collection.userId, userId), inArray(collection.orderId, input.orderIds)))
         .returning({ id: collection.id });
       if (moved.length === 0) return Result.err(new OrderItemsNotFound());
@@ -435,6 +457,7 @@ export const Orders = {
     },
   ),
 
+  /** Moves the items into a new Order, leaving each item's own values. */
   split: command(
     { action: "orders.split", failure: "Failed to split orders" },
     async (
@@ -442,7 +465,6 @@ export const Orders = {
       input: {
         readonly collectionIds: string[];
         readonly newOrder: NewOrder;
-        readonly cascadeOptions: CascadeOptions;
       },
     ) => {
       const userId = scope.viewer.userId;
@@ -456,19 +478,9 @@ export const Orders = {
           "Inserting the split order returned no row, so orders.split has no order to move items into",
         );
 
-      const cascadeProperties =
-        input.cascadeOptions.length > 0
-          ? Object.fromEntries(
-              input.cascadeOptions.map((option) => [
-                option,
-                input.newOrder[option as keyof typeof input.newOrder],
-              ]),
-            )
-          : {};
-
       const moved = await scope.tx
         .update(collection)
-        .set({ orderId: inserted.id, ...cascadeProperties })
+        .set({ orderId: inserted.id })
         .where(and(eq(collection.userId, userId), inArray(collection.id, input.collectionIds)))
         .returning({ id: collection.id });
       if (!foundAll(input.collectionIds, moved.length)) {

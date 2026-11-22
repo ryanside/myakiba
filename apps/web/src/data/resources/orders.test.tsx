@@ -106,6 +106,9 @@ await mock.module("@/queries/orders", () => ({
   },
   getOrderItems: async () => Result.ok({ items: [], totalCount: 0 }),
   getOrderItemReleases: async () => Result.ok([]),
+  getMergeDraft: async () => {
+    throw new Error("no merge dialog in these tests");
+  },
   editOrder: held("edit order", editServerOrder),
   deleteOrders: held("delete orders", removeOrders),
   mergeOrders: held("merge", removeOrders),
