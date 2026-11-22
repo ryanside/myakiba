@@ -5282,10 +5282,18 @@
     },
     {
       "fix": "a77c570486e3cd984e0f9b833ddb9330922b3917",
-      "bug": "The Collection page's optimistic delete left the paid item count that Average Cost divides by unchanged.",
+      "bug": "The Collection list returned no paid item count, so the Collection page had no count of paid items to divide Item Spend by or to lower on an optimistic delete.",
       "test": "apps/web/src/data/resources/collection.test.tsx",
       "fixed": [
         "a Collection Item write on the collection page > an unfiltered delete lowers the paid item count before the server answers"
+      ]
+    },
+    {
+      "fix": "fce52ba86687e643a5e556fc16b84294ed81218a",
+      "bug": "The Collection page divided Item Spend by every Owned item for Average Cost, in a route no test reached, so an unpaid item lowered it.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > Average Cost is the mean of the paid prices, before and after a delete"
       ]
     }
   ],
