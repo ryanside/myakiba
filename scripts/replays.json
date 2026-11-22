@@ -5472,6 +5472,11 @@
       "test": "apps/web/src/components/orders/orders-columns.test.tsx",
       "fixed": [
         "the Unpaid Costs column leaves a row blank when a negative fee takes its amount below zero"
+      ],
+      "testAt": "4df32002e148241b0e0864a99a7524e10006ba21",
+      "reason": "The Unpaid Costs column this fix tested is gone: a Partly paid row now draws the amount under its Total. HEAD checks the same below-zero rule in the Total cell.",
+      "atHead": [
+        "the Total cell draws no Unpaid Costs when a negative fee takes the amount below zero"
       ]
     },
     {
@@ -5519,6 +5524,31 @@
       "test": "apps/web/src/components/order-page-unpaid-costs.test.tsx",
       "fixed": [
         "a fee edit in Edit order keeps the cost breakdown, Total and Unpaid Costs from one server Order"
+      ]
+    },
+    {
+      "fix": "9d6f7a10d6ddb344ae79658b3e6b3645f60c9853",
+      "bug": "The Orders table's Unpaid Costs column widened the default table by 136 px, so at 1280 px with the sidebar open the Paid checkbox and the row actions sat past its right edge; and the table and the board patched an untick to unpaid before the server answered, so a second click after another Order's edit drew a row unchecked beside its old Unpaid Costs, and the board's Paid box took a second click while its write saved.",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": [
+        "the Total cell draws a Partly paid row's Unpaid Costs under its Total, and nothing for an unpaid or paid row"
+      ]
+    },
+    {
+      "fix": "9d6f7a10d6ddb344ae79658b3e6b3645f60c9853",
+      "bug": "The Orders table's Unpaid Costs column widened the default table by 136 px, so at 1280 px with the sidebar open the Paid checkbox and the row actions sat past its right edge; and the table and the board patched an untick to unpaid before the server answered, so a second click after another Order's edit drew a row unchecked beside its old Unpaid Costs, and the board's Paid box took a second click while its write saved.",
+      "test": "apps/web/src/components/unpaid-costs-while-saving.test.tsx",
+      "fixed": [
+        "unpaying a paid row leaves its checkbox and payment to the server's row, and takes no second click",
+        "a Paid tick, another Order's title edit during its refetch, then a second click never draws the row unchecked beside its old Unpaid Costs"
+      ]
+    },
+    {
+      "fix": "9d6f7a10d6ddb344ae79658b3e6b3645f60c9853",
+      "bug": "The Orders table's Unpaid Costs column widened the default table by 136 px, so at 1280 px with the sidebar open the Paid checkbox and the row actions sat past its right edge; and the table and the board patched an untick to unpaid before the server answered, so a second click after another Order's edit drew a row unchecked beside its old Unpaid Costs, and the board's Paid box took a second click while its write saved.",
+      "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
+      "fixed": [
+        "a dashboard kanban card's Paid checkbox > unticking a paid card leaves its checkbox to the server and takes no second click until the write lands"
       ]
     }
   ],
