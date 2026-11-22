@@ -68,6 +68,35 @@ test("the Dashboard's Total Spent adds paid Collection Items and paid Order fees
   });
 });
 
+test("an Owned, partly paid Order counts beside Unpaid Costs, not under Active Orders", async () => {
+  await renderInApp(
+    <OverviewTab
+      data={{
+        ...dashboard,
+        ordersSummary: { ...dashboard.ordersSummary, totalActiveOrderCount: 0 },
+        unpaidOrderCount: 1,
+        unpaidCosts: 30_000,
+      }}
+      dataUpdatedAt={0}
+      isLoading={false}
+      isError={false}
+      error={null}
+      currency="USD"
+      locale="en-US"
+      dateFormat="MM/DD/YYYY"
+    />,
+  );
+
+  const card = (title: string) =>
+    [...(screen.getByText(title).nextElementSibling?.children ?? [])].map(
+      (part) => part.textContent,
+    );
+  expect({ activeOrders: card("Active Orders"), unpaidCosts: card("Unpaid Costs") }).toEqual({
+    activeOrders: ["0"],
+    unpaidCosts: ["$300.00", "1 order"],
+  });
+});
+
 const calendarOrder = {
   orderId: "order-1",
   title: "Miku order",

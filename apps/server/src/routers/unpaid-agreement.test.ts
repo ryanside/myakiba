@@ -323,6 +323,7 @@ async function seedFeesPaid() {
 
 type Dashboard = {
   readonly unpaidOrderCount: number;
+  readonly ordersSummary: { readonly totalActiveOrderCount: number };
   readonly unpaidCosts: number;
   readonly collectionStats: { readonly totalSpent: number };
   readonly categoriesOwned: readonly { readonly name: string; readonly totalValue: number }[];
@@ -688,6 +689,16 @@ describe("an Owned Order Item that is still unpaid", () => {
       shopsSection: [8000, 8000],
       scalesSection: [8000, 8000],
     });
+  });
+
+  test("its Owned Order, whose fees are paid, counts as unpaid on the Dashboard though it is not active", async () => {
+    const dashboard = await get<Dashboard>(ownedUnpaid, "/dashboard");
+
+    expect({
+      unpaidOrderCount: dashboard.unpaidOrderCount,
+      activeOrders: dashboard.ordersSummary.totalActiveOrderCount,
+      unpaidCosts: dashboard.unpaidCosts,
+    }).toEqual({ unpaidOrderCount: 1, activeOrders: 0, unpaidCosts: 30_000 });
   });
 
   test("Collection Spend, Fee Spend and Unpaid Costs add up to the Order Total", async () => {

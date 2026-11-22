@@ -44,3 +44,28 @@ test("pressing the chosen Paid chip again stops narrowing by Paid", async () => 
 
   expect(await press("Paid")).toEqual([{ status: undefined, paid: undefined, offset: 0 }]);
 });
+
+const searchAfter = (search: OrderFilters, change: Partial<OrderFilters> | undefined) =>
+  Object.fromEntries(
+    Object.entries({ ...search, ...change }).filter(([, value]) => value !== undefined),
+  );
+
+test("after an Expenses Paid Orders link, Unpaid replaces the link's feesPaid instead of narrowing it", async () => {
+  filters = { feesPaid: true };
+
+  const [change] = await press("Unpaid");
+
+  expect(searchAfter(filters, change)).toEqual({ paid: false, offset: 0 });
+});
+
+test("a status chip keeps an Expenses link's feesPaid", async () => {
+  filters = { feesPaid: true };
+
+  const [change] = await press("Shipped");
+
+  expect(searchAfter(filters, change)).toEqual({
+    feesPaid: true,
+    status: ["Shipped"],
+    offset: 0,
+  });
+});
