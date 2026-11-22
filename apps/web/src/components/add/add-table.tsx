@@ -228,6 +228,10 @@ function SelectRow({ row }: CellContext<AddRow, unknown>) {
   );
 }
 
+// Under 36rem the pinned actions cover most of the item cell, so the note takes lines of its own.
+const WIDE_ONLY = "@max-[36rem]/add:hidden";
+const NARROW_ONLY = "hidden @max-[36rem]/add:block";
+
 function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
   return (
     <ItemTitleCell
@@ -236,8 +240,11 @@ function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
       externalId={item.externalId}
       image={item.image}
       walkedByKeys
+      below={
+        row.selected === true ? null : <HeldNote item={item} stacked className={NARROW_ONLY} />
+      }
     >
-      {row.selected === true ? null : <HeldNote item={item} />}
+      {row.selected === true ? null : <HeldNote item={item} className={WIDE_ONLY} />}
     </ItemTitleCell>
   );
 }

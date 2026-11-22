@@ -17,6 +17,7 @@ export function ItemTitleCell({
   image,
   walkedByKeys = false,
   children,
+  below,
 }: {
   readonly itemId: string;
   readonly title: string;
@@ -25,6 +26,8 @@ export function ItemTitleCell({
   /** A table the keyboard walks marks focus on its links, and skips the picture's repeat of the title. */
   readonly walkedByKeys?: boolean;
   readonly children?: ReactNode;
+  /** Lines under the MFC number, which take the width the text has rather than share one line. */
+  readonly below?: ReactNode;
 }) {
   const destination = itemDestination(itemId, externalId);
   return (
@@ -53,7 +56,7 @@ export function ItemTitleCell({
           }
         />
       </Link>
-      <div className={cn("min-w-0 space-y-px", walkedByKeys && "flex-1")}>
+      <div className={cn("min-w-0", walkedByKeys && "flex-1")}>
         <Link
           {...destination}
           title={title}
@@ -64,7 +67,7 @@ export function ItemTitleCell({
         >
           {title}
         </Link>
-        <div className="flex items-center gap-2 font-normal">
+        <div className="mt-px flex items-center gap-2 font-normal">
           {externalId === null ? (
             <span className="text-xs text-muted-foreground">
               {walkedByKeys ? "Custom item" : "Custom"}
@@ -84,6 +87,7 @@ export function ItemTitleCell({
           )}
           {children}
         </div>
+        {below}
       </div>
     </div>
   );
