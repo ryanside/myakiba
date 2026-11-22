@@ -92,36 +92,37 @@ const targetKey = (target: ListTarget) => `${target.type}:${target.id}`;
 
 async function lockExistingTargets(tx: Tx, userId: string, targets: readonly ListTarget[]) {
   const { itemIds, collectionIds, orderIds } = splitTargets(targets);
-  const [items, collectionItems, orders] = await Promise.all([
-    itemIds.length === 0
-      ? Promise.resolve([])
-      : tx
-          .select({ id: item.id })
-          .from(item)
-          .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds)))
-          .orderBy(asc(item.id))
-          .for("key share"),
-    collectionIds.length === 0
-      ? Promise.resolve([])
-      : tx
-          .select({ id: collection.id })
-          .from(collection)
-          .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
-          .orderBy(asc(collection.id))
-          .for("key share"),
+  const orders =
     orderIds.length === 0
-      ? Promise.resolve([])
-      : tx
+      ? []
+      : await tx
           .select({ id: order.id })
           .from(order)
           .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
           .orderBy(asc(order.id))
-          .for("key share"),
-  ]);
+          .for("key share");
+  const items =
+    itemIds.length === 0
+      ? []
+      : await tx
+          .select({ id: item.id })
+          .from(item)
+          .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds)))
+          .orderBy(asc(item.id))
+          .for("key share");
+  const collectionItems =
+    collectionIds.length === 0
+      ? []
+      : await tx
+          .select({ id: collection.id })
+          .from(collection)
+          .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
+          .orderBy(asc(collection.id))
+          .for("key share");
   return new Set([
+    ...orders.map(({ id }) => targetKey({ type: "order", id })),
     ...items.map(({ id }) => targetKey({ type: "item", id })),
     ...collectionItems.map(({ id }) => targetKey({ type: "collectionItem", id })),
-    ...orders.map(({ id }) => targetKey({ type: "order", id })),
   ]);
 }
 
@@ -474,6 +475,7 @@ export const Lists = {
         return Result.err(new ListNotFound());
       }
 
+      const existing = await lockExistingTargets(scope.tx, userId, members);
       const currentMembers = await scope.tx
         .select(memberColumns)
         .from(listMember)
@@ -482,7 +484,6 @@ export const Lists = {
         .for("update");
       const present = new Set(currentMembers.map((member) => targetKey(targetOf(member))));
       const absent = members.filter((member) => !present.has(targetKey(member)));
-      const existing = await lockExistingTargets(scope.tx, userId, absent);
       const restorable = absent.filter((member) => existing.has(targetKey(member)));
       if (restorable.length === 0) {
         scope.log.set({ restoredCount: 0 });

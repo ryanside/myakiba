@@ -147,6 +147,7 @@ export function useRemoveListMembersMutation(listId: string) {
       const toastId = toast.add({
         type: "error",
         ...failureToast,
+        id: `undo:${input.listId}:${input.members.map(({ type, id }) => `${type}:${id}`).join(",")}`,
         ...(!(failure instanceof ApiNotFound) && {
           actionProps: {
             children: "Retry",
