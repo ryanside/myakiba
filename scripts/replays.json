@@ -5415,7 +5415,9 @@
         "the merge dialog > opens on the values derived from the source Orders and sends them unchanged",
         "the merge dialog > says why it cannot open when the source Orders do not load",
         "moving items to a new order offers no Cascade to Items choice"
-      ]
+      ],
+      "testAt": "6d6c1c60f1ae289edd1305893fd0cf695678c7d9",
+      "reason": "Later commits in this PR add draft tests to this file that also pass at this fix, because the draft here refetched on every mount, so this fix replays against the test file as its replay commit left it."
     },
     {
       "fix": "bf39a935f1edcd768a3c181854fc45ffb6bb75a7",
@@ -5443,7 +5445,9 @@
       "test": "apps/web/src/data/resources/orders.test.tsx",
       "fixed": [
         "a merge from the Merge dialog > does not read the merge draft again once the merged Orders are gone"
-      ]
+      ],
+      "testAt": "6e9607584d9bfd2c576f083d40c07f71119f18f1",
+      "reason": "A later commit in this PR gives the merge draft read an opening id in its input, which this test file passes, so this fix replays against the test file as its failing-test commit left it."
     },
     {
       "fix": "fb0bc89511fb94558bc59cdf13e2155016d21c01",
@@ -5460,6 +5464,16 @@
       "test": "apps/web/src/components/orders/order-submit.test.tsx",
       "fixed": [
         "the merge dialog reads its Orders fresh on every open > waits for the new draft after a source Order changed, then shows its fees"
+      ]
+    },
+    {
+      "fix": "e5014c0f28290a4266c873617f82bbee094d9b41",
+      "bug": "The merge draft's key was the sorted ids alone, so a reopen while the first read was pending joined that read and mounted its old fee, and a reopen before collection reused the finished read; and the Notes reason and Merge's disabled state came from a mount error that a blur on another field cleared.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the merge dialog's Notes > keeps Merge held and its reason tied to it after a blur on another field and a collapse",
+        "the merge dialog reads its Orders fresh on every open > a reopen while the first read is still pending waits for its own read",
+        "the merge dialog reads its Orders fresh on every open > a reopen in the same tick as the close reads the Orders again"
       ]
     }
   ],
