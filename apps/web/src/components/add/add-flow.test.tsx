@@ -2159,3 +2159,119 @@ test("an owned Item picked alone counts while it waits, with Add disabled, then 
     server.commits.length,
   ]).toEqual([true, true, 0]);
 });
+
+/** Holds the read a window focus sends, and lets every read after it through. */
+async function holdNextRefetch() {
+  const release = holdItemReads();
+  refocus();
+  await pause(20);
+  server.itemsGate = null;
+  return release;
+}
+
+test("a re-picked owned Item keeps its note when an older read answers late", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const releaseOld = await holdNextRefetch();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  await releaseOld();
+  await pause(50);
+
+  expect([isChecked("Hatsune Miku"), shows("In your collection")]).toEqual(["false", true]);
+});
+
+test("a row that just loaded stays loaded when the next read fails", async () => {
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  const release = holdItemReads();
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID]));
+  server.itemsFailure = refused(503, "down");
+  await release();
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("true"));
+
+  refocus();
+  await pause(50);
+  expect([
+    isChecked("Hatsune Miku"),
+    shows("Could not load this item"),
+    addButton() !== null,
+  ]).toEqual(["true", false, true]);
+});
+
+test("a row that loaded on its first read keeps its Item and edits when a later row fails and is removed during the failure", async () => {
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  const release = holdItemReads();
+  await addFromSearch(user, "Rem", /Rem/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([OTHER_ID]));
+  server.itemsFailure = refused(503, "down");
+  await release();
+  await waitFor(() => expect(isChecked("Rem")).toBe("true"));
+  await user.type(screen.getByRole("textbox", { name: "Price for Rem" }), "12");
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  await click(user, "Remove this row");
+
+  await waitFor(() => expect([isChecked("Rem"), addButton() !== null]).toEqual(["true", true]));
+  expect(await tryToCommit()).toBe(true);
+  expect(server.commits[0]?.rows.map(({ itemId, price }) => [itemId, price])).toEqual([
+    [OTHER_ID, 1200],
+  ]);
+});
+
+test("a New Order's default title comes from the read that decided its row, so a retry after a reload repeats it", async () => {
+  seedItems(item(ITEM_ID, { title: "Old title", externalId: 98_777 }));
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  const releaseOld = await holdNextRefetch();
+  await click(user, "Remove Old title");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777 }));
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("true"));
+  await releaseOld();
+  await pause(50);
+
+  const { commitAnswer } = server;
+  server.commitAnswer = () => new Promise(() => {});
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  cleanup();
+  server.commitAnswer = commitAnswer;
+  openAddPage("/add?to=order-new");
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("true"));
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+
+  const [lost, retried] = server.commits;
+  expect([
+    lost?.ownership.order?.fields?.title,
+    retried?.ownership.order?.fields?.title,
+    retried?.commitId === lost?.commitId,
+  ]).toEqual(["Hatsune Miku", "Hatsune Miku", true]);
+});
+
+test("an unverified user whose read failed sees only the verify reason at the button", async () => {
+  server.itemsFailure = refused(503, "down");
+  draft(ITEM_ID);
+  openAddPage("/add?to=collection", { emailVerified: false });
+
+  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  expect([
+    screen
+      .queryByRole("button", { name: "Verify your email to add items" })
+      ?.hasAttribute("disabled"),
+    screen.queryAllByText(BLOCKED).length,
+  ]).toEqual([true, 0]);
+});
