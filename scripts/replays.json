@@ -5403,7 +5403,9 @@
         "each item's price follows its own Paid and each Order's fees follow the Order's > Expenses counts a paid item on an Unpaid Order as Order Item Spend, and an unpaid item on a Paid Order as neither",
         "each item's price follows its own Paid and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way",
         "the Orders page lists the Orders behind Unpaid Costs > Unpaid Costs of at least 1 and the Unpaid filter both keep a Paid Order that holds an unpaid item",
-        "the Orders page lists the Orders behind Order Spend > Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid Orders link leaves out"
+        "the Orders page lists the Orders behind Order Spend > Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid Orders link leaves out",
+        "an Order whose Order Fees are paid and whose two Order Items are not is Partly paid > with the fee filter cleared, the list holds the Order whose fees are unpaid again",
+        "an Owned Order Item that is still unpaid > its Owned Order, whose fees are paid, counts as unpaid on the Dashboard though it is not active"
       ]
     },
     {
@@ -5445,13 +5447,15 @@
     },
     {
       "fix": "01531798158c7fd669b18fe224163aa55e069313",
-      "bug": "An Expenses Paid Orders or Shipping link lands with feesPaid and no paid, so the Orders chip row showed All pressed while feesPaid still hid every Order whose fees are unpaid, and pressing All, or a status then All, left it in place.",
+      "bug": "An Expenses Paid Orders or Shipping link lands with feesPaid and no paid, so the Orders chip row showed All pressed while feesPaid still hid every Order whose fees are unpaid, and pressing All, or a status then All, left it in place. The row drew no chip for feesPaid at all, even beside a pressed Paid or Unpaid chip.",
       "test": "apps/web/src/components/orders/orders-quick-filters.test.tsx",
       "fixed": [
         "after an Expenses Paid Orders link, the row shows Fees paid as the filter on, not All",
         "All clears an Expenses link's feesPaid",
         "after a status is chosen on an Expenses link's list, All clears both",
-        "pressing Fees paid again clears it"
+        "pressing Fees paid again clears it",
+        "a URL with both feesPaid and paid shows both payment chips pressed",
+        "on a URL with both, toggling off the pressed Unpaid chip keeps Fees paid"
       ]
     },
     {
