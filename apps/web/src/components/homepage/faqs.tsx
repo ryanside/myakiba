@@ -16,8 +16,8 @@ import { DISCORD_URL } from "@/components/homepage/links";
 import type { ExtensionStore } from "@/lib/extension-listings";
 
 const STORE_BROWSERS = {
-  chromeWebStore: "Chrome, Edge and other Chromium browsers",
-  firefoxAddons: "Firefox",
+  chromeWebStore: " for Chrome, Edge and other Chromium browsers",
+  firefoxAddons: "",
 } as const satisfies Record<ExtensionStore, string>;
 
 const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review";
@@ -51,7 +51,7 @@ function StoreLink({ store, first }: { readonly store: ExtensionStore; readonly 
       >
         {STORE_NAMES[store]}
       </a>
-      {` for ${STORE_BROWSERS[store]}`}
+      {STORE_BROWSERS[store]}
     </>
   );
 }
