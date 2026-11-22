@@ -238,7 +238,10 @@ test("an Order's tab follows a rename made on its page", async () => {
 });
 
 test("a missing Order and an Order with no title name only the kind", async () => {
-  answerOrders({ "od-blank": () => Response.json(orderNamed("od-blank", "")) });
+  answerOrders({
+    "od-blank": () => Response.json(orderNamed("od-blank", "")),
+    "od-spaces": () => Response.json(orderNamed("od-spaces", "   ")),
+  });
   const { router } = renderApp("/orders/od-missing");
   await screen.findByText("Order not found");
   expect(tab()).toEqual(showing("Order - myakiba"));
@@ -246,6 +249,37 @@ test("a missing Order and an Order with no title name only the kind", async () =
   await act(() => router.navigate({ to: "/orders/$id", params: { id: "od-blank" } }));
   await screen.findByText("Created");
   expect(tab()).toEqual(showing("Order - myakiba"));
+
+  await act(() => router.navigate({ to: "/orders/$id", params: { id: "od-spaces" } }));
+  await waitFor(() => expect(requests).toContain("GET /api/orders/od-spaces"));
+  await screen.findByText("Created");
+  expect(tab()).toEqual(showing("Order - myakiba"));
+});
+
+test("an Order rename whose write fails returns the tab to the Order's title", async () => {
+  const write = held();
+  answer = async (request) => {
+    const { pathname } = new URL(request.url);
+    if (pathname.endsWith("/item-releases")) return Response.json([]);
+    if (pathname.endsWith("/items")) return Response.json(EMPTY_PAGE);
+    if (request.method === "PUT") return write.response;
+    return Response.json(orderNamed("od-alpha", "Alpha Order"));
+  };
+  renderApp("/orders/od-alpha");
+  await screen.findByRole("heading", { name: "Alpha Order" });
+
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Edit" }));
+  const titleField = await screen.findByLabelText("Title");
+  await user.clear(titleField);
+  await user.type(titleField, "Renamed Order");
+  await user.click(screen.getByRole("button", { name: "Update" }));
+  await screen.findByRole("heading", { name: "Renamed Order", hidden: true });
+  expect(tab()).toEqual(showing("Renamed Order - myakiba"));
+
+  write.send(new Response("Order is down", { status: 503 }));
+  await screen.findByRole("heading", { name: "Alpha Order", hidden: true });
+  expect(tab()).toEqual(showing("Alpha Order - myakiba"));
 });
 
 const ITEM = {
