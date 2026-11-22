@@ -182,8 +182,8 @@ export function OrdersCardGrid({
                 ) : null}
               </span>
               {unpaidCosts === null ? null : (
-                <span className="flex min-w-0 items-baseline justify-between gap-2 text-xs leading-4">
-                  <span className="truncate text-muted-foreground">Unpaid Costs</span>
+                <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs leading-4">
+                  <span className="text-muted-foreground">Unpaid Costs</span>
                   <span className="shrink-0 tabular-nums">
                     {formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
                   </span>

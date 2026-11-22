@@ -439,7 +439,7 @@ export function createOrdersColumns({
       enableSorting: false,
       enableHiding: true,
       enableResizing: true,
-      size: 112,
+      size: 136,
       meta: {
         ...NUMERIC_COLUMN_META,
         headerTitle: "Unpaid Costs",
