@@ -85,7 +85,9 @@ test("a blank price reads as its release's price only when that is in the user's
   expect(yen.getAttribute("placeholder")).toBe("No price");
 
   await user.click(screen.getByRole("button", { name: "Details for Yen" }));
-  expect(screen.getAllByText(/¥25,000/u)).toHaveLength(1);
+  expect(screen.getByRole("combobox", { name: "Release for Yen" }).textContent).toContain(
+    "¥25,000",
+  );
 });
 
 test("an Item's second line is only its MFC number, with no date, price or badges", async () => {

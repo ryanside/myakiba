@@ -578,11 +578,10 @@ test("the Release control and its menu show date, type, barcode and price in the
 
   await user.click(first as HTMLElement);
   await waitFor(() => {
-    for (const text of ["05/01/2026", "Limited", "4580590174562"]) {
+    for (const text of ["05/01/2026", "Limited", "4580590174562", "¥25,000"]) {
       expect(control().textContent).toContain(text);
     }
   });
-  expect(control().textContent).not.toContain("¥25,000");
   const price = screen.getByRole("textbox", {
     name: "Price for Hatsune Miku",
     description: "Release ¥25,000",
@@ -656,7 +655,7 @@ test.each([
     expect(priceOf("Yen").placeholder).toBe("No price");
     expect(priceOf("Yen").value).toBe("");
     expect(yenHint()).not.toBeNull();
-    expect(screen.getAllByText("Release ¥25,000")).toHaveLength(1);
+    expect(screen.getByText("Release ¥25,000").title).toBe("Release ¥25,000");
     expect(priceOf("Hatsune Miku").placeholder).toBe("$5,000.00");
     expect(priceOf("Hatsune Miku").getAttribute("aria-describedby")).toBeNull();
     expect(screen.queryByText(/^Release \$/u)).toBeNull();
@@ -685,6 +684,7 @@ test("a price filled across currencies is what was typed, survives a reload, and
   await user.type(await screen.findByRole("textbox", { name: "Price" }), "12.50");
   await click(user, "Fill 2 selected");
   await waitFor(() => expect(priceOf("Yen").value).toBe("$12.50"));
+  expect(yenHint()).not.toBeNull();
   cleanup();
 
   openAddPage("/add?to=collection");

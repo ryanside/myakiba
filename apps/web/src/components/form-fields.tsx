@@ -27,18 +27,25 @@ export function LabeledField({
 }: {
   readonly id: string;
   readonly label: ReactNode;
-  /** Shown under the field as `${id}-description`, which the field names in aria-describedby. */
-  readonly description?: ReactNode;
+  /**
+   * One line under the field as `${id}-description`, which the field names in aria-describedby. It
+   * never widens the field: past its width it ends in an ellipsis, and its title holds the whole.
+   */
+  readonly description?: string | null | undefined;
   readonly error?: string | undefined;
   readonly className?: string | undefined;
   readonly children: ReactNode;
 }) {
   return (
-    <div className={cn("grid gap-1.5", className)}>
+    <div className={cn("grid gap-1.5", description && "grid-cols-[minmax(0,1fr)]", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
       {description ? (
-        <FieldDescription id={`${id}-description`} className="text-xs nth-last-2:mt-0">
+        <FieldDescription
+          id={`${id}-description`}
+          title={description}
+          className="truncate text-xs nth-last-2:mt-0"
+        >
           {description}
         </FieldDescription>
       ) : null}

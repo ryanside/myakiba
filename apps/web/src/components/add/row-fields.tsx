@@ -124,7 +124,7 @@ export function plannedPrice(
 }
 
 /** The release's own price when it is in another currency, which a blank Price does not save. */
-export function foreignReleasePrice(
+function foreignReleasePrice(
   release: AddItem["latestRelease"],
   currency: AddController["currency"],
 ): string | null {

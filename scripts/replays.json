@@ -5508,6 +5508,14 @@
       "fixed": [
         "each place an unselected row's Item is in also has a line of its own that nothing truncates"
       ]
+    },
+    {
+      "fix": "c7f9dfa804921375dd19979b1a8b41e7fa417f14",
+      "bug": "The Add page's Fill menu said a blank Price uses the release price even for selected rows whose release is in another currency, where a blank saves no price.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": ["a Price fill says what a blank saves for the selected rows"],
+      "testAt": "c7f9dfa804921375dd19979b1a8b41e7fa417f14",
+      "reason": "cf57c7d95 and 69d640aa3 reworded the mixed placeholder to fit 360 px, and 95b8e7b9e moved the row's release price out of the placeholder, so the test file stays at the fix and HEAD runs the case by the same name."
     }
   ],
   "lint": [
