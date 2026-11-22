@@ -20,8 +20,12 @@ export function LiveRegions({ controller }: { readonly controller: AddController
         {announcement}
       </p>
       <p role="status" className="sr-only">
-        {failedPicks > 0 ? `${formatCount(failedPicks, "pick", "picks")} could not be saved` : ""}
-        {waiting > 0 ? waitingText(waiting) : ""}
+        {[
+          failedPicks > 0 ? `${formatCount(failedPicks, "pick", "picks")} could not be saved` : "",
+          waiting > 0 ? waitingText(waiting) : "",
+        ]
+          .filter(Boolean)
+          .join(". ")}
       </p>
     </>
   );

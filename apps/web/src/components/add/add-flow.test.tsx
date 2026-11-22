@@ -26,6 +26,7 @@ import {
   seedDraft,
   draftItemIds,
   DRAFT_KEY,
+  USER,
 } from "../../../test/add-app";
 
 configure({ asyncUtilTimeout: 3000 });
@@ -1394,6 +1395,29 @@ test("Items waiting past the row cap survive a reload, before and after a commit
   expect(waitingItemIds()).toEqual([]);
   expect(new Set([...kept, ...left])).toEqual(new Set(allIds));
   expect(screen.queryAllByText(/more items? waits?/u)).toEqual([]);
+});
+
+test("the status region reads failed picks and waiting Items as two sentences", async () => {
+  seedDraft(
+    Array.from({ length: 100 }, (_, index) => ({
+      itemId: `row${String(index).padStart(9, "0")}`,
+      overrides: {},
+      selected: true,
+    })),
+  );
+  sessionStorage.setItem(
+    "myakiba:account:add-waiting",
+    JSON.stringify({ userId: USER.id, value: [ITEM_ID] }),
+  );
+  server.uploadAnswer = async () => refused(503, "down");
+  loadExtension({ picks: [fakePick(98_777, "Picked Miku")] });
+  openAddPage();
+
+  await waitFor(() =>
+    expect(screen.getAllByRole("status").map(({ textContent }) => textContent)).toContain(
+      "1 pick could not be saved. 1 more item waits and comes in as you add or remove these.",
+    ),
+  );
 });
 
 test("the search says how many it found, and aria-expanded follows the panel", async () => {
