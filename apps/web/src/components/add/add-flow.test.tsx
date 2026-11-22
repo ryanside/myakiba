@@ -728,7 +728,7 @@ test("a Price fill says what a blank saves for the selected rows", async () => {
     return hint;
   };
 
-  expect(await blankHint()).toBe("Blank saves no price on some rows");
+  expect(await blankHint()).toBe("Some rows save no price if blank");
   await user.click(screen.getByRole("checkbox", { name: "Select Yen" }));
   expect(await blankHint()).toBe("Blank uses the release price");
   await user.click(screen.getByRole("checkbox", { name: "Select Yen" }));
