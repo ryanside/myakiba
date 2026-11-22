@@ -2281,3 +2281,78 @@ test("an unverified user whose read failed sees only the verify reason at the bu
     screen.queryAllByText(BLOCKED).length,
   ]).toEqual([true, 0]);
 });
+
+/** The button named `name`, when the user can press it. */
+const enabledButton = (name: string) => {
+  const button = screen.queryByRole("button", { name });
+  return button === null || button.hasAttribute("disabled") ? null : button;
+};
+
+test("a New Order with its default title waits for the current read of its rows, and a typed title does not", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  const release = holdItemReads();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([OTHER_ID]));
+  expect([enabledButton("Create order with 1") === null, server.commits.length]).toEqual([true, 0]);
+
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
+  await user.keyboard("Spring preorders{Enter}");
+  await waitFor(() => expect(enabledButton("Create order with 1") !== null).toBe(true));
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect(server.commits[0]?.ownership.order?.fields?.title).toBe("Spring preorders");
+  await release();
+});
+
+test("a New Order with its default title is blocked with the read's reason when the current read fails", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  server.itemsFailure = refused(503, "down");
+  await click(user, "Remove Hatsune Miku");
+
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: BLOCKED })?.hasAttribute("disabled")).toBe(true),
+  );
+  expect([
+    enabledButton("Create order with 1") === null,
+    screen.queryByRole("button", { name: "Retry" }) !== null,
+    server.commits.length,
+  ]).toEqual([true, true, 0]);
+});
+
+test("a New Order created from the current read retries a lost answer with the same title and commitId", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  seedItems(item(OTHER_ID, { title: "Rem renamed", externalId: 112_233 }));
+  const release = holdItemReads();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([OTHER_ID]));
+  expect(enabledButton("Create order with 1") === null).toBe(true);
+  await release();
+  await waitFor(() => expect(enabledButton("Create order with 1") !== null).toBe(true));
+
+  const { commitAnswer } = server;
+  server.commitAnswer = () => new Promise(() => {});
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  cleanup();
+  server.commitAnswer = commitAnswer;
+  openAddPage("/add?to=order-new");
+  await waitFor(() => expect(enabledButton("Create order with 1") !== null).toBe(true));
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+
+  const [lost, retried] = server.commits;
+  expect([
+    lost?.ownership.order?.fields?.title,
+    retried?.ownership.order?.fields?.title,
+    retried?.commitId === lost?.commitId,
+  ]).toEqual(["Rem renamed", "Rem renamed", true]);
+});
