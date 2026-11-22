@@ -14,7 +14,7 @@ import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
 import { readCount } from "@/lib/count-input";
 import { FILL_FIELD } from "@/lib/fill-fields";
-import { getCurrencyLocale } from "@/lib/locale";
+import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
@@ -123,12 +123,12 @@ export function plannedPrice(
   return parsed.isOk() ? parsed.value : null;
 }
 
-/** What a blank Price saves. A release in another currency saves nothing, so it reads as no price. */
+/** What a blank Price saves, or for a release in another currency, which saves none, its price. */
 function pricePlaceholder(release: AddItem["latestRelease"], currency: AddController["currency"]) {
   const saved = releasePriceDefault(release, currency);
-  return saved === 0
-    ? "No price"
-    : formatCurrencyFromMinorUnits(saved, currency, getCurrencyLocale(currency));
+  if (saved > 0) return formatCurrencyFromMinorUnits(saved, currency, getCurrencyLocale(currency));
+  const listed = formatReleasePrice(release?.price, release?.priceCurrency, currency);
+  return listed ? `Release ${listed}` : "No price";
 }
 
 export function hasOwnValue(row: DraftRow, field: FieldId): boolean {

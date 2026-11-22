@@ -78,7 +78,7 @@ test("a blank price reads as its release's price only when that is in the user's
   const dollars = await screen.findByRole("textbox", { name: "Price for Dollars" });
   expect(dollars.getAttribute("placeholder")).toBe("$5,000.00");
   const yen = screen.getByRole("textbox", { name: "Price for Yen" });
-  expect(yen.getAttribute("placeholder")).toBe("No price");
+  expect(yen.getAttribute("placeholder")).toBe("Release ¥25,000");
 
   await user.click(screen.getByRole("button", { name: "Details for Yen" }));
   expect(screen.getByRole("combobox", { name: "Release for Yen" }).textContent).toContain(

@@ -584,12 +584,13 @@ test("the Release control and its menu show date, type, barcode and price in the
   });
   expect(
     screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).getAttribute("placeholder"),
-  ).toBe("No price");
+  ).toBe("Release ¥25,000");
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 
   await click(user, "Add 1 to collection");
   await waitFor(() => expect(server.commits).toHaveLength(1));
   expect(server.commits[0]?.rows[0]?.releaseId).toBe(FIRST_RELEASE);
+  expect(server.commits[0]?.rows[0]?.price).toBeNull();
 });
 
 test("a release in another currency says nothing about converting it", async () => {
@@ -611,6 +612,106 @@ test("a release in another currency says nothing about converting it", async () 
   await rowsLoaded();
 
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
+});
+
+// --------------------------------------------------------------------- A price in another currency
+
+const YEN_ID = "yen000000001";
+const yenItem = () =>
+  item(YEN_ID, {
+    title: "Yen",
+    latestRelease: {
+      id: "yen",
+      date: "2027-02-01",
+      type: null,
+      barcode: null,
+      price: 2_500_000,
+      priceCurrency: "JPY",
+    },
+  });
+const priceOf = (title: string) =>
+  screen.getByRole<HTMLInputElement>("textbox", { name: `Price for ${title}` });
+const sentPrices = () => server.commits.at(-1)?.rows.map(({ price }) => price);
+
+test.each([
+  ["the Collection", "/add?to=collection", "Add 2 to collection"],
+  ["a new Order", "/add?to=order-new", "Create order with 2"],
+  ["an existing Order", "/add?to=order:spring000001", "Add 2 to order"],
+])(
+  "a blank price in another currency shows its release's price as a hint, and %s gets no price",
+  async (_, url, button) => {
+    server.orders.set("spring000001", "Spring order");
+    seedItems(yenItem());
+    draft(ITEM_ID, YEN_ID);
+    const user = userEvent.setup();
+    openAddPage(url);
+    await rowsLoaded();
+
+    expect(priceOf("Yen").placeholder).toBe("Release ¥25,000");
+    expect(priceOf("Yen").value).toBe("");
+    expect(priceOf("Hatsune Miku").placeholder).toBe("$5,000.00");
+
+    await user.click(priceOf("Yen"));
+    await user.tab();
+    expect(priceOf("Yen").value).toBe("");
+
+    await waitFor(() =>
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: button }).disabled).toBe(false),
+    );
+    await click(user, button);
+    await waitFor(() => expect(server.commits).toHaveLength(1));
+    expect(sentPrices()).toEqual([null, null]);
+  },
+);
+
+test("a price filled across currencies is what was typed, survives a reload, and a blank fill clears it", async () => {
+  seedItems(yenItem());
+  draft(ITEM_ID, YEN_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+
+  await fill(user, "Price");
+  await user.type(await screen.findByRole("textbox", { name: "Price" }), "12.50");
+  await click(user, "Fill 2 selected");
+  await waitFor(() => expect(priceOf("Yen").value).toBe("$12.50"));
+  cleanup();
+
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  expect([priceOf("Hatsune Miku").value, priceOf("Yen").value]).toEqual(["$12.50", "$12.50"]);
+
+  await fill(user, "Price");
+  await user.clear(await screen.findByRole("textbox", { name: "Price" }));
+  await click(user, "Fill 2 selected");
+  await waitFor(() => expect(priceOf("Yen").value).toBe(""));
+  expect(priceOf("Yen").placeholder).toBe("Release ¥25,000");
+
+  await click(user, "Add 2 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect(sentPrices()).toEqual([null, null]);
+});
+
+test("an Item in another currency that waits for room comes in with a blank price", async () => {
+  seedItems(yenItem());
+  seedDraft(
+    Array.from({ length: 100 }, (_, index) => ({
+      itemId: `row${String(index).padStart(9, "0")}`,
+      overrides: {},
+      selected: true,
+    })),
+  );
+  sessionStorage.setItem(
+    "myakiba:account:add-waiting",
+    JSON.stringify({ userId: USER.id, value: [YEN_ID] }),
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await waitFor(() => expect(screen.queryAllByText("No longer in myakiba").length).toBe(100));
+  await user.click(screen.getAllByRole("button", { name: "Remove this row" })[0] as HTMLElement);
+
+  await waitFor(() => expect(priceOf("Yen").placeholder).toBe("Release ¥25,000"));
+  expect(priceOf("Yen").value).toBe("");
 });
 
 test("a commit points at a price the page cannot read", async () => {
