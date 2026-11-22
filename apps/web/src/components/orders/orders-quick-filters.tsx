@@ -1,5 +1,6 @@
 import { useOrdersFilters } from "@/hooks/use-orders";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { OrderFilters } from "@myakiba/contracts/orders/schema";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { QuickFilterChips } from "../quick-filter-chips";
 
@@ -35,11 +36,14 @@ export function OrdersQuickFilters(): React.ReactElement {
       onChange={(chips) => {
         const nextStatuses = chips.filter(isStatus);
         const paidChip = newlyPressedPaidChip(chips.filter(isPaidChip), current);
-        setFilters({
+        const paid = paidChip === undefined ? undefined : PAID_CHIPS[paidChip];
+        const next: Partial<OrderFilters> = {
           status: nextStatuses.length > 0 ? nextStatuses : undefined,
-          paid: paidChip === undefined ? undefined : PAID_CHIPS[paidChip],
+          paid,
           offset: 0,
-        });
+        };
+        if (paid !== filters.paid) next.feesPaid = undefined;
+        setFilters(next);
       }}
     />
   );

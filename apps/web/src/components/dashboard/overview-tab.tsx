@@ -3,6 +3,7 @@ import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { OrdersBarChart } from "@/components/dashboard/orders-bar-chart";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
+import { UnpaidCostsCard } from "@/components/dashboard/unpaid-costs-card";
 import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { LoadError } from "@/components/page-states";
@@ -76,13 +77,11 @@ export function OverviewTab({
         <KPICard
           title="Active Orders"
           value={ordersSummary.totalActiveOrderCount}
-          subvalueTitle="unpaid"
-          subvalue={unpaidOrderCount}
           isLoading={isLoading}
         />
-        <KPICard
-          title="Unpaid Costs"
-          value={formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
+        <UnpaidCostsCard
+          amount={formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
+          orderCount={unpaidOrderCount}
           isLoading={isLoading}
         />
       </KPIGroup>

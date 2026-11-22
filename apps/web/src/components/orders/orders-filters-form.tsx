@@ -178,6 +178,7 @@ function OrdersFiltersDraft({
         colDateEnd: value.colDateEnd || undefined,
         status: value.status && value.status.length > 0 ? value.status : undefined,
         paid: PAID_CHOICES[value.paid],
+        feesPaid: undefined,
         totalMin: optionalMinorUnits(value.totalMin),
         totalMax: optionalMinorUnits(value.totalMax),
         unpaidCostsMin: optionalMinorUnits(value.unpaidCostsMin),

@@ -12,8 +12,8 @@ export const images: readonly string[] = [
 const KPIS = [
   { title: "Total Items", value: "237", detail: null },
   { title: "Total Spent", value: "$22,728.27", detail: null },
-  { title: "Active Orders", value: "28", detail: "23 unpaid" },
-  { title: "Unpaid Costs", value: "$2,556.70", detail: null },
+  { title: "Active Orders", value: "28", detail: null },
+  { title: "Unpaid Costs", value: "$2,556.70", detail: "23 orders" },
 ] as const satisfies readonly {
   readonly title: string;
   readonly value: string;

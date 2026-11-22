@@ -4,6 +4,7 @@ import { CostBreakdown } from "@/components/dashboard/cost-breakdown";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { ShopBreakdown } from "@/components/dashboard/shop-breakdown";
+import { UnpaidCostsCard } from "@/components/dashboard/unpaid-costs-card";
 import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { LoadError } from "@/components/page-states";
@@ -62,21 +63,15 @@ export function MonthlyTab({
     <>
       <KPIGroup>
         <KPICard title="Total Items" value={itemCount} isLoading={isLoading} />
-        <KPICard
-          title="Total Orders"
-          value={orderCount}
-          subvalueTitle="unpaid"
-          subvalue={unpaidOrderCount}
-          isLoading={isLoading}
-        />
+        <KPICard title="Total Orders" value={orderCount} isLoading={isLoading} />
         <KPICard
           title="Paid Costs"
           value={formatCurrencyFromMinorUnits(paidAmount, currency, locale)}
           isLoading={isLoading}
         />
-        <KPICard
-          title="Unpaid Costs"
-          value={formatCurrencyFromMinorUnits(unpaidAmount, currency, locale)}
+        <UnpaidCostsCard
+          amount={formatCurrencyFromMinorUnits(unpaidAmount, currency, locale)}
+          orderCount={unpaidOrderCount}
           isLoading={isLoading}
         />
       </KPIGroup>

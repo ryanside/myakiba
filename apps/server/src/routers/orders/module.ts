@@ -57,6 +57,7 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.colDateEnd ? lte(order.collectionDate, filters.colDateEnd) : undefined,
     filters.status ? inArray(order.status, filters.status) : undefined,
     filters.feesPaid === undefined ? undefined : eq(orderIsPaid, filters.feesPaid),
+    filters.paid === true ? orderIsPaid : undefined,
     filters.shippingFeeMin === undefined
       ? undefined
       : gte(order.shippingFee, filters.shippingFeeMin),
