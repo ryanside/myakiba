@@ -2106,3 +2106,35 @@ test("an unselected row says where the Item is, without counting its Collection 
   await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
   expect(shows("In your collection, On order")).toBe(true);
 });
+
+test("a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure", async () => {
+  draft(OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await user.type(screen.getByRole("textbox", { name: "Price for Rem" }), "12");
+  server.itemsFailure = refused(503, "down");
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(screen.queryAllByText("Could not load this item").length).toBe(2));
+  const [waitingRow] = screen.getAllByRole("button", { name: "Remove this row" });
+  await user.click(waitingRow as HTMLElement);
+
+  await waitFor(() => expect([isChecked("Rem"), addButton() !== null]).toEqual(["true", true]));
+  expect(await tryToCommit()).toBe(true);
+  expect(server.commits[0]?.rows.map(({ itemId, price }) => [itemId, price])).toEqual([
+    [OTHER_ID, 1200],
+  ]);
+});
+
+test("when a failed read leaves nothing to add, Add says to retry or remove, beside the button too", async () => {
+  server.itemsFailure = refused(503, "down");
+  draft(ITEM_ID);
+  openAddPage("/add?to=collection");
+
+  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  expect([
+    screen.queryByRole("button", { name: BLOCKED })?.hasAttribute("disabled"),
+    screen.queryAllByText(BLOCKED).some((element) => element.closest("button") === null),
+  ]).toEqual([true, true]);
+});
