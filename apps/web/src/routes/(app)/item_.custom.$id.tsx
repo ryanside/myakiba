@@ -13,11 +13,8 @@ import {
 
 export const Route = createFileRoute("/(app)/item_/custom/$id")({
   component: RouteComponent,
-  head: ({ params }) => ({
-    meta: [
-      { name: "description", content: `Custom item ${params.id} details` },
-      { title: `Custom item - myakiba` },
-    ],
+  head: () => ({
+    meta: [{ title: "Custom item - myakiba" }],
   }),
 });
 

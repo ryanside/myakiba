@@ -12,6 +12,7 @@ import { ListFormDialog } from "@/components/lists/list-form-dialog";
 import { ListMemberGrid, memberImages } from "@/components/lists/list-member-grid";
 import { ListMembersActionBar } from "@/components/lists/list-members-action-bar";
 import { MediaViewSkeletons } from "@/components/media-tile";
+import { RecordTitle } from "@/components/record-title";
 import { LIST_HEADING_CLASS_NAME, ListHeading } from "@/components/lists/list-heading";
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -56,9 +57,6 @@ export const Route = createFileRoute("/(app)/lists_/$listId")({
     ]),
   component: RouteComponent,
   remountDeps: ({ params }) => params.listId,
-  head: ({ params }) => ({
-    meta: [{ name: "description", content: `List ${params.listId}` }, { title: "List - myakiba" }],
-  }),
 });
 
 function RouteComponent(): React.JSX.Element {
@@ -101,6 +99,7 @@ function RouteComponent(): React.JSX.Element {
 
   return (
     <div className="mx-auto flex max-w-[88rem] flex-col gap-6" aria-busy={isPending}>
+      <RecordTitle kind="List" title={isPending ? undefined : data?.title} />
       <div className="flex flex-col gap-1">
         <BackLink to="/lists" text="All Lists" font="sans" className="self-start" />
 
