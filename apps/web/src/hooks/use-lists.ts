@@ -147,13 +147,18 @@ const UNDO_TIMEOUT_MS = 10_000;
 
 type Members = readonly ListMemberRestore[];
 
+/** Removed members not yet offered an Undo, and the title to name one of them by. */
+type Removal = { readonly members: Members; readonly soleTitle: string | undefined };
+
 type UndoState =
   | { readonly kind: "none" }
   | { readonly kind: "open"; readonly toastId: string; readonly members: Members }
-  | { readonly kind: "restoring"; readonly members: Members }
-  | { readonly kind: "failed"; readonly toastId: string; readonly members: Members };
+  | { readonly kind: "restoring"; readonly members: Members; readonly later: Removal | null }
+  | { readonly kind: "failed"; readonly toastId: string; readonly members: Members }
+  | { readonly kind: "ended" };
 
 const NONE: UndoState = { kind: "none" };
+const ENDED: UndoState = { kind: "ended" };
 
 const targetKey = ({ type, id }: ListTarget) => `${type}:${id}`;
 
@@ -162,29 +167,83 @@ function joinByTarget(older: Members, newer: Members): Members {
   return [...older.filter((member) => !newerKeys.has(targetKey(member))), ...newer];
 }
 
+const titleOf = ({ members, soleTitle }: Removal) =>
+  `${members.length === 1 && soleTitle ? soleTitle : members.length} removed from List`;
+
+/** The List page's Undo, whose states and events are tabled in the PR. */
 export function useRemoveListMembersMutation(listId: string) {
   const [state, setState] = useState<UndoState>(NONE);
   const current = useRef<UndoState>(NONE);
   const go = (next: UndoState) => {
+    if (current.current.kind === "ended") return;
     current.current = next;
     setState(next);
   };
   useEffect(
     () => () => {
       const left = current.current;
-      current.current = NONE;
+      current.current = ENDED;
       if (left.kind === "open" || left.kind === "failed") toast.close(left.toastId);
     },
     [],
   );
 
-  const closed = (toastId: string) => {
+  const holding = (toastId: string) => {
     const now = current.current;
-    if ((now.kind === "open" || now.kind === "failed") && now.toastId === toastId) go(NONE);
+    return (now.kind === "open" || now.kind === "failed") && now.toastId === toastId ? now : null;
+  };
+  const closed = (toastId: string) => {
+    if (holding(toastId)) go(NONE);
+  };
+  const restoreNow = (toastId: string) => {
+    const now = holding(toastId);
+    if (!now) return;
+    go({ kind: "restoring", members: now.members, later: null });
+    toast.close(toastId);
+    return restore.run({ listId, members: now.members });
+  };
+  const openUndo = (removal: Removal) => {
+    const toastId: string = toast.add({
+      type: "success",
+      title: titleOf(removal),
+      timeout: UNDO_TIMEOUT_MS,
+      actionProps: { children: "Undo", onClick: () => restoreNow(toastId) },
+      onClose: () => closed(toastId),
+    });
+    go({ kind: "open", toastId, members: removal.members });
+  };
+  const removedOk = (added: Removal) => {
+    const now = current.current;
+    if (now.kind === "ended") return;
+    if (now.kind === "none") {
+      openUndo(added);
+      return;
+    }
+    const held = now.kind === "restoring" ? (now.later?.members ?? []) : now.members;
+    const joined = { members: joinByTarget(held, added.members), soleTitle: added.soleTitle };
+    const fits = joined.members.length <= WRITE_LIMITS.ids;
+    if (now.kind === "restoring") {
+      go({ ...now, later: fits ? joined : added });
+    } else if (fits) {
+      if (now.kind === "open") {
+        toast.update(now.toastId, { title: titleOf(joined), timeout: UNDO_TIMEOUT_MS });
+      }
+      go({ ...now, members: joined.members });
+    } else {
+      go(NONE);
+      toast.close(now.toastId);
+      openUndo(added);
+    }
+  };
+  /** Leaves `restoring`, then answers the removals that arrived meanwhile from where it landed. */
+  const settle = (next: UndoState, later: Removal | null) => {
+    go(next);
+    if (later) removedOk(later);
   };
   const restore = useResourceMutation(restoreListMembersCommand, {
     onSaved: () => {
-      if (current.current.kind === "restoring") go(NONE);
+      const now = current.current;
+      if (now.kind === "restoring") settle(NONE, now.later);
     },
     onFailed: (_input, failureToast, failure) => {
       const now = current.current;
@@ -193,42 +252,25 @@ export function useRemoveListMembersMutation(listId: string) {
         return;
       }
       if (failure instanceof ApiUnreachable || failure instanceof ApiServerError) {
-        const toastId = `undo-failed:${listId}`;
+        const toastId = `undo-failed:${crypto.randomUUID()}`;
         toast.add({
           type: "error",
           id: toastId,
           title: failureToast.title,
-          actionProps: { children: "Retry", onClick: () => restoreNow() },
+          actionProps: { children: "Retry", onClick: () => restoreNow(toastId) },
           onClose: () => closed(toastId),
         });
-        go({ kind: "failed", toastId, members: now.members });
+        settle({ kind: "failed", toastId, members: now.members }, now.later);
         return;
       }
-      go(NONE);
       toast.add({
         type: "error",
         title: failureToast.title,
         ...(failure instanceof ApiNotFound && { description: failureToast.description }),
       });
+      settle(failure instanceof ApiNotFound ? ENDED : NONE, now.later);
     },
   });
-  const restoreNow = () => {
-    const now = current.current;
-    if (now.kind !== "open" && now.kind !== "failed") return;
-    go({ kind: "restoring", members: now.members });
-    toast.close(now.toastId);
-    return restore.run({ listId, members: now.members });
-  };
-  const openUndo = (members: Members, title: string) => {
-    const toastId: string = toast.add({
-      type: "success",
-      title,
-      timeout: UNDO_TIMEOUT_MS,
-      actionProps: { children: "Undo", onClick: () => restoreNow() },
-      onClose: () => closed(toastId),
-    });
-    go({ kind: "open", toastId, members });
-  };
   const remove = useResourceMutation(removeListMembersCommand);
 
   return {
@@ -238,26 +280,7 @@ export function useRemoveListMembersMutation(listId: string) {
         if (removed.error.cause instanceof ApiNotFound) await remove.refetch();
         return removed;
       }
-      const now = current.current;
-      if (now.kind === "restoring") return removed;
-      const added = removed.value.removed;
-      const titleOf = (members: Members) =>
-        `${members.length === 1 && soleMemberTitle ? soleMemberTitle : members.length} removed from List`;
-      if (now.kind === "none") {
-        openUndo(added, titleOf(added));
-        return removed;
-      }
-      const joined = joinByTarget(now.members, added);
-      if (joined.length > WRITE_LIMITS.ids) {
-        go(NONE);
-        toast.close(now.toastId);
-        openUndo(added, titleOf(added));
-        return removed;
-      }
-      if (now.kind === "open") {
-        toast.update(now.toastId, { title: titleOf(joined), timeout: UNDO_TIMEOUT_MS });
-      }
-      go({ ...now, members: joined });
+      removedOk({ members: removed.value.removed, soleTitle: soleMemberTitle });
       return removed;
     },
     isPending: remove.isPending,
