@@ -30,7 +30,6 @@ import {
   updateKanbanOrderPaidCommand,
   updateKanbanOrderStatusCommand,
 } from "@/data/resources/dashboard";
-import { useUnpaidCostsHeld } from "@/data/resources/order-unpaid-costs";
 import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -310,7 +309,7 @@ function OrderCard({
   ...props
 }: OrderCardProps) {
   const locale = getCurrencyLocale(currency);
-  const unpaidCosts = partlyPaidUnpaidCosts(order, useUnpaidCostsHeld()(order.orderId));
+  const unpaidCosts = partlyPaidUnpaidCosts(order);
 
   const content = (
     <div

@@ -1,7 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { OrderControls } from "@/components/orders/order-controls";
-import { useUnpaidCostsHeld } from "@/data/resources/order-unpaid-costs";
 import { useOrderPending } from "@/components/orders/order-pending-context";
 import {
   MediaCard,
@@ -48,7 +47,6 @@ export function OrdersCardGrid({
   isLoading,
 }: OrdersCardGridProps): React.JSX.Element {
   const { isOrderPending } = useOrderPending();
-  const isUnpaidCostsHeld = useUnpaidCostsHeld();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
@@ -90,7 +88,7 @@ export function OrdersCardGrid({
         const isPending = isOrderPending(order.orderId);
         const displayImages = order.images.slice(0, 4);
         const destination = { to: "/orders/$id", params: { id: order.orderId } } as const;
-        const unpaidCosts = partlyPaidUnpaidCosts(order, isUnpaidCostsHeld(order.orderId));
+        const unpaidCosts = partlyPaidUnpaidCosts(order);
 
         return (
           <MediaCard key={order.orderId} selected={isSelected} className="animate-data-in">

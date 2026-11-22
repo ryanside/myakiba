@@ -2,14 +2,13 @@ import { afterEach, expect, spyOn, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Result } from "better-result";
-import { defineCommand, Holds, useResourceMutation } from "@/data/client";
+import { defineCommand, useResourceMutation } from "@/data/client";
 import { ApiServerError } from "@/lib/errors/api-server-error";
 import { Toaster, toast } from "@/components/ui/toast";
 import { PopoverMultiInputCell } from "./popover-multi-input-cell";
 
 const command = defineCommand({
   invalidates: ["orders"],
-  holds: { in: new Holds(), keys: () => [] },
   persist: async (_values: Record<string, number>) =>
     Result.err(
       new ApiServerError({

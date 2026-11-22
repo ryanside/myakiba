@@ -16,7 +16,6 @@ import { createPickIntake } from "../picks";
 import type { PickContext } from "../picks";
 import { inUploadSlot } from "../upload-slots";
 import { searches } from "./search";
-import { holdsUnpaidCosts } from "./order-unpaid-costs";
 
 type AddCommit = Parameters<typeof app.api.add.commit.post>[0];
 
@@ -48,7 +47,6 @@ function commitFailureText(failure: ApiFailure): string {
 
 const commitAddCommand = defineCommand({
   invalidates: ["wishlist", ...collectionWriteFamilies],
-  holds: holdsUnpaidCosts(() => ({ edits: "membership", orderIds: "unknown" })),
   persist: (commit: AddCommit) =>
     call(app.api.add.commit.post(commit), {
       fallback: "myakiba could not add these items. Try again.",

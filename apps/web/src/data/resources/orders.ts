@@ -1,5 +1,4 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type {
   CascadeOptions,
@@ -32,10 +31,9 @@ import {
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import { FILL_FIELD } from "@/lib/fill-fields";
-import { paymentOf } from "@/lib/orders";
+import { paymentOf, withUnpaidCostsPending } from "@/lib/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, messageAs, rootedRead } from "../client";
-import { holdsUnpaidCosts } from "./order-unpaid-costs";
 
 const orderItemsOf = (orderId: string) => ["orderItems", orderId] as const;
 
@@ -91,17 +89,23 @@ export const orders = {
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
 type OnList = { readonly list: OrderFilters };
 
-/** A hidden query refetches when it shows again, so a patch there would outlive its write's hold. */
-function isShown(queryClient: QueryClient, queryKey: QueryKey): boolean {
-  return queryClient.getQueryCache().find({ queryKey, exact: true })?.isActive() ?? false;
+const UNPAID_COSTS_INPUTS = [
+  "paid",
+  "shippingFee",
+  "taxes",
+  "duties",
+  "tariffs",
+  "miscFees",
+] as const;
+
+function afterEdit(old: Order, edited: Order, values: EditedOrder): Order {
+  return UNPAID_COSTS_INPUTS.some((field) => old[field] !== values[field])
+    ? withUnpaidCostsPending(edited)
+    : edited;
 }
 
 export const editOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(({ values }: { readonly values: EditedOrder }) => ({
-    edits: "order",
-    values,
-  })),
   refetchBy: "settled",
   persist: ({
     values,
@@ -125,21 +129,24 @@ export const editOrderCommand = defineCommand({
         (values.tariffs - previousOrderDetail.tariffs) +
         (values.miscFees - previousOrderDetail.miscFees)
       : undefined;
-    if (isShown(queryClient, orderDetailKey))
-      queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-        old
-          ? {
+    queryClient.setQueryData<Order>(orderDetailKey, (old) =>
+      old
+        ? afterEdit(
+            old,
+            {
               ...old,
               ...values,
               ...cascadedPayment,
               ...(detailNewTotal !== undefined && { total: detailNewTotal }),
-            }
-          : old,
-      );
+            },
+            values,
+          )
+        : old,
+    );
 
     const listKey = orders.list.key(list);
     let previousList: OrdersPage | undefined;
-    if (!hasActiveFiltersOrSorting(list) && isShown(queryClient, listKey)) {
+    if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
       previousList = queryClient.getQueryData<OrdersPage>(listKey);
       const oldOrder = previousList?.items.find((o) => o.orderId === values.orderId);
@@ -159,12 +166,16 @@ export const editOrderCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === values.orderId
-                  ? {
-                      ...order,
-                      ...values,
-                      ...cascadedPayment,
-                      ...(newTotal !== undefined && { total: newTotal }),
-                    }
+                  ? afterEdit(
+                      order,
+                      {
+                        ...order,
+                        ...values,
+                        ...cascadedPayment,
+                        ...(newTotal !== undefined && { total: newTotal }),
+                      },
+                      values,
+                    )
                   : order,
               ),
             }
@@ -192,16 +203,11 @@ export const editOrderCommand = defineCommand({
 
 export const setOrderPaidCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(({ orderId }: { readonly orderId: string }) => ({
-    edits: "paid",
-    orderIds: [orderId],
-  })),
   refetchBy: "settled",
   persist: ({ orderId, paid }: { readonly orderId: string; readonly paid: boolean } & OnList) =>
     fillOrderPaid(orderId, paid),
   optimistic: async (queryClient, { orderId, paid, list }) => {
-    if (hasActiveFiltersOrSorting(list) || !isShown(queryClient, orders.list.key(list)))
-      return Result.ok(null);
+    if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
 
     const listKey = orders.list.key(list);
     await queryClient.cancelQueries({ queryKey: listKey });
@@ -211,7 +217,9 @@ export const setOrderPaidCommand = defineCommand({
         ? {
             ...old,
             items: old.items.map((order) =>
-              order.orderId === orderId ? { ...order, paid, payment: paymentOf(paid) } : order,
+              order.orderId === orderId
+                ? withUnpaidCostsPending({ ...order, paid, payment: paymentOf(paid) })
+                : order,
             ),
           }
         : old,
@@ -229,10 +237,6 @@ export const setOrderPaidCommand = defineCommand({
 
 export const deleteOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(({ orderIds }: { readonly orderIds: Set<string> }) => ({
-    edits: "membership",
-    orderIds,
-  })),
   refetchBy: "settled",
   persist: ({ orderIds }: { readonly orderIds: Set<string> } & OnList) => deleteOrders(orderIds),
   optimistic: async (queryClient, { orderIds, list }) => {
@@ -262,13 +266,6 @@ export const deleteOrdersCommand = defineCommand({
 
 export const fillOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(
-    ({ orderIds, fill }: { readonly orderIds: readonly string[]; readonly fill: OrderFill }) => ({
-      edits: "order fill",
-      orderIds,
-      field: fill.field,
-    }),
-  ),
   refetchBy: "settled",
   persist: ({
     orderIds,
@@ -284,10 +281,6 @@ export const fillOrdersCommand = defineCommand({
 
 export const mergeOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(({ orderIds }: { readonly orderIds: Set<string> }) => ({
-    edits: "membership",
-    orderIds,
-  })),
   refetchBy: "settled",
   persist: ({
     values,
@@ -320,7 +313,6 @@ export const mergeOrdersCommand = defineCommand({
 
 export const splitOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(() => ({ edits: "membership", orderIds: "unknown" })),
   refetchBy: "settled",
   persist: ({
     values,
@@ -338,10 +330,6 @@ export const splitOrdersCommand = defineCommand({
 
 export const editOrderItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(({ values }: { readonly values: CollectionItemFormValues }) => ({
-    edits: "item",
-    values,
-  })),
   refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
@@ -375,16 +363,16 @@ export const editOrderItemCommand = defineCommand({
     const orderDetailKey = orders.detail.key(itemOrderId);
     await queryClient.cancelQueries({ queryKey: orderDetailKey });
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
-    if (priceChanged && isShown(queryClient, orderDetailKey)) {
+    if (priceChanged) {
       queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-        old ? { ...old, total: old.total + priceDelta } : old,
+        old ? withUnpaidCostsPending({ ...old, total: old.total + priceDelta }) : old,
       );
     }
 
     const listKey = orders.list.key(list);
     let previousOrders: OrdersPage | undefined;
 
-    if (!hasActiveFiltersOrSorting(list) && priceChanged && isShown(queryClient, listKey)) {
+    if (!hasActiveFiltersOrSorting(list) && priceChanged) {
       await queryClient.cancelQueries({ queryKey: listKey });
       previousOrders = queryClient.getQueryData<OrdersPage>(listKey);
       queryClient.setQueryData<OrdersPage>(listKey, (old) =>
@@ -393,7 +381,7 @@ export const editOrderItemCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === itemOrderId
-                  ? { ...order, total: order.total + priceDelta }
+                  ? withUnpaidCostsPending({ ...order, total: order.total + priceDelta })
                   : order,
               ),
             }
@@ -419,10 +407,6 @@ export const editOrderItemCommand = defineCommand({
 
 export const deleteOrderItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(({ orderId }: { readonly orderId: string }) => ({
-    edits: "membership",
-    orderIds: [orderId],
-  })),
   refetchBy: "settled",
   persist: ({ orderId, itemId }: { readonly orderId: string; readonly itemId: string } & OnList) =>
     deleteOrderItem(orderId, itemId),
@@ -446,21 +430,20 @@ export const deleteOrderItemCommand = defineCommand({
     const orderDetailKey = orders.detail.key(orderId);
     await queryClient.cancelQueries({ queryKey: orderDetailKey });
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
-    if (isShown(queryClient, orderDetailKey))
-      queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-        old
-          ? {
-              ...old,
-              total: old.total - removedPrice,
-              itemCount: old.itemCount - 1,
-            }
-          : old,
-      );
+    queryClient.setQueryData<Order>(orderDetailKey, (old) =>
+      old
+        ? withUnpaidCostsPending({
+            ...old,
+            total: old.total - removedPrice,
+            itemCount: old.itemCount - 1,
+          })
+        : old,
+    );
 
     const listKey = orders.list.key(list);
     let previousOrders: OrdersPage | undefined;
 
-    if (!hasActiveFiltersOrSorting(list) && isShown(queryClient, listKey)) {
+    if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
       previousOrders = queryClient.getQueryData<OrdersPage>(listKey);
       queryClient.setQueryData<OrdersPage>(listKey, (old) =>
@@ -469,11 +452,11 @@ export const deleteOrderItemCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === orderId
-                  ? {
+                  ? withUnpaidCostsPending({
                       ...order,
                       total: order.total - removedPrice,
                       itemCount: order.itemCount - 1,
-                    }
+                    })
                   : order,
               ),
             }
@@ -499,7 +482,6 @@ export const deleteOrderItemCommand = defineCommand({
 
 export const deleteOrderItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(() => ({ edits: "membership", orderIds: "unknown" })),
   refetchBy: "settled",
   persist: ({ collectionIds }: { readonly collectionIds: Set<string> }) =>
     deleteOrderItems(collectionIds),
@@ -510,15 +492,6 @@ export const deleteOrderItemsCommand = defineCommand({
 
 export const moveOrderItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  holds: holdsUnpaidCosts(
-    ({
-      targetOrderId,
-      orderIds,
-    }: {
-      readonly targetOrderId: string;
-      readonly orderIds?: Set<string>;
-    }) => ({ edits: "membership", orderIds: orderIds ? [targetOrderId, ...orderIds] : "unknown" }),
-  ),
   refetchBy: "settled",
   persist: ({
     targetOrderId,

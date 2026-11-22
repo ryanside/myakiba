@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-query";
 import type { keepPreviousData } from "@tanstack/react-query";
 import { Panic, Result } from "better-result";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
 import { asFailure, asPanic, DEFECT_TEXT, reportDefect } from "@/lib/as-panic";
 import { WriteFailed } from "@/lib/errors/write-failed";
@@ -362,79 +362,11 @@ type RefetchTiming<Input, Output, F extends WritableFamily> =
       readonly refetchKeys?: never;
     };
 
-/** What a write holds while it is in flight: these keys, or every key of its store. */
-export type HeldKeys = readonly string[] | "every";
-
-type HeldSnapshot = { readonly every: boolean; readonly keys: ReadonlySet<string> };
-
-/** Keys held by writes in flight. A screen reads them with `useHeld`. */
-export class Holds {
-  readonly #counts = new Map<string, number>();
-  #every = 0;
-  #snapshot: HeldSnapshot = { every: false, keys: new Set() };
-  readonly #listeners = new Set<() => void>();
-
-  /** Holds `keys` until the returned release runs; a second release does nothing. */
-  hold(keys: HeldKeys): () => void {
-    this.#change(keys, 1);
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      this.#change(keys, -1);
-    };
-  }
-
-  readonly subscribe = (listener: () => void): (() => void) => {
-    this.#listeners.add(listener);
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  };
-
-  readonly snapshot = (): HeldSnapshot => this.#snapshot;
-
-  #change(keys: HeldKeys, by: 1 | -1): void {
-    if (keys === "every") this.#every += by;
-    else
-      for (const key of new Set(keys)) {
-        const count = (this.#counts.get(key) ?? 0) + by;
-        if (count === 0) this.#counts.delete(key);
-        else this.#counts.set(key, count);
-      }
-    this.#snapshot = { every: this.#every > 0, keys: new Set(this.#counts.keys()) };
-    for (const listener of this.#listeners) listener();
-  }
-}
-
-/** Whether a write in flight holds a key of `holds`, read again whenever a hold starts or ends. */
-export function useHeld(holds: Holds): (key: string) => boolean {
-  const snapshot = useSyncExternalStore(holds.subscribe, holds.snapshot, holds.snapshot);
-  return useCallback((key: string) => snapshot.every || snapshot.keys.has(key), [snapshot]);
-}
-
-/** The keys a write holds in `in` from its start until it and its refetch settle or it rolls back. */
-type Hold<Input> = {
-  readonly in: Holds;
-  readonly keys: (queryClient: QueryClient, input: Input) => HeldKeys;
-};
-
-/**
- * A write that can change Orders says which Orders' Unpaid Costs it holds, even when none. A write
- * that names no family (`"nothing"`) leaves `F` as every family, and holds nothing.
- */
-type HoldRule<F extends WritableFamily, Input> = WritableFamily extends F
-  ? unknown
-  : "orders" extends F
-    ? { readonly holds: Hold<Input> }
-    : unknown;
-
 type CommandSpec<Input, Output, Failure extends Error, F extends WritableFamily> = RefetchTiming<
   Input,
   Output,
   F
 > & {
-  readonly holds?: Hold<Input>;
   /** Families this write can change, or `"nothing"` for one that changes no cached data. */
   readonly invalidates: readonly [F, ...F[]] | "nothing";
   /** The write. Its failure is the command's declared failure, and a throw is a defect. */
@@ -473,7 +405,7 @@ export type Command<Input, Output, Failure extends Error> = {
 };
 
 export function defineCommand<Input, Output, Failure extends Error, const F extends WritableFamily>(
-  spec: CommandSpec<Input, Output, Failure, F> & HoldRule<NoInfer<F>, Input>,
+  spec: CommandSpec<Input, Output, Failure, F>,
 ): Command<Input, Output, Failure> {
   return { [commandSpec]: spec as CommandSpec<Input, Output, Failure, WritableFamily> };
 }
@@ -530,50 +462,45 @@ async function runCommand<Input, Output, Failure extends Error>(
     else await invalidateKeys(keys);
   };
 
-  const release = spec.holds?.in.hold(spec.holds.keys(queryClient, input));
-  try {
-    const patched = await attempt(async () =>
-      spec.optimistic ? spec.optimistic(queryClient, input) : Result.ok(null),
-    );
-    const rollback = patched.isOk() ? patched.value : null;
-    const written = await attempt(async (): Promise<Result<Output, Failure | Panic>> => {
-      if (patched.isErr()) return Result.err(patched.error);
-      const saved = await spec.persist(input);
-      if (saved.isErr()) return Result.err(asFailure(saved.error));
-      const output = saved.value;
-      const successTitle = spec.successTitle?.(input, output);
-      if (successTitle !== undefined)
-        toast.add({
-          type: "success",
-          title: successTitle,
-          ...(spec.successDescription && { description: spec.successDescription(input, output) }),
-        });
-      const warning = spec.warningToast?.(input, output);
-      if (warning !== undefined) toast.add({ type: "warning", ...warning });
-      await onSaved?.(input, output);
-      await spec.saved?.(queryClient, input, output);
-      if (spec.refetchBy === "background") void refetchSaved(output);
-      else if (spec.refetchBy === undefined) await refetchSaved(output);
-      return saved;
-    });
+  const patched = await attempt(async () =>
+    spec.optimistic ? spec.optimistic(queryClient, input) : Result.ok(null),
+  );
+  const rollback = patched.isOk() ? patched.value : null;
+  const written = await attempt(async (): Promise<Result<Output, Failure | Panic>> => {
+    if (patched.isErr()) return Result.err(patched.error);
+    const saved = await spec.persist(input);
+    if (saved.isErr()) return Result.err(asFailure(saved.error));
+    const output = saved.value;
+    const successTitle = spec.successTitle?.(input, output);
+    if (successTitle !== undefined)
+      toast.add({
+        type: "success",
+        title: successTitle,
+        ...(spec.successDescription && { description: spec.successDescription(input, output) }),
+      });
+    const warning = spec.warningToast?.(input, output);
+    if (warning !== undefined) toast.add({ type: "warning", ...warning });
+    await onSaved?.(input, output);
+    await spec.saved?.(queryClient, input, output);
+    if (spec.refetchBy === "background") void refetchSaved(output);
+    else if (spec.refetchBy === undefined) await refetchSaved(output);
+    return saved;
+  });
 
-    if (written.isErr()) {
-      const failure = written.error;
-      rollback?.();
-      const declared = Panic.is(failure) ? null : failure;
-      const failureToast = spec.failureToast?.(input, declared);
-      if (failureToast !== undefined) {
-        const shown = { ...failureToast, ...(declared === null && { description: DEFECT_TEXT }) };
-        if (onFailed) onFailed(input, shown);
-        else toast.add({ type: "error", ...shown });
-      }
+  if (written.isErr()) {
+    const failure = written.error;
+    rollback?.();
+    const declared = Panic.is(failure) ? null : failure;
+    const failureToast = spec.failureToast?.(input, declared);
+    if (failureToast !== undefined) {
+      const shown = { ...failureToast, ...(declared === null && { description: DEFECT_TEXT }) };
+      if (onFailed) onFailed(input, shown);
+      else toast.add({ type: "error", ...shown });
     }
-    if (spec.refetchBy === "settled") await refetchFamilies();
-    spec.settled?.(queryClient, input);
-    return written;
-  } finally {
-    release?.();
   }
+  if (spec.refetchBy === "settled") await refetchFamilies();
+  spec.settled?.(queryClient, input);
+  return written;
 }
 
 /**

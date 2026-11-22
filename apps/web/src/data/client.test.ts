@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { Result } from "better-result";
-import { defineCommand, Holds, preload, preloadPage, rootedRead } from "./client";
+import { defineCommand, preload, preloadPage, rootedRead } from "./client";
 import { orders } from "./resources/orders";
 import { wishlist } from "./resources/wishlist";
 
@@ -82,7 +82,6 @@ test("a write refetches only keys of the families it names, at one time", () => 
 
   defineCommand({
     invalidates: ["orders"],
-    holds: { in: new Holds(), keys: () => [] },
     refetchBy: "settled",
     // @ts-expect-error -- a write that refetches once it settles refetches every family it names.
     refetchKeys: () => [{ queryKey: ["orders"] }],
@@ -129,13 +128,4 @@ test("a route waits for its preloads on a hover, starts them on a navigation and
   finishLoad();
   await hover;
   expect(hoverSettled).toBe(true);
-});
-
-test("a write that can change Orders says which Orders' Unpaid Costs it holds, even none", () => {
-  defineCommand({ invalidates: ["orders"], holds: { in: new Holds(), keys: () => [] }, persist });
-
-  // @ts-expect-error -- a write to the Orders family declares its hold.
-  defineCommand({ invalidates: ["orders"], persist });
-
-  defineCommand({ invalidates: ["lists"], persist });
 });

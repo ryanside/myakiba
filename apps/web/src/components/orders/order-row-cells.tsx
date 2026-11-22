@@ -13,7 +13,6 @@ import type { Row } from "@tanstack/react-table";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +26,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import type { Saving } from "@/data/client";
-import { useUnpaidCostsHeld } from "@/data/resources/order-unpaid-costs";
-import { shownUnpaidCosts } from "@/lib/orders";
 import { cn } from "@/lib/utils";
 import { OrderForm } from "./order-form";
 
@@ -45,21 +42,6 @@ export function OrderItemCountCell({ row }: { readonly row: Row<Order> }): React
       {itemCount}
       <span className="sr-only"> items</span>
     </Button>
-  );
-}
-
-export function UnpaidCostsCell({
-  order,
-  currency,
-  locale,
-}: {
-  readonly order: Order;
-  readonly currency: Currency;
-  readonly locale: string;
-}): React.JSX.Element | null {
-  const unpaidCosts = shownUnpaidCosts(order, useUnpaidCostsHeld()(order.orderId));
-  return unpaidCosts === null ? null : (
-    <>{formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}</>
   );
 }
 
