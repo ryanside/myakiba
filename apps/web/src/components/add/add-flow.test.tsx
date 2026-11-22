@@ -8,6 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { flushSync } from "react-dom";
 import { parseJson } from "@myakiba/utils/parse-json";
@@ -1973,4 +1974,52 @@ test("a failed read decides nothing: the row says it could not load, and the nex
   server.itemsFailure = null;
   await click(user, "Retry");
   await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+});
+
+/** Refetches the reads a window focus refetches, as coming back to the tab does. */
+const refocus = () =>
+  act(() => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+
+test("a read sent before an Item was added again cannot decide it, however late it answers", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const release = holdItemReads();
+  refocus();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID]));
+  await release();
+
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  expect(await tryToCommit()).toBe(false);
+});
+
+test("a read sent while a commit was in flight cannot decide an Item added again after it answers", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const answer = holdCommit();
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  const release = holdItemReads();
+  refocus();
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+  await answer();
+  await release();
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID]));
+
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  expect(await tryToCommit()).toBe(false);
 });

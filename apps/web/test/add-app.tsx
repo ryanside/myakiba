@@ -137,16 +137,17 @@ await mock.module("@/lib/treaty-client", () => ({
       add: {
         items: {
           get: async ({ query }: { readonly query: { readonly ids: readonly string[] } }) => {
-            await server.itemsGate;
-            return (
+            // The answer is what the server held when the read arrived, however long it is held.
+            const answer =
               server.itemsFailure ??
               ok({
                 items: query.ids.flatMap((id) => {
                   const item = server.items.get(id);
                   return item ? [item] : [];
                 }),
-              })
-            );
+              });
+            await server.itemsGate;
+            return answer;
           },
         },
         commit: {
