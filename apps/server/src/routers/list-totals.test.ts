@@ -115,9 +115,25 @@ beforeAll(async () => {
       price: 3000,
       shop: "HLJ",
     },
-    { id: "c-4", userId, itemId: "item-2", status: "Owned", price: 4000, shop: "AmiAmi" },
-    { id: "c-5", userId, itemId: "item-3", status: "Owned", price: 5000, shop: "HLJ" },
-    { id: "c-6", userId, itemId: "item-1", status: "Owned", price: 6000, shop: "AmiAmi" },
+    {
+      id: "c-4",
+      userId,
+      itemId: "item-2",
+      status: "Owned",
+      paid: true,
+      price: 4000,
+      shop: "AmiAmi",
+    },
+    { id: "c-5", userId, itemId: "item-3", status: "Owned", paid: true, price: 5000, shop: "HLJ" },
+    {
+      id: "c-6",
+      userId,
+      itemId: "item-1",
+      status: "Owned",
+      paid: true,
+      price: 6000,
+      shop: "AmiAmi",
+    },
     { id: "c-other", userId: "user-2", itemId: "aki-1", orderId: "order-4", price: 9000 },
   ]);
 });
