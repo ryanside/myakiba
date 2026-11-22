@@ -22,8 +22,8 @@ Preconditions:
 
 - Signed in per `sign-in.md`. For `settings-applied`, one Order exists per `orders.md`. For `settings-shops`, one Collection Item has a shop: follow `collection.md` through **Fill** and stop before **Delete**.
 
-- **Open preferences.** `preview_navigate` to `<url>/settings?section=preferences`. The title is `Preferences Settings - myakiba`. The `Display currency` button reads `USD — United States Dollar`, `MM/DD/YYYY` has `aria-pressed="true"`, and `role=button[name='Save formats']` is disabled.
-- **Change currency.** Click `role=button[name='Display currency']`, type `JPY` into `input[placeholder='Search currencies...']`, then click `role=option[name=/JPY/]`. The button reads `JPY — Japanese Yen`.
+- **Open preferences.** `preview_navigate` to `<url>/settings?section=preferences`. The title is `Preferences Settings - myakiba`. The `Currency` button reads `USD — United States Dollar`, `MM/DD/YYYY` has `aria-pressed="true"`, and `role=button[name='Save formats']` is disabled.
+- **Change currency.** Click `role=button[name='Currency']`, type `JPY` into `input[placeholder='Search currencies...']`, then click `role=option[name=/JPY/]`. The button reads `JPY — Japanese Yen`.
 - **Change date format.** Click `role=main >> role=button[name='YYYY/MM/DD']`. The preview card switches to `¥` amounts and `YYYY/MM/DD` dates, and the page reads `Unsaved changes`.
 - **Save.** Click `role=button[name='Save formats']`. The `Notifications` region shows `Preferences updated successfully` and the button is disabled again.
 - **Confirm the write.** `$H psql <run> "select currency, date_format from \"user\" where email = 'verify@example.com'"` returns `JPY|YYYY/MM/DD`. `$H logs <run>` has `POST /api/auth/update-user`.

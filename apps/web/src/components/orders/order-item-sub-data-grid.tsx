@@ -110,6 +110,11 @@ export function OrderItemSubDataGrid({
     [selectedOrderIdByCollectionId],
   );
 
+  const selectedCount = useMemo(
+    () => [...selectedOrderIdByCollectionId.values()].filter((id) => id === orderId).length,
+    [selectedOrderIdByCollectionId, orderId],
+  );
+
   const columns = useMemo(
     () =>
       createOrderItemSubColumns({
@@ -206,10 +211,7 @@ export function OrderItemSubDataGrid({
                   selected
                 </span>
               ) : (
-                <SelectionSummary
-                  selected={subTable.getFilteredSelectedRowModel().rows.length}
-                  total={totalCount}
-                />
+                <SelectionSummary selected={selectedCount} total={totalCount} />
               )}
             </div>
             <DataGridPagination className="pb-1.5" />
