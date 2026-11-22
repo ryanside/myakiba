@@ -138,11 +138,11 @@ A Wishlist Release Filter for Items whose latest Item Release date is today or e
 One of three expense views: Collection, Orders, or Shipping. Each has its own rules for what counts, which Shop to use, and how averages work, so totals from different views can overlap.
 
 **Spend**:
-Money that an Expense Scope counts as spent. Unpaid Costs are shown separately and do not count as Spend.
+Money that an Expense Scope counts as spent, which is money paid. Unpaid Costs are shown separately and never count as Spend.
 _Avoid_: Cost, Spending, Total Spent when referring to this exact number
 
 **Collection Spend**:
-The saved price of each Owned Collection Item, added once regardless of its copy count. This includes both Collection Items outside Orders and Order Items.
+The saved price of each Owned and paid Collection Item, added once regardless of its copy count. This includes both Collection Items outside Orders and Order Items. An Owned Order Item that is still unpaid counts as Unpaid Costs, not Collection Spend.
 _Avoid_: Collection Item Spend
 
 **Order Spend**:
