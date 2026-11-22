@@ -55,6 +55,7 @@ const draftWith = (itemId: string, overrides: RowOverrides) =>
 const click = (user: User, name: string | RegExp) =>
   user.click(screen.getByRole("button", { name }));
 const rowsLoaded = () => screen.findAllByRole("checkbox", { name: /^Select (?!all)/u });
+const rowCheckboxes = () => screen.queryAllByRole("checkbox", { name: /^Select (?!all)/u });
 const chooseOption = async (user: User, field: string, option: string) => {
   await user.click(screen.getByRole("combobox", { name: field }));
   await user.click(await screen.findByRole("option", { name: option }));
@@ -1320,6 +1321,26 @@ test("a full page says so, in a status region too, and removing a row clears it"
 
   await user.click(screen.getAllByRole("button", { name: "Remove this row" })[0] as HTMLElement);
   await waitFor(() => expect(screen.queryByText(/Add these first/u)).toBeNull());
+});
+
+test("picks past the row cap wait on the page and come in as rows are committed", async () => {
+  const mfcIds = Array.from({ length: 101 }, (_, index) => 10_000 + index);
+  seedItems(...mfcIds.map((mfcId) => item(`item-${mfcId}`, { title: `Pick ${mfcId}` })));
+  const extension = loadExtension({ picks: mfcIds.map((mfcId) => fakePick(mfcId, null)) });
+  const user = userEvent.setup();
+  openAddPage("/add?to=none");
+
+  await waitFor(() =>
+    expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(101),
+  );
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
+
+  const kept = draftItemIds() ?? [];
+  await click(user, "Keep 100 in Item Database");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(1));
+  expect(new Set([...kept, ...(draftItemIds() ?? [])])).toEqual(
+    new Set(mfcIds.map((mfcId) => `item-${mfcId}`)),
+  );
 });
 
 test("the search says how many it found, and aria-expanded follows the panel", async () => {
