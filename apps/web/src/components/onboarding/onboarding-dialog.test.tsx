@@ -59,7 +59,7 @@ type OnboardingStatus = { hasSeenOnboarding?: boolean };
 
 const GENERATED_USERNAME = generateUsername();
 
-function useBrowserLocale(language: string) {
+function setBrowserLocale(language: string) {
   Object.defineProperty(navigator, "language", { value: language, configurable: true });
 }
 
@@ -257,7 +257,7 @@ test("an account with a generated username is asked to choose one, and saves it"
 });
 
 test("a new account in a ja-JP browser starts with yen and year-first dates", async () => {
-  useBrowserLocale("ja-JP");
+  setBrowserLocale("ja-JP");
   await openDashboard(false);
 
   expect(preferences().currency).toContain("JPY");
@@ -272,7 +272,7 @@ test("a new account in a ja-JP browser starts with yen and year-first dates", as
 });
 
 test("a new account in an en-GB browser starts with pounds and day-first dates", async () => {
-  useBrowserLocale("en-GB");
+  setBrowserLocale("en-GB");
   await openDashboard(false);
 
   expect(preferences().currency).toContain("GBP");
@@ -280,7 +280,7 @@ test("a new account in an en-GB browser starts with pounds and day-first dates",
 });
 
 test("Getting Started shows an onboarded account its saved currency, whatever the locale", async () => {
-  useBrowserLocale("ja-JP");
+  setBrowserLocale("ja-JP");
   await openDashboard(true);
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
   await screen.findByRole("dialog", { name: "Welcome to myakiba." });
@@ -301,7 +301,7 @@ test.each([
 ])(
   "%s and %s saved before a reload at the extension step come back, not the locale's guess",
   async (currency, dateFormat) => {
-    useBrowserLocale("en-GB");
+    setBrowserLocale("en-GB");
     await openDashboard(false);
     await choosePreferences(currency, dateFormat);
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
@@ -321,3 +321,29 @@ test.each([
     expect(updates.slice(saved)).toEqual([]);
   },
 );
+
+async function savePreferencesThenLeave() {
+  setBrowserLocale("en-GB");
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  cleanup();
+}
+
+test("a new account that saved preferences and left at the extension step reopens there in the same browser", async () => {
+  await savePreferencesThenLeave();
+  await openDashboard(false);
+
+  expect(
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." }),
+  ).toBeTruthy();
+});
+
+test("a new account that saved preferences and left at the extension step sees no onboarding in another browser", async () => {
+  await savePreferencesThenLeave();
+  localStorage.clear();
+  await openDashboard(false);
+  await act(() => Bun.sleep(500));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
