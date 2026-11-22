@@ -5399,7 +5399,8 @@
       "fixed": [
         "a picked Item already in the Collection or an Order arrives unselected, says so, and stays out of the commit",
         "an Item already in the Collection that waits for room comes in unselected",
-        "an Item added again after its commit arrives unselected"
+        "an Item added again after its commit arrives unselected",
+        "a read sent while a commit was in flight cannot decide an Item added again after it answers"
       ]
     },
     {
@@ -5420,6 +5421,18 @@
         "an Item added again waits for a fresh read of what you own, and cannot be added from the old one",
         "a row waiting for its first fresh read stays out of a commit, so a retry after a reload repeats it",
         "a failed read decides nothing: the row says it could not load, and the next good read decides it"
+      ]
+    },
+    {
+      "fix": "44a401c141d4e5b2e2f0ecc839552f0fb54099f7",
+      "bug": "An old read of the same Add rows left in flight answered a re-added Item with its old counts at a fresh time; a failed read let other rows commit, so a retry after a lost answer and a reload sent other rows under a new commitId; a waiting row could not be removed; Select all decided a row its read had not; and the note counted saved records with no unit.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "a read sent before an Item was added again cannot decide it, however late it answers",
+        "a row whose read failed blocks Add for every row until it is removed or read",
+        "a row waiting for its read can be removed",
+        "Select all leaves a row waiting for its read to that read",
+        "an unselected row says where the Item is, without counting its Collection Items"
       ]
     }
   ],
