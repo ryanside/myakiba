@@ -10,6 +10,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { flushSync } from "react-dom";
+import { parseJson } from "@myakiba/utils/parse-json";
+import * as z from "zod";
 import { MONEY_INPUT_HINT } from "@/lib/money-input";
 import type { RowOverrides } from "./add-draft";
 import { captureIdOf, fakePick } from "../../../test/fake-extension";
@@ -56,6 +58,12 @@ const click = (user: User, name: string | RegExp) =>
   user.click(screen.getByRole("button", { name }));
 const rowsLoaded = () => screen.findAllByRole("checkbox", { name: /^Select (?!all)/u });
 const rowCheckboxes = () => screen.queryAllByRole("checkbox", { name: /^Select (?!all)/u });
+const waitingItemIds = (): readonly string[] => {
+  const stored = sessionStorage.getItem("myakiba:account:add-waiting");
+  return stored === null
+    ? []
+    : parseJson(z.object({ value: z.array(z.string()) }), stored).unwrap().value;
+};
 const chooseOption = async (user: User, field: string, option: string) => {
   await user.click(screen.getByRole("combobox", { name: field }));
   await user.click(await screen.findByRole("option", { name: option }));
@@ -1345,6 +1353,47 @@ test("picks past the row cap wait on the page and come in as rows are committed"
   expect(new Set([...kept, ...(draftItemIds() ?? [])])).toEqual(
     new Set(mfcIds.map((mfcId) => `item-${mfcId}`)),
   );
+});
+
+test("Items waiting past the row cap survive a reload, before and after a commit", async () => {
+  const mfcIds = Array.from({ length: 103 }, (_, index) => 20_000 + index);
+  const allIds = mfcIds.map((mfcId) => `item-${mfcId}`);
+  seedItems(...mfcIds.map((mfcId) => item(`item-${mfcId}`, { title: `Pick ${mfcId}` })));
+  const extension = loadExtension({ picks: mfcIds.map((mfcId) => fakePick(mfcId, null)) });
+  const user = userEvent.setup();
+  openAddPage("/add?to=none");
+  await waitFor(() =>
+    expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(103),
+  );
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
+  cleanup();
+
+  openAddPage("/add?to=none");
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("note")
+        .some(
+          ({ textContent }) =>
+            textContent === "3 more items wait and come in as you add or remove these.",
+        ),
+    ).toBe(true),
+  );
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
+  const kept = draftItemIds() ?? [];
+  expect(new Set([...kept, ...waitingItemIds()])).toEqual(new Set(allIds));
+
+  await click(user, "Keep 100 in Item Database");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(3));
+  cleanup();
+
+  openAddPage("/add?to=none");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(3));
+  const left = draftItemIds() ?? [];
+  expect(left).toHaveLength(3);
+  expect(waitingItemIds()).toEqual([]);
+  expect(new Set([...kept, ...left])).toEqual(new Set(allIds));
+  expect(screen.queryAllByText(/more items? waits?/u)).toEqual([]);
 });
 
 test("the search says how many it found, and aria-expanded follows the panel", async () => {

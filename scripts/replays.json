@@ -6,7 +6,8 @@
       "test": "apps/web/src/components/add/add-flow.test.tsx",
       "fixed": [
         "picks past the row cap wait on the page and come in as rows are committed",
-        "a full page says how many wait, in a status region too, and a removed row lets one in"
+        "a full page says how many wait, in a status region too, and a removed row lets one in",
+        "Items waiting past the row cap survive a reload, before and after a commit"
       ]
     },
     {
