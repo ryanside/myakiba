@@ -249,6 +249,7 @@ async function seedOwnedUnpaid() {
 
 type Dashboard = {
   readonly unpaidCosts: number;
+  readonly collectionStats: { readonly totalSpent: number };
   readonly categoriesOwned: readonly { readonly name: string; readonly totalValue: number }[];
 };
 type CollectionList = { readonly totalValue: number; readonly paidItemCount: number };
@@ -259,6 +260,7 @@ type ExpensesCollection = {
     readonly standalone: { readonly spend: number };
   };
   readonly kpis: { readonly averageItemCost: number };
+  readonly breakdown: readonly { readonly spend: number }[];
   readonly spendingByPeriod: readonly { readonly collectionItems: number }[];
   readonly averageCostByPeriod: readonly { readonly collectionItems: number }[];
   readonly averageCostToDate: readonly { readonly collectionItems: number }[];
@@ -522,10 +524,12 @@ describe("an Owned Order Item that is still unpaid", () => {
       collectionPage: collectionPage.totalValue,
       dashboardCategories: dashboard.categoriesOwned.map((row) => row.totalValue),
       dashboardUnpaidCosts: dashboard.unpaidCosts,
+      dashboardTotalSpent: dashboard.collectionStats.totalSpent,
       expenses: expenses.summary.spend,
       expensesOrderLinked: expenses.summary.orderLinked.spend,
       expensesStandalone: expenses.summary.standalone.spend,
       expensesByPeriod: sum(expenses.spendingByPeriod),
+      expensesByCategory: expenses.breakdown.map((row) => row.spend),
       expenseShops: expenseShops.items.map((row) => row.spend),
       analyticsOrigins: analytics.entries
         .find((row) => row.category === "Origins")
@@ -539,10 +543,12 @@ describe("an Owned Order Item that is still unpaid", () => {
       collectionPage: 8000,
       dashboardCategories: [8000],
       dashboardUnpaidCosts: 30_000,
+      dashboardTotalSpent: 8000,
       expenses: 8000,
       expensesOrderLinked: 8000,
       expensesStandalone: 0,
       expensesByPeriod: 8000,
+      expensesByCategory: [8000],
       expenseShops: [8000],
       analyticsOrigins: [8000],
       analyticsShops: [8000],
