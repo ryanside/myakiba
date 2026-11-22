@@ -5254,6 +5254,16 @@
         "what an empty Add page says > without it, while a store reviews it, what still works",
         "what an empty Add page says > without it, in a browser it does not run in, which ones it does"
       ]
+    },
+    {
+      "fix": "1ad4ca6850b6d0aeb7ddaac0cc30c1b5d3695bf9",
+      "bug": "The Collection and Orders footers counted only the page's selected rows out of the page's rows, so after paging they read 0 selected while the action bar counted 3, and an Order's items footer dropped its count on the next page.",
+      "test": "apps/web/src/components/selection-footer.test.tsx",
+      "fixed": [
+        "the selection footer counts every selected row, not only the page's > on the Collection page",
+        "the selection footer counts every selected row, not only the page's > on the Orders page",
+        "the selection footer counts every selected row, not only the page's > in an Order's items"
+      ]
     }
   ],
   "lint": [
