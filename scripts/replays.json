@@ -5468,17 +5468,6 @@
     },
     {
       "fix": "4df32002e148241b0e0864a99a7524e10006ba21",
-      "bug": "A fee edit, an item price edit or an item removal patched an Order's Total at once and kept its old Unpaid Costs, so the Order page and the Orders table drew the new Total ($21.00, $151.00 or $101.00) beside the old Unpaid Costs of $120.00 until the refetch landed.",
-      "test": "apps/web/src/data/resources/orders-unpaid-costs.test.tsx",
-      "fixed": [
-        "a fee edit that is still saving draws the new Total on the Order page with no Unpaid Costs from before it",
-        "a fee edit that is still saving draws the new Total on the Orders table with no Unpaid Costs from before it",
-        "an item price edit that is still saving draws its new Total with no Unpaid Costs from before it",
-        "removing an item that is still saving draws the new Total with no Unpaid Costs from before it"
-      ]
-    },
-    {
-      "fix": "4df32002e148241b0e0864a99a7524e10006ba21",
       "bug": "The Orders table's Unpaid Costs cell drew a negative amount from a negative fee, which the Orders cards and the Order page hide.",
       "test": "apps/web/src/components/orders/orders-columns.test.tsx",
       "fixed": [
@@ -5486,22 +5475,33 @@
       ]
     },
     {
-      "fix": "b34e7e3e106331f2fa93aec861860c599194a635",
-      "bug": "Whether an Order's Unpaid Costs waited for a write was a field on cached rows, set at each patch site. A fee edit from the Total cell on a filtered or sorted Orders list patched no row, so the cell drew Total $21.00 beside Unpaid Costs $120.00; paying an item without changing its price set no mark, so an expanded row kept $120.00; and the mark rode into the next inline edit's PUT body, which the strict schema refused.",
+      "fix": "1106021cbd418318355e0b92b43e09fe1768afc6",
+      "bug": "An Order edit, an item price edit and an item removal patched the Order's Total in the browser before the server answered, and the Total cell's fee popover kept its own post-submit Total, so a row drew a Total beside Unpaid Costs from an older snapshot: $21.00 beside $120.00 on the Orders table, after leaving the page and coming back, or after another Order's edit during the refetch, and $51.00 or $1.00 beside $20.00 on the Order page.",
       "test": "apps/web/src/components/unpaid-costs-while-saving.test.tsx",
       "fixed": [
-        "a fee edit from the Total cell > on a list with a shop filter draws no Unpaid Costs beside its new Total while it saves",
-        "a fee edit from the Total cell > on a list with a sort draws no Unpaid Costs beside its new Total while it saves",
-        "a title edit made while a fee edit still saves sends only Order fields and saves",
-        "paying the only unpaid item in an expanded row draws no Unpaid Costs on the row while it saves"
+        "a fee edit from the Total cell > on a list with no filter draws the server's Total and Unpaid Costs, before and after it saves",
+        "a fee edit from the Total cell > on a list with a shop filter draws the server's Total and Unpaid Costs, before and after it saves",
+        "a fee edit from the Total cell > on a list with a sort draws the server's Total and Unpaid Costs, before and after it saves",
+        "a fee edit from the Total cell > saved while its page is closed draws the old pair on return until the server's row lands",
+        "a fee edit from the Total cell > followed by another Order's title edit during its refetch keeps its own pair together"
       ]
     },
     {
-      "fix": "b34e7e3e106331f2fa93aec861860c599194a635",
-      "bug": "Paying the only unpaid item on the Order page set no mark on its Order, because its price did not change, so the summary kept Unpaid Costs $20.00 while the item read Paid.",
+      "fix": "1106021cbd418318355e0b92b43e09fe1768afc6",
+      "bug": "An Order edit, an item price edit and an item removal patched the Order's Total in the browser before the server answered, and the Total cell's fee popover kept its own post-submit Total, so a row drew a Total beside Unpaid Costs from an older snapshot: $21.00 beside $120.00 on the Orders table, after leaving the page and coming back, or after another Order's edit during the refetch, and $51.00 or $1.00 beside $20.00 on the Order page.",
       "test": "apps/web/src/components/order-page-unpaid-costs.test.tsx",
       "fixed": [
-        "paying the only unpaid item draws no Unpaid Costs on the Order page while it saves"
+        "an item price edit keeps the Order's pair until the server's Order lands",
+        "removing the only unpaid item keeps the Order's pair until the server's Order reads paid"
+      ]
+    },
+    {
+      "fix": "1106021cbd418318355e0b92b43e09fe1768afc6",
+      "bug": "An Order edit, an item price edit and an item removal patched the Order's Total in the browser before the server answered, and the Total cell's fee popover kept its own post-submit Total, so a row drew a Total beside Unpaid Costs from an older snapshot: $21.00 beside $120.00 on the Orders table, after leaving the page and coming back, or after another Order's edit during the refetch, and $51.00 or $1.00 beside $20.00 on the Order page.",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "an Order write on the orders page > a failed edit puts the Order back, says so and refetches the list",
+        "an Order write on the orders page > an edit that fails while a delete of the same Order is saving shows the Order until the delete lands"
       ]
     }
   ],
