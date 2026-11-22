@@ -413,3 +413,36 @@ test("an Undo of another member and a delete of an Order in the List at once bot
   });
   expect(await shownTitles()).toBe("ABCDE");
 });
+
+test("an Undo that deadlocks on its targets answers 500, and the same Undo succeeds once the other write is done", async () => {
+  await db.insert(collection).values([
+    { id: "collection-1", userId, itemId: "item-F", status: "Owned" },
+    { id: "collection-2", userId, itemId: "item-F", status: "Owned" },
+  ]);
+  await db.insert(listMember).values([
+    { id: "member-c1", listId: "list-1", userId, collectionId: "collection-1", position: 5 },
+    { id: "member-c2", listId: "list-1", userId, collectionId: "collection-2", position: 6 },
+  ]);
+  const members = await removed("c1", "c2");
+  const holding = Promise.withResolvers<null>();
+  const finish = Promise.withResolvers<null>();
+  const other = db
+    .transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL deadlock_timeout = '10s'`);
+      await tx.delete(collection).where(eq(collection.id, "collection-2"));
+      holding.resolve(null);
+      await finish.promise;
+      await tx.delete(collection).where(eq(collection.id, "collection-1"));
+      tx.rollback();
+    })
+    .catch(() => "rolled back");
+  await holding.promise;
+
+  const undone = undo(members);
+  await waitForLockWaits(1);
+  finish.resolve(null);
+
+  expect(await undone).toEqual({ status: 500, body: "Failed to undo" });
+  expect(await other).toBe("rolled back");
+  expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 2 } });
+});

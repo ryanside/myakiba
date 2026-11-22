@@ -209,6 +209,7 @@ const {
 } = await import("./use-lists");
 const { toast, Toaster } = await import("@/components/ui/toast");
 const toastAdd = spyOn(toast, "add");
+const toastUpdate = spyOn(toast, "update");
 const { refreshItemCommand } = await import("@/data/resources/item");
 const { useResourceMutation } = await import("@/data/client");
 
@@ -231,6 +232,7 @@ afterEach(() => {
   server.restoreFailures.length = 0;
   server.restoreDefect = false;
   toastAdd.mockClear();
+  toastUpdate.mockClear();
   moves.clear();
   currentActions = undefined;
 });
@@ -827,13 +829,23 @@ describe("Undo after Remove from List", () => {
     await waitFor(() => expect(server.writes.at(-1)).toBe("restore item-m1@0,item-m2@1 to l1"));
   });
 
-  test("Undo still runs after the List page has closed", async () => {
-    const { unmount } = await removeFromList(["m1"], "figma Saber");
-    unmount();
+  test("leaving the List page closes its Undo, and the Undo it held cannot fire", async () => {
+    const queryClient = new QueryClient();
+    const page = (open: boolean) => (
+      <QueryClientProvider client={queryClient}>
+        <Toaster>{open ? <ListScreens /> : null}</Toaster>
+      </QueryClientProvider>
+    );
+    const view = render(page(true));
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1"]);
+    const undo = lastToastAction();
 
-    await act(async () => lastToastAction()());
+    view.rerender(page(false));
+    await act(async () => undo());
 
-    await waitFor(() => expect(server.writes.at(-1)).toBe("restore item-m1@0 to l1"));
+    await waitFor(() => expect(screen.queryAllByText(/removed from List/u).length).toBe(0));
+    expect(server.writes).toEqual(["remove m1 from l1"]);
   });
 
   test("a failed Undo offers Retry, which sends the same restore again", async () => {
@@ -928,13 +940,119 @@ describe("Undo after Remove from List", () => {
     await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo"));
   });
 
-  test("an Undo that hits a defect offers Retry without telling the user to reload", async () => {
+  test("an Undo that hits a defect offers no Retry", async () => {
     await removeFromList(["m1"], "figma Saber");
     server.restoreDefect = true;
 
     await act(async () => lastToastAction()());
 
-    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo: Retry"));
+    await waitFor(() =>
+      expect(shownToasts().at(-1)).toBe(
+        "error: Failed to undo: Something went wrong. Reload the page and try again",
+      ),
+    );
+  });
+
+  test("an Undo answered 401 offers no Retry", async () => {
+    await removeFromList(["m1"], "figma Saber");
+    server.restoreFailures.push({ status: 401, value: "Unauthorized" });
+
+    await act(async () => lastToastAction()());
+
+    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo"));
+  });
+
+  test("a 404 on Undo closes the List's open Retry, since nothing can go back to it", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1"]);
+    server.restoreFailures.push({ status: 500, value: "Failed to undo" });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(1));
+
+    await removeEach(["m2"]);
+    server.restoreFailures.push({ status: 404, value: "List not found" });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+
+    await waitFor(() => expect(screen.queryAllByText("List not found").length).toBe(1));
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(0));
+  });
+
+  test("removing the same target twice inside one toast's life sends it once", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1", "m1"]);
+    server.writes.length = 0;
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+
+    await waitFor(() => expect(server.writes).toEqual(["restore item-m1@0 to l1"]));
+  });
+
+  test("a removal that joins the open Undo restarts its timer", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+
+    await removeEach(["m1", "m2"]);
+
+    expect(toastUpdate.mock.calls.map(([, update]) => [update.title, update.timeout])).toEqual([
+      ["2 removed from List", 10_000],
+    ]);
+  });
+
+  test("a removal that would take the open Undo past the route's limit starts a new one", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    const batch = (prefix: string) =>
+      Array.from({ length: 600 }, (_, index) => `${prefix}${index}`);
+
+    await act(async () => {
+      await currentActions?.removeMembers.run(batch("a"));
+    });
+    await act(async () => {
+      await currentActions?.removeMembers.run(batch("b"));
+    });
+
+    await waitFor(() =>
+      expect(screen.queryAllByText(/removed from List/u).map((title) => title.textContent)).toEqual(
+        ["600 removed from List"],
+      ),
+    );
+  });
+
+  test("an open Retry and a later removal's Undo each send only their own members", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await removeEach(["m1"]);
+    server.restoreFailures.push({ status: 500, value: "Failed to undo" });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(1));
+    await removeEach(["m2"]);
+    server.writes.length = 0;
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+    await waitFor(() => expect(server.writes).toEqual(["restore item-m2@0 to l1"]));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
+    await waitFor(() =>
+      expect(server.writes).toEqual(["restore item-m2@0 to l1", "restore item-m1@0 to l1"]),
+    );
+  });
+
+  test("two failed Undos on one List keep one Retry that puts both back", async () => {
+    renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    for (const memberId of ["m1", "m2"]) {
+      await removeEach([memberId]);
+      server.restoreFailures.push({ status: 500, value: "Failed to undo" });
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
+      await waitFor(() => expect(server.restoreFailures.length).toBe(0));
+    }
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(1));
+    server.writes.length = 0;
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
+
+    await waitFor(() => expect(server.writes).toEqual(["restore item-m1@0,item-m2@0 to l1"]));
   });
 
   test("an Undo into a deleted List says so and offers no Retry", async () => {
@@ -947,8 +1065,10 @@ describe("Undo after Remove from List", () => {
   });
 
   test("a failed remove says what happened and offers no Undo", async () => {
-    renderListScreens();
-    await waitFor(() => expect(currentActions).toBeDefined());
+    const { queryClient } = renderListScreens();
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    server.fetches.length = 0;
     server.removeFailure = { status: 404, value: "Selection not found" };
     toastAdd.mockClear();
 
@@ -957,8 +1077,7 @@ describe("Undo after Remove from List", () => {
       expect(saved?.status).toBe("error");
     });
 
-    expect(shownToasts()).toEqual([
-      "error: Failed to remove from List: This List changed elsewhere. Reload to see it.",
-    ]);
+    expect(shownToasts()).toEqual(["error: Failed to remove from List"]);
+    await waitFor(() => expect(server.fetches).toContain("l1"));
   });
 });
