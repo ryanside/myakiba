@@ -5271,6 +5271,22 @@
       "fixed": [
         "a Collection Item write on the collection page > an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers"
       ]
+    },
+    {
+      "fix": "a77c570486e3cd984e0f9b833ddb9330922b3917",
+      "bug": "Once Collection Spend counted only paid items, the Collection page, Expenses and the Analytics sections still divided it by every Owned item, so an unpaid item lowered each average.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Owned Order Item that is still unpaid > averages divide Collection Spend by the paid items it sums"
+      ]
+    },
+    {
+      "fix": "a77c570486e3cd984e0f9b833ddb9330922b3917",
+      "bug": "The Collection page's optimistic delete left the paid item count that Average Cost divides by unchanged.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > an unfiltered delete lowers the paid item count before the server answers"
+      ]
     }
   ],
   "lint": [

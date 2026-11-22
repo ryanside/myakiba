@@ -175,7 +175,7 @@ Spend with no Realized Expense Date. It appears in all-time totals and breakdown
 Order Spend divided by the number of Paid Orders.
 
 **Average Collection Item Spend**:
-Collection Spend divided by the number of Owned Collection Items.
+Collection Spend divided by the number of Owned and paid Collection Items, the ones whose prices it adds.
 
 **Average Order Item Spend**:
 Order Item Spend divided by the number of Order Items it counts.
