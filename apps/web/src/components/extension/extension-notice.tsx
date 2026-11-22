@@ -48,7 +48,6 @@ export const PICK: Task = {
 
 export const RUNS_IN = `on a computer in Chrome, Edge or another Chromium browser, or in Firefox ${EXTENSION_MIN_BROWSER_VERSION} or later`;
 
-/** How a pick reaches the Add page, said from where the reader is. */
 export function pickHowTo(landing: "here" | "on the Add page"): string {
   return `Click Pick for myakiba on any MyFigureCollection item and it lands ${landing}.`;
 }
@@ -61,7 +60,6 @@ export function reviewTitle(store: ExtensionStore): string {
   return `The myakiba extension is in review at ${STORE_NAMES[store]}`;
 }
 
-/** A notice's body and link, for a page that writes its own title. */
 type NoticeLines = { readonly body: string; readonly link: ExtensionNoticeCopy["link"] };
 
 /** What to do while this browser's store reviews the extension: use another store's, or wait. */

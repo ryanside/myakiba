@@ -45,11 +45,11 @@ await mock.module("@/lib/extension-bridge", () => ({
 const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
 
 const LAST_STEP = "Pick your first items.";
+const TAKE_NEVER_ANSWERS_MS = 60_000;
 
 function loadExtension(options: Parameters<typeof fakeExtension>[0]) {
   extension = fakeExtension(options);
-  // A take the fake leaves unanswered stays pending for the whole test.
-  bridge = createExtensionBridge(extension.window, { picksAnswerMs: 60_000 });
+  bridge = createExtensionBridge(extension.window, { picksAnswerMs: TAKE_NEVER_ANSWERS_MS });
 }
 
 function GettingStartedButton() {
@@ -177,13 +177,13 @@ test("with no picks yet, the last step says how to pick one", async () => {
   expect(finishLabel()).toBe("Get started");
 });
 
-test("one pick waiting opens the Add page, closes onboarding and keeps the pick", async () => {
+test("one pick waiting goes to the Add page, closes onboarding and keeps the pick", async () => {
   loadExtension({ picks: [fakePick(1)] });
   const router = await openLastStep();
 
   await waitFor(() => expect(lastStepText()).toContain("1 pick waiting"));
-  expect(finishLabel()).toBe("Open the Add page");
-  fireEvent.click(screen.getByRole("button", { name: "Open the Add page" }));
+  expect(finishLabel()).toBe("Go to Add");
+  fireEvent.click(screen.getByRole("button", { name: "Go to Add" }));
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -196,7 +196,7 @@ test("three picks read as 3 picks waiting", async () => {
   await openLastStep();
 
   await waitFor(() => expect(lastStepText()).toContain("3 picks waiting"));
-  expect(finishLabel()).toBe("Open the Add page");
+  expect(finishLabel()).toBe("Go to Add");
 });
 
 test("a pick made in another tab counts when this tab is focused again", async () => {

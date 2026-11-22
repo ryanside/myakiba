@@ -183,7 +183,6 @@ export function createPickIntake(deps: PickIntakeDeps) {
   };
 }
 
-/** The extension's state here, and how many picks it keeps for this tab once it is ready. */
 export type WaitingPicks =
   | { readonly kind: "checking" }
   | { readonly kind: "absent" }
@@ -195,18 +194,12 @@ type Taken = Extract<WaitingPicks, { readonly kind: "stopped" | "ready" }>;
 
 const CHECKING: WaitingPicks = { kind: "checking" };
 
-/**
- * Counts the extension's picks while `active`, and again each time the tab shows. Taking deletes
- * nothing, so the Add page still gets every pick. Only the latest take counts, and the count is
- * cleared when `active` ends, so a screen never shows a count from before it opened.
- */
 export function useWaitingPicks(active: boolean): WaitingPicks {
   const status = useSyncExternalStore(extensionBridge.subscribe, extensionBridge.status);
   const [taken, setTaken] = useState<Taken | null>(null);
   const ready = active && status.kind === "ready";
 
   useEffect(() => {
-    // A probe never rejects: an extension that stays silent reads as absent.
     if (active) void extensionBridge.probe();
   }, [active]);
 

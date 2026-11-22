@@ -347,7 +347,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                     </form>
                   ) : null}
                   {meta.id === "extension" ? <ExtensionStep /> : null}
-                  {meta.id === "add" ? <AddStep picks={picks} /> : null}
+                  {meta.id === "add" ? <NextAction picks={picks} /> : null}
                 </StepperContent>
               ))}
             </StepperPanel>
@@ -393,8 +393,7 @@ function StepHeader({ meta }: StepHeaderProps) {
   );
 }
 
-/** The user's next step, from what the extension holds now. */
-function AddStep({ picks }: { readonly picks: WaitingPicks }) {
+function NextAction({ picks }: { readonly picks: WaitingPicks }) {
   switch (picks.kind) {
     case "checking":
       return null;
@@ -416,16 +415,14 @@ function picksCopy(count: number): ExtensionNoticeCopy {
 
 type FinishButton = { readonly label: string; readonly icon: IconSvgElement };
 
-/** Finishing always closes onboarding on the Add page. With picks waiting, that is the next step. */
 function finishButton(picks: WaitingPicks): FinishButton {
   return picks.kind === "ready" && picks.count > 0
-    ? { label: "Open the Add page", icon: NavigateIcon }
+    ? { label: "Go to Add", icon: NavigateIcon }
     : { label: "Get started", icon: Tick02Icon };
 }
 
 type StepFooterProps = {
   readonly isFirst: boolean;
-  /** The last step's button, or null on every step before it. */
   readonly finish: FinishButton | null;
   readonly isSaving: boolean;
   readonly canContinue: boolean;
