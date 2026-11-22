@@ -42,7 +42,6 @@ const appRouteApi = getRouteApi("/(app)");
 
 type DraftState = {
   readonly rows: readonly DraftRow[];
-  /** Items past the row cap, oldest first. Each becomes a row once a row leaves. */
   readonly waiting: readonly string[];
 };
 

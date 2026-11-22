@@ -27,7 +27,6 @@ export function LiveRegions({ controller }: { readonly controller: AddController
   );
 }
 
-/** Verify email, extension stopped, read error, MFC hint and the waiting Items, in this order. */
 export function Notices({ controller }: { readonly controller: AddController }) {
   const {
     emailVerified,
