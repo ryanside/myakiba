@@ -4,46 +4,54 @@ import type { OrderFilters } from "@myakiba/contracts/orders/schema";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { QuickFilterChips } from "../quick-filter-chips";
 
-const PAID_CHIPS = { Paid: true, Unpaid: false } as const;
-type PaidChip = keyof typeof PAID_CHIPS;
-const CHIPS = [...ORDER_STATUSES, "Paid", "Unpaid"] as const;
+const PAYMENT_CHIPS = {
+  Paid: { paid: true, feesPaid: undefined },
+  Unpaid: { paid: false, feesPaid: undefined },
+  "Fees paid": { paid: undefined, feesPaid: true },
+  "Fees unpaid": { paid: undefined, feesPaid: false },
+} as const satisfies Record<string, Pick<OrderFilters, "paid" | "feesPaid">>;
+type PaymentChip = keyof typeof PAYMENT_CHIPS;
 
 const isStatus = (chip: string): chip is OrderStatus =>
   ORDER_STATUSES.some((status) => status === chip);
-const isPaidChip = (chip: string): chip is PaidChip => chip in PAID_CHIPS;
+const isPaymentChip = (chip: string): chip is PaymentChip => chip in PAYMENT_CHIPS;
 
-function paidChipOf(paid: boolean | undefined): PaidChip | undefined {
-  if (paid === undefined) return undefined;
-  return paid ? "Paid" : "Unpaid";
+function paymentChipsOf({ paid, feesPaid }: OrderFilters): PaymentChip[] {
+  const chips: PaymentChip[] = [];
+  if (paid !== undefined) chips.push(paid ? "Paid" : "Unpaid");
+  if (feesPaid !== undefined) chips.push(feesPaid ? "Fees paid" : "Fees unpaid");
+  return chips;
 }
 
-function newlyPressedPaidChip(
-  pressed: readonly PaidChip[],
-  current: PaidChip | undefined,
-): PaidChip | undefined {
-  return pressed.find((chip) => chip !== current) ?? pressed[0];
+function nextPaymentChips(
+  pressed: readonly PaymentChip[],
+  current: readonly PaymentChip[],
+): readonly PaymentChip[] {
+  const newlyPressed = pressed.find((chip) => !current.includes(chip));
+  return newlyPressed === undefined ? pressed : [newlyPressed];
 }
 
 export function OrdersQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useOrdersFilters();
   const statuses = filters.status ?? [];
-  const current = paidChipOf(filters.paid);
+  const current = paymentChipsOf(filters);
+  const linkOnly = current.filter((chip) => chip !== "Paid" && chip !== "Unpaid");
 
   return (
     <QuickFilterChips
-      options={CHIPS}
-      selected={current ? [...statuses, current] : statuses}
+      options={[...ORDER_STATUSES, "Paid", "Unpaid", ...linkOnly]}
+      selected={[...statuses, ...current]}
       onChange={(chips) => {
         const nextStatuses = chips.filter(isStatus);
-        const paidChip = newlyPressedPaidChip(chips.filter(isPaidChip), current);
-        const paid = paidChip === undefined ? undefined : PAID_CHIPS[paidChip];
-        const next: Partial<OrderFilters> = {
+        const payment = nextPaymentChips(chips.filter(isPaymentChip), current);
+        setFilters({
           status: nextStatuses.length > 0 ? nextStatuses : undefined,
-          paid,
+          paid: payment.map((chip) => PAYMENT_CHIPS[chip].paid).find((v) => v !== undefined),
+          feesPaid: payment
+            .map((chip) => PAYMENT_CHIPS[chip].feesPaid)
+            .find((v) => v !== undefined),
           offset: 0,
-        };
-        if (paid !== filters.paid) next.feesPaid = undefined;
-        setFilters(next);
+        });
       }}
     />
   );

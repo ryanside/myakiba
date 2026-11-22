@@ -24,6 +24,7 @@ export const paidItemCount = sql<number>`COUNT(${collection.id}) FILTER (WHERE $
 
 export const orderPaidInFull = sql<boolean>`(${order.paid} AND BOOL_AND(${collection.paid}) IS NOT FALSE)`;
 export const unpaidOrder = sql<boolean>`NOT ${orderPaidInFull}`;
+export const unpaidOrderRow = sql<boolean>`(${orderFeesUnpaid} OR EXISTS (SELECT 1 FROM ${collection} WHERE ${collection.orderId} = ${order.id} AND ${collection.userId} = ${order.userId} AND ${itemIsUnpaid}))`;
 
 export const orderPayment = sql<OrderPayment>`CASE
   WHEN ${orderPaidInFull} THEN 'paid'

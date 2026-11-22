@@ -584,6 +584,7 @@ function Kpi({ label, children }: { readonly label: string; readonly children: R
 function Totals({ counted }: { readonly counted: S["counted"] }) {
   const paid = counted !== "before";
   const owned = counted === "owned";
+  const unpaidOrders = BEFORE.unpaid - (paid ? 1 : 0);
   return (
     <div className="mk-order-lifecycle-totals">
       <Kpi label="Total Items">
@@ -607,9 +608,6 @@ function Totals({ counted }: { readonly counted: S["counted"] }) {
           value={BEFORE.active - (owned ? 1 : 0)}
           duration={900}
         />
-        <span className="mk-order-lifecycle-kpi-sub">
-          <Count value={BEFORE.unpaid - (paid ? 1 : 0)} duration={700} /> unpaid
-        </span>
       </Kpi>
       <Kpi label="Unpaid Costs">
         <Count
@@ -618,6 +616,9 @@ function Totals({ counted }: { readonly counted: S["counted"] }) {
           format={cents}
           duration={900}
         />
+        <span className="mk-order-lifecycle-kpi-sub">
+          <Count value={unpaidOrders} duration={700} /> {unpaidOrders === 1 ? "order" : "orders"}
+        </span>
       </Kpi>
     </div>
   );

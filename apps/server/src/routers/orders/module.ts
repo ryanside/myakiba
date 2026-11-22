@@ -32,6 +32,7 @@ import {
   orderSpend,
   orderTotal,
   orderUnpaidCosts,
+  unpaidOrderRow,
 } from "@/lib/order-money";
 
 const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
@@ -58,6 +59,7 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.status ? inArray(order.status, filters.status) : undefined,
     filters.feesPaid === undefined ? undefined : eq(orderIsPaid, filters.feesPaid),
     filters.paid === true ? orderIsPaid : undefined,
+    filters.paid === false ? unpaidOrderRow : undefined,
     filters.shippingFeeMin === undefined
       ? undefined
       : gte(order.shippingFee, filters.shippingFeeMin),
