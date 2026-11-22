@@ -891,8 +891,9 @@
   /* The value's line held by padding: a rolling figure is one em tall */
   .mk-order-lifecycle-kpi-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 8px;
+    gap: 0 8px;
     padding: 3px 0 5px;
   }
 
