@@ -29,17 +29,10 @@ export function paymentOf(paid: boolean): OrderPayment {
   return paid ? "paid" : "unpaid";
 }
 
-/** An Order's Unpaid Costs, or null when it owes nothing: paid in full, or nothing above zero. */
-export function shownUnpaidCosts(order: {
-  readonly payment: OrderPayment;
-  readonly unpaidCosts: number;
-}): number | null {
-  return order.payment === "paid" || order.unpaidCosts <= 0 ? null : order.unpaidCosts;
-}
-
+/** A Partly paid Order's Unpaid Costs above zero; an Unpaid Order owes the Total it already shows. */
 export function partlyPaidUnpaidCosts(order: {
   readonly payment: OrderPayment;
   readonly unpaidCosts: number;
 }): number | null {
-  return order.payment === "partly" ? shownUnpaidCosts(order) : null;
+  return order.payment === "partly" && order.unpaidCosts > 0 ? order.unpaidCosts : null;
 }

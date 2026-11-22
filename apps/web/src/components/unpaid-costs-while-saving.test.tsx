@@ -356,7 +356,7 @@ test("unpaying a paid row leaves its checkbox and payment to the server's row, a
   await waitFor(() => expect(server.writes.length).toBe(1));
   const whileSaving = {
     paid: paidBox().getAttribute("aria-checked"),
-    saving: Object.hasOwn(paidBox().dataset, "disabled") || paidBox().hasAttribute("disabled"),
+    saving: paidBox().getAttribute("aria-disabled") === "true",
     ...shown(),
   };
   server.writes[0]?.settle("ok");

@@ -162,7 +162,9 @@ export const setOrderPaidCommand = defineCommand({
   persist: ({ orderId, paid }: { readonly orderId: string; readonly paid: boolean } & OnList) =>
     fillOrderPaid(orderId, paid),
   optimistic: async (queryClient, { orderId, paid, list }) => {
-    if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
+    // A tick shows at once, since a Paid Order draws no Unpaid Costs. An untick leaves the
+    // checkbox and the payment state to the server's row, beside its Unpaid Costs.
+    if (!paid || hasActiveFiltersOrSorting(list)) return Result.ok(null);
 
     const listKey = orders.list.key(list);
     await queryClient.cancelQueries({ queryKey: listKey });

@@ -19,7 +19,7 @@ import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
-import { ORDER_STATUS_COLORS, shownUnpaidCosts } from "@/lib/orders";
+import { ORDER_STATUS_COLORS, partlyPaidUnpaidCosts } from "@/lib/orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { PaidCheckbox } from "./payment";
 import type {
@@ -401,19 +401,30 @@ export function createOrdersColumns({
             value: order.miscFees,
           },
         ];
+        const unpaidCosts = partlyPaidUnpaidCosts(order);
         return (
-          <PopoverMultiInputCell
-            inputs={inputs}
-            title="Fees & Charges"
-            description="Expand order to edit item prices"
-            totalAmount={order.total}
-            currency={currency}
-            locale={locale}
-            disabled={isPending}
-            onSubmit={async (newValues) => {
-              return onEditOrder({ ...editedOrder(order), ...newValues }, []);
-            }}
-          />
+          <div className="flex flex-col items-end">
+            <PopoverMultiInputCell
+              inputs={inputs}
+              title="Fees & Charges"
+              description="Expand order to edit item prices"
+              totalAmount={order.total}
+              currency={currency}
+              locale={locale}
+              disabled={isPending}
+              onSubmit={async (newValues) => {
+                return onEditOrder({ ...editedOrder(order), ...newValues }, []);
+              }}
+            />
+            {unpaidCosts === null ? null : (
+              <span className="flex flex-wrap justify-end gap-x-1 text-xs leading-4 text-muted-foreground">
+                <span>Unpaid Costs</span>
+                <span className="tabular-nums text-foreground">
+                  {formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
+                </span>
+              </span>
+            )}
+          </div>
         );
       }),
       enableSorting: true,
@@ -423,28 +434,6 @@ export function createOrdersColumns({
       meta: {
         ...NUMERIC_COLUMN_META,
         headerTitle: "Total",
-        skeleton: <Skeleton className="h-6" />,
-      },
-    },
-    {
-      accessorKey: "unpaidCosts",
-      id: "unpaidCosts",
-      header: ({ column }) => (
-        <DataGridColumnHeader title="Unpaid Costs" visibility={true} column={column} />
-      ),
-      cell: ({ row }) => {
-        const unpaidCosts = shownUnpaidCosts(row.original);
-        return unpaidCosts === null
-          ? null
-          : formatCurrencyFromMinorUnits(unpaidCosts, currency, locale);
-      },
-      enableSorting: false,
-      enableHiding: true,
-      enableResizing: true,
-      size: 136,
-      meta: {
-        ...NUMERIC_COLUMN_META,
-        headerTitle: "Unpaid Costs",
         skeleton: <Skeleton className="h-6" />,
       },
     },

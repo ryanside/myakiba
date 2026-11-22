@@ -62,7 +62,6 @@ const DEFAULT_COLUMN_ORDER = [
   "collectionDate",
   "itemCount",
   "total",
-  "unpaidCosts",
   "shippingFee",
   "taxes",
   "duties",

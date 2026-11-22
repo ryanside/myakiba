@@ -257,6 +257,12 @@ function updateOrderInColumns(
   return columns;
 }
 
+function withoutId(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  const next = new Set(ids);
+  next.delete(id);
+  return next;
+}
+
 function paymentAfterPaidCascade(paid: boolean): PaymentFields {
   return { paid, payment: paymentOf(paid) };
 }
@@ -297,6 +303,7 @@ interface OrderCardProps extends Omit<
   asHandle?: boolean;
   onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
   onPaidChange: (orderId: string, paid: boolean) => void;
+  isPaidSaving?: boolean;
 }
 
 function OrderCard({
@@ -306,6 +313,7 @@ function OrderCard({
   asHandle,
   onDateChange,
   onPaidChange,
+  isPaidSaving = false,
   ...props
 }: OrderCardProps) {
   const locale = getCurrencyLocale(currency);
@@ -362,6 +370,7 @@ function OrderCard({
             <PaidCheckbox
               label={`${order.title} paid`}
               payment={order.payment}
+              disabled={isPaidSaving}
               onPaidChange={(paid) => onPaidChange(order.orderId, paid)}
             />
           </div>
@@ -446,6 +455,7 @@ interface OrderColumnProps {
   readonly isOverlay?: boolean;
   readonly onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
   readonly onPaidChange: (orderId: string, paid: boolean) => void;
+  readonly paidSaving?: ReadonlySet<string>;
 }
 
 function ColumnBody({
@@ -456,9 +466,16 @@ function ColumnBody({
   asHandle,
   onDateChange,
   onPaidChange,
+  paidSaving,
 }: Pick<
   OrderColumnProps,
-  "orders" | "isLoading" | "currency" | "dateFormat" | "onDateChange" | "onPaidChange"
+  | "orders"
+  | "isLoading"
+  | "currency"
+  | "dateFormat"
+  | "onDateChange"
+  | "onPaidChange"
+  | "paidSaving"
 > & {
   readonly asHandle: boolean;
 }) {
@@ -479,6 +496,7 @@ function ColumnBody({
       asHandle={asHandle}
       onDateChange={onDateChange}
       onPaidChange={onPaidChange}
+      isPaidSaving={paidSaving?.has(order.orderId) ?? false}
     />
   ));
 }
@@ -492,6 +510,7 @@ function OrderColumn({
   isOverlay,
   onDateChange,
   onPaidChange,
+  paidSaving,
 }: OrderColumnProps) {
   const col = COLUMNS[columnId];
 
@@ -518,6 +537,7 @@ function OrderColumn({
             asHandle={!isOverlay}
             onDateChange={onDateChange}
             onPaidChange={onPaidChange}
+            paidSaving={paidSaving}
           />
         </KanbanColumnContent>
       </Frame>
@@ -549,6 +569,7 @@ function OrderKanbanBoard({
   const pendingStatusMutationsRef = React.useRef(new Map<string, PendingStatusMutations>());
   const pendingDateMutationsRef = React.useRef(new Map<string, PendingDateMutations>());
   const pendingPaidMutationsRef = React.useRef(new Map<string, PendingPaidMutations>());
+  const [paidSaving, setPaidSaving] = React.useState<ReadonlySet<string>>(new Set());
   const snapshotRef = React.useRef(snapshot);
   const heldOrderIdRef = React.useRef<string | null>(null);
   const reconcileWithSnapshot = React.useCallback((): void => {
@@ -680,6 +701,7 @@ function OrderKanbanBoard({
 
       const queue: PendingPaidMutations = { mutations: [variables], persisted: previous };
       pendingPaidMutationsRef.current.set(variables.orderId, queue);
+      setPaidSaving((current) => new Set(current).add(variables.orderId));
 
       void drainMutationQueue(
         queue.mutations,
@@ -687,7 +709,7 @@ function OrderKanbanBoard({
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
 
-          queue.persisted = paymentAfterPaidCascade(persistedVariables.paid);
+          if (persistedVariables.paid) queue.persisted = paymentAfterPaidCascade(true);
         },
         async () => {
           setColumns((current) =>
@@ -698,6 +720,7 @@ function OrderKanbanBoard({
           );
           pendingPaidMutationsRef.current.delete(variables.orderId);
           await paidWrite.refetch();
+          setPaidSaving((current) => withoutId(current, variables.orderId));
         },
       );
     },
@@ -711,12 +734,15 @@ function OrderKanbanBoard({
         .find((candidate) => candidate.orderId === orderId);
       if (!order) return;
 
-      setColumns((current) =>
-        updateOrderInColumns(current, orderId, (shown) => ({
-          ...shown,
-          ...paymentAfterPaidCascade(paid),
-        })),
-      );
+      // A tick shows at once, since the board draws no line for a Paid Order. An untick leaves
+      // the checkbox to the server's row.
+      if (paid)
+        setColumns((current) =>
+          updateOrderInColumns(current, orderId, (shown) => ({
+            ...shown,
+            ...paymentAfterPaidCascade(true),
+          })),
+        );
 
       enqueuePaidMutation({ orderId, paid }, { paid: order.paid, payment: order.payment });
     },
@@ -783,6 +809,7 @@ function OrderKanbanBoard({
             dateFormat={dateFormat}
             onDateChange={handleDateChange}
             onPaidChange={handlePaidChange}
+            paidSaving={paidSaving}
           />
         ))}
       </KanbanBoard>

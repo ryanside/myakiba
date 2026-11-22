@@ -612,7 +612,7 @@ describe("a dashboard kanban card's Paid checkbox", () => {
     await clickPaid("miku");
     const whileSaving = {
       paid: shownPaid("miku"),
-      saving: Object.hasOwn(paidBox("miku").dataset, "disabled"),
+      saving: paidBox("miku").getAttribute("aria-disabled") === "true",
     };
     await clickPaid("miku");
     const writesAfterSecondClick = writes.length;
