@@ -64,10 +64,7 @@ async function select(user: ReturnType<typeof userEvent.setup>, ...titles: strin
   }
 }
 
-const searchSettles = () =>
-  new Promise((resolve) => {
-    setTimeout(resolve, 300);
-  });
+const isShown = (title: string) => screen.queryAllByText(title).length > 0;
 const actionBar = () => screen.getByRole("toolbar").textContent ?? "";
 const footer = () => screen.getByText(/row\(s\) selected/).textContent;
 const itemsFooter = () =>
@@ -173,8 +170,7 @@ describe("the selection footer keeps counting rows a search hides", () => {
     await screen.findByText("co-00");
     await select(user, "co-00", "co-01", "co-02");
     await user.type(screen.getByRole("textbox", { name: "Search Collection" }), "co-00");
-    await searchSettles();
-    await waitFor(() => expect(screen.queryByText("co-01")).toBeNull());
+    await waitFor(() => expect(isShown("co-01")).toBe(false));
     expect(actionBar()).toContain("3 items selected");
     expect(footer()).toBe("3 row(s) selected");
   });
@@ -185,8 +181,7 @@ describe("the selection footer keeps counting rows a search hides", () => {
     await screen.findByText("od-00");
     await select(user, "od-00", "od-01", "od-02");
     await user.type(screen.getByRole("textbox", { name: "Search Orders" }), "od-00");
-    await searchSettles();
-    await waitFor(() => expect(screen.queryByText("od-01")).toBeNull());
+    await waitFor(() => expect(isShown("od-01")).toBe(false));
     expect(actionBar()).toContain("3 orders selected");
     expect(footer()).toBe("3 row(s) selected");
   });
