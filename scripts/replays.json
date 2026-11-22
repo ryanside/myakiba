@@ -5391,6 +5391,20 @@
       "fixed": [
         "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
       ]
+    },
+    {
+      "fix": "5e697573fe8ba932e358363334efc152c8d1202d",
+      "bug": "Lists.restoreMembers locked the List's members before the Orders it put back, so an Undo of an Order beside a delete of that Order deadlocked: the delete locked the Order and cascaded to a member the Undo held, and Postgres killed the delete with a 500.",
+      "test": "apps/server/src/routers/lists/restore.test.ts",
+      "fixed": ["an Undo of an Order and a delete of that Order at once both finish"]
+    },
+    {
+      "fix": "5e697573fe8ba932e358363334efc152c8d1202d",
+      "bug": "Each failed Undo of a Remove from List showed an error toast with the same text and no id, so the toast wrapper closed the earlier one, and of two removals whose Undos failed only the last kept its Retry.",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
+      "fixed": [
+        "Undo after Remove from List > two removals whose Undos both fail each keep a Retry that puts back their own members"
+      ]
     }
   ],
   "lint": [
