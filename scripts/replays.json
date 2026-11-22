@@ -5254,6 +5254,25 @@
         "what an empty Add page says > without it, while a store reviews it, what still works",
         "what an empty Add page says > without it, in a browser it does not run in, which ones it does"
       ]
+    },
+    {
+      "fix": "4caa10c3d96a41d8bbd2cdac0e4362d78bd54f42",
+      "bug": "The Edit Order sheet preselected every Cascade to Items field, and PUT /api/orders/:orderId copied each named field to every item, so saving an Order with only a new title wrote its status, Paid, Shop, dates and shipping method over every item, including values set on one item.",
+      "test": "apps/server/src/routers/orders/update.test.ts",
+      "fixed": [
+        "an Order edit copies to its items only what it changed > a title change leaves every item as it was, even naming every cascade option",
+        "an Order edit copies to its items only what it changed > a changed field moves only to the items that held the Order's old value",
+        "an Order edit copies to its items only what it changed > a cleared date clears only the items that held the Order's date"
+      ]
+    },
+    {
+      "fix": "4caa10c3d96a41d8bbd2cdac0e4362d78bd54f42",
+      "bug": "The Edit Order sheet offered a Cascade to Items picker set to every field and sent all of them on every save, whatever the user changed.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the edit-order sheet > a title change copies nothing to the items, and no Cascade to Items choice is offered",
+        "the edit-order sheet > a Paid change copies only Paid to the items"
+      ]
     }
   ],
   "lint": [
