@@ -349,3 +349,49 @@ describe.each(FOOTER_PATHS.filter((path) => path.checksWidths))("$name footer wi
     }
   });
 });
+
+describe("the edit-order sheet", () => {
+  async function editAndSave(edit: (user: ReturnType<typeof userEvent.setup>) => Promise<void>) {
+    const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="edit-order"
+          renderTrigger={trigger}
+          orderData={order}
+          callbackFn={send}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await edit(user);
+    await user.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(send.mock.calls.length).toBe(1));
+    queryClient.clear();
+    return send.mock.calls[0];
+  }
+
+  test(
+    "a title change copies nothing to the items, and no Cascade to Items choice is offered",
+    untilBodyDone(async () => {
+      const call = await editAndSave(async (user) => {
+        expect(screen.queryByText("Options")).toBeNull();
+        await user.type(screen.getByLabelText("Title"), " renamed");
+      });
+      expect(call?.[1]).toEqual([]);
+    }),
+  );
+
+  test(
+    "a Paid change copies only Paid to the items",
+    untilBodyDone(async () => {
+      const call = await editAndSave(async (user) => {
+        await user.click(screen.getByRole("checkbox", { name: "Paid" }));
+      });
+      expect(call?.[1]).toEqual(["paid"]);
+    }),
+  );
+});

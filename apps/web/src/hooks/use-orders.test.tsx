@@ -55,6 +55,7 @@ await mock.module("@/queries/orders", () => ({
   deleteOrderItems: write("delete items"),
   moveItem: write("move items"),
   fillOrders: write("fill orders"),
+  fillOrderPaid: write("set paid"),
 }));
 await mock.module("@/queries/collection", () => ({
   getCollection: async () => Result.ok({ items: [], totalCount: 0 }),

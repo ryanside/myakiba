@@ -17,6 +17,7 @@ import { OrderPendingContext } from "./order-pending-context";
 afterEach(() => {
   cleanup();
   edits.length = 0;
+  paidSets.length = 0;
 });
 
 function order(orderId: string): Order {
@@ -48,10 +49,15 @@ function order(orderId: string): Order {
 }
 
 const edits: [EditedOrder, CascadeOptions][] = [];
+const paidSets: [string, boolean][] = [];
 
 const columns = createOrdersColumns({
   onEditOrder: async (values, cascade) => {
     edits.push([values, cascade]);
+    return Result.ok();
+  },
+  onSetPaid: async (orderId: string, paid: boolean) => {
+    paidSets.push([orderId, paid]);
     return Result.ok();
   },
   onDeleteOrders: async () => Result.ok(),
@@ -152,6 +158,21 @@ test("saves a fee edit without cascading", async () => {
   fireEvent.keyDown(editor, { key: "Enter" });
 
   await waitFor(() => expect(edits).toEqual([[{ ...savedOrder, taxes: 500 }, []]]));
+});
+
+test("a Paid click on a partly paid Order sets Paid on the Order and every item, not an edit", async () => {
+  render(
+    <OrderPendingContext
+      value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+    >
+      <ColumnCells orders={[{ ...order("o1"), paid: true, payment: "partly" }]} columnId="paid" />
+    </OrderPendingContext>,
+  );
+
+  fireEvent.click(screen.getByRole("checkbox", { name: "o1 paid" }));
+
+  await waitFor(() => expect(paidSets).toEqual([["o1", true]]));
+  expect(edits).toEqual([]);
 });
 
 function OrderRow() {

@@ -64,7 +64,7 @@ await mock.module("@/queries/orders", () => ({
   updateOrderStatus: (orderId: string, status: string) => sendWrite(orderId, { status }),
   updateOrderDate: (orderId: string, field: string, date: string | null) =>
     sendWrite(orderId, { [field]: date }),
-  updateOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
+  fillOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
 }));
 const realDashboard = await import("@/queries/dashboard");
 await mock.module("@/queries/dashboard", () => ({

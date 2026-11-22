@@ -26,6 +26,7 @@ import {
   mergeOrders,
   moveItem,
   splitOrders,
+  fillOrderPaid,
 } from "@/queries/orders";
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
@@ -174,6 +175,38 @@ export const editOrderCommand = defineCommand({
   successTitle: () => "Order updated",
   failureToast: (_input, failure) => ({
     title: shownMessageOf(failure, "Failed to update order. Please try again."),
+  }),
+});
+
+export const setOrderPaidCommand = defineCommand({
+  invalidates: collectionWriteFamilies,
+  refetchBy: "settled",
+  persist: ({ orderId, paid }: { readonly orderId: string; readonly paid: boolean } & OnList) =>
+    fillOrderPaid(orderId, paid),
+  optimistic: async (queryClient, { orderId, paid, list }) => {
+    if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
+
+    const listKey = orders.list.key(list);
+    await queryClient.cancelQueries({ queryKey: listKey });
+    const previous = queryClient.getQueryData<OrdersPage>(listKey);
+    queryClient.setQueryData<OrdersPage>(listKey, (old) =>
+      old
+        ? {
+            ...old,
+            items: old.items.map((order) =>
+              order.orderId === orderId ? { ...order, paid, payment: paymentOf(paid) } : order,
+            ),
+          }
+        : old,
+    );
+
+    return Result.ok(() => {
+      if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
+    });
+  },
+  successTitle: () => "Order updated",
+  failureToast: (_input, failure) => ({
+    title: shownMessageOf(failure, "Failed to update Paid. Please try again."),
   }),
 });
 

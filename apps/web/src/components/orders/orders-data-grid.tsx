@@ -85,6 +85,7 @@ export default function OrdersDataGrid() {
   const tableData = useMemo(() => [...orders], [orders]);
   const {
     handleEditOrder,
+    handleSetOrderPaid,
     handleDeleteOrders,
     handleMerge,
     handleSplit,
@@ -216,6 +217,7 @@ export default function OrdersDataGrid() {
     () =>
       createOrdersColumns({
         onEditOrder: handleEditOrder,
+        onSetPaid: handleSetOrderPaid,
         onDeleteOrders: deleteOrders,
         onEditItem: handleEditItem,
         onDeleteItem: deleteItem,
@@ -223,7 +225,16 @@ export default function OrdersDataGrid() {
         locale,
         dateFormat,
       }),
-    [handleEditItem, deleteItem, handleEditOrder, deleteOrders, currency, locale, dateFormat],
+    [
+      handleEditItem,
+      deleteItem,
+      handleEditOrder,
+      handleSetOrderPaid,
+      deleteOrders,
+      currency,
+      locale,
+      dateFormat,
+    ],
   );
 
   const handlePaginationChange = useCallback(

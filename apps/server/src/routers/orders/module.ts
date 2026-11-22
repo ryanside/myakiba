@@ -533,6 +533,11 @@ export const Orders = {
     },
   ),
 
+  /**
+   * Updates the Order, then copies each listed field the edit changed to the items that still
+   * held the Order's old value, so a value set on one item stays. It locks the Order, then its
+   * items in id order, as Orders.fill does.
+   */
   update: command(
     { action: "orders.update", failure: "Failed to update order" },
     async (
@@ -545,18 +550,33 @@ export const Orders = {
     ) => {
       const userId = scope.viewer.userId;
       scope.log.set({ order: { id: input.orderId } });
-      const updated = await scope.tx
+      const selected = and(eq(order.userId, userId), eq(order.id, input.orderId));
+      const [before] = await scope.tx.select().from(order).where(selected).for("no key update");
+      if (!before) return Result.err(new OrderNotFound());
+
+      await scope.tx
         .update(order)
         .set({ ...input.order, updatedAt: new Date() })
-        .where(and(eq(order.userId, userId), eq(order.id, input.orderId)))
-        .returning({ id: order.id });
-      if (updated.length === 0) return Result.err(new OrderNotFound());
+        .where(selected);
 
-      if (input.cascadeOptions.length > 0) {
-        const cascadeProperties = Object.fromEntries(
-          input.cascadeOptions.map((option) => [option, input.order[option]]),
-        );
-        await cascadeToItems(scope.tx, userId, [input.orderId], cascadeProperties);
+      const changed = [...new Set(input.cascadeOptions)].filter(
+        (field) => input.order[field] !== undefined && input.order[field] !== before[field],
+      );
+      if (changed.length === 0) return Result.ok("Order updated successfully" as const);
+
+      const items = and(eq(collection.userId, userId), eq(collection.orderId, input.orderId));
+      await scope.tx
+        .select({ id: collection.id })
+        .from(collection)
+        .where(items)
+        .orderBy(asc(collection.id))
+        .for("no key update");
+      for (const field of changed) {
+        const old = before[field];
+        await scope.tx
+          .update(collection)
+          .set(Object.fromEntries([[field, input.order[field]]]))
+          .where(and(items, old === null ? isNull(collection[field]) : eq(collection[field], old)));
       }
       return Result.ok("Order updated successfully" as const);
     },

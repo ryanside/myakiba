@@ -202,10 +202,13 @@ export function updateOrderStatus(orderId: string, status: OrderStatus) {
   );
 }
 
-export function updateOrderPaid(orderId: string, paid: boolean) {
-  return call(app.api.orders({ orderId }).put({ order: { paid }, cascadeOptions: ["paid"] }), {
-    fallback: "Failed to update Paid. Please try again.",
-  });
+export function fillOrderPaid(orderId: string, paid: boolean) {
+  return call(
+    app.api.orders.fill.put({ orderIds: [orderId], fill: { field: "paid", value: paid } }),
+    {
+      fallback: "Failed to update Paid. Please try again.",
+    },
+  );
 }
 
 export type OrderDateField =

@@ -64,6 +64,7 @@ function cascadeFor(field: keyof Order): CascadeOptions {
 
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  onSetPaid: (orderId: string, paid: boolean) => Saving;
   onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   onEditItem: (values: CollectionItemFormValues) => Saving;
   onDeleteItem: (orderId: string, itemId: string) => Saving;
@@ -74,6 +75,7 @@ interface OrdersColumnsParams {
 
 export function createOrdersColumns({
   onEditOrder,
+  onSetPaid,
   onDeleteOrders,
   onEditItem,
   onDeleteItem,
@@ -83,6 +85,9 @@ export function createOrdersColumns({
 }: OrdersColumnsParams): ColumnDef<Order>[] {
   const editOrder = editableCell(withOrderPending, (order, field, value) =>
     onEditOrder({ ...editedOrder(order), [field]: value }, cascadeFor(field)),
+  );
+  const setPaid = editableCell(withOrderPending, (order, _field, paid) =>
+    onSetPaid(order.orderId, paid === true),
   );
 
   return [
@@ -579,7 +584,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Paid" visibility={true} column={column} />
       ),
-      cell: editOrder("paid", (order, { disabled, onSubmit }) => (
+      cell: setPaid("paid", (order, { disabled, onSubmit }) => (
         <PaidCheckbox
           label={`${order.title} paid`}
           payment={order.payment}

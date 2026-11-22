@@ -5340,6 +5340,57 @@
       "fixed": [
         "a Collection Item write on the collection page > Average Cost is the mean of the paid prices, before and after a delete"
       ]
+    },
+    {
+      "fix": "4caa10c3d96a41d8bbd2cdac0e4362d78bd54f42",
+      "bug": "The Edit Order sheet preselected every Cascade to Items field, and PUT /api/orders/:orderId copied each named field to every item, so saving an Order with only a new title wrote its status, Paid, Shop, dates and shipping method over every item, including values set on one item.",
+      "test": "apps/server/src/routers/orders/update.test.ts",
+      "fixed": [
+        "an Order edit copies to its items only what it changed > a title change leaves every item as it was, even naming every cascade option",
+        "an Order edit copies to its items only what it changed > a changed field moves only to the items that held the Order's old value",
+        "an Order edit copies to its items only what it changed > a cleared date clears only the items that held the Order's date"
+      ]
+    },
+    {
+      "fix": "4caa10c3d96a41d8bbd2cdac0e4362d78bd54f42",
+      "bug": "The Edit Order sheet offered a Cascade to Items picker set to every field and sent all of them on every save, whatever the user changed.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the edit-order sheet > a title change copies nothing to the items, and no Cascade to Items choice is offered",
+        "the edit-order sheet > a Paid change copies only Paid to the items"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/queries/orders.test.ts",
+      "fixed": [
+        "Paid from a checkbox writes Paid to the Order and every item in it, as an Order fill"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": [
+        "a kanban Paid write > sets Paid on the Order and every Order Item through an Order fill"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": [
+        "a Paid click on a partly paid Order sets Paid on the Order and every item, not an edit"
+      ]
+    },
+    {
+      "fix": "a1980a8ef91ca5d13925339cb752b6134b12ba90",
+      "bug": "Orders.update copies only a field the edit changes, so the Paid checkbox on a Partly paid Order whose own Paid was yes sent paid: true with cascade [paid], wrote no item and stayed partly, from the Orders table and the Dashboard board.",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
+      ]
     }
   ],
   "lint": [
