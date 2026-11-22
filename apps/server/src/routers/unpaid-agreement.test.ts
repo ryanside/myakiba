@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
+import { toDateOnlyString } from "@myakiba/utils/date-only";
 import { createTestDatabase } from "../../test/database";
 
 const { collection, entry, entry_to_item, item, order } = figureSchema;
@@ -322,6 +323,7 @@ async function seedFeesPaid() {
 }
 
 type Dashboard = {
+  readonly orders: readonly { readonly orderId: string; readonly unpaidCosts: number }[];
   readonly unpaidOrderCount: number;
   readonly ordersSummary: { readonly totalActiveOrderCount: number };
   readonly unpaidCosts: number;
@@ -796,6 +798,57 @@ describe("each Order's own Unpaid Costs", () => {
       ["Not yet priced", "unpaid", 0],
       ["Paid in full", "paid", 0],
     ]);
+  });
+
+  test("the Dashboard Overview board shows a Partly paid Order releasing this month the Unpaid Costs the Orders page does", async () => {
+    const userId = "user-board-now";
+    const thisMonth = toDateOnlyString(new Date());
+    await db
+      .insert(authSchema.user)
+      .values({ id: userId, name: "Kai", email: "k@example.com", username: "kai" });
+    await db.insert(item).values([
+      { id: "now-a", ownerId: userId, externalId: 112, title: "Yukari", category: "Prepainted" },
+      { id: "now-b", ownerId: userId, externalId: 113, title: "Akari", category: "Prepainted" },
+    ]);
+    await db.insert(order).values({
+      id: "now-order",
+      userId,
+      title: "Releasing now",
+      shop: "AmiAmi",
+      status: "Ordered",
+      paid: true,
+      orderDate: thisMonth,
+      releaseDate: thisMonth,
+      shippingFee: 400,
+    });
+    await db.insert(collection).values([
+      {
+        id: "now-paid",
+        userId,
+        itemId: "now-a",
+        orderId: "now-order",
+        status: "Ordered",
+        paid: true,
+        price: 1000,
+      },
+      {
+        id: "now-unpaid",
+        userId,
+        itemId: "now-b",
+        orderId: "now-order",
+        status: "Ordered",
+        paid: false,
+        price: 2500,
+      },
+    ]);
+
+    const dashboard = await get<Dashboard>(userId, "/dashboard");
+    const orders = await get<OrdersList>(userId, "/orders?limit=10");
+
+    expect({
+      board: dashboard.orders.map((row) => [row.orderId, row.unpaidCosts]),
+      page: orders.items.map((row) => [row.orderId, row.payment, row.unpaidCosts]),
+    }).toEqual({ board: [["now-order", 2500]], page: [["now-order", "partly", 2500]] });
   });
 
   test("the Dashboard board shows each Order the Unpaid Costs the Orders page does", async () => {

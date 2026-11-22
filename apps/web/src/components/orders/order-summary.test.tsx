@@ -80,7 +80,11 @@ const unpaidCostsRow = () => screen.queryByText("Unpaid Costs")?.parentElement?.
 
 test("a Partly paid order shows its Unpaid Costs under the Total", () => {
   summary({ paid: true, payment: "partly", total: 3000, unpaidCosts: 1200 });
-  expect(unpaidCostsRow()).toBe("Unpaid Costs$12.00");
+  const labels = [...document.querySelectorAll("span")].map((span) => span.textContent);
+  expect({
+    row: unpaidCostsRow(),
+    afterTotal: labels.indexOf("Unpaid Costs") > labels.indexOf("Total"),
+  }).toEqual({ row: "Unpaid Costs$12.00", afterTotal: true });
 });
 
 test.each([

@@ -666,7 +666,12 @@ describe("an Order's Unpaid Costs", () => {
 
     await db.update(order).set({ paid: false }).where(eq(order.id, "order-1"));
 
-    const unpaid = await unpaidCostsOf();
-    expect(unpaid.detail).toBe(2500);
+    expect(await unpaidCostsOf()).toEqual({
+      list: [
+        ["order-1", 2500],
+        ["order-2", 0],
+      ],
+      detail: 2500,
+    });
   });
 });

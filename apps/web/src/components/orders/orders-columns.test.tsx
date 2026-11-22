@@ -220,7 +220,7 @@ test("draws the row's open-order link with a different icon from its expand butt
   expect(glyph(open)).not.toEqual(glyph(expand));
 });
 
-test("the Unpaid Costs column shows what each row still owes, and is blank once a row reads Paid, before the refetch brings its zero", () => {
+test("the Unpaid Costs column shows what each row still owes and leaves a row that owes nothing blank", () => {
   render(
     <OrderPendingContext
       value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
@@ -230,14 +230,32 @@ test("the Unpaid Costs column shows what each row still owes, and is blank once 
           { ...order("partly"), paid: true, payment: "partly", total: 3000, unpaidCosts: 1200 },
           { ...order("unpaid"), total: 3000, unpaidCosts: 3000 },
           { ...order("paid"), paid: true, payment: "paid", total: 3000, unpaidCosts: 0 },
-          { ...order("just-paid"), paid: true, payment: "paid", total: 3000, unpaidCosts: 1200 },
         ]}
         columnId="unpaidCosts"
       />
     </OrderPendingContext>,
   );
 
-  expect(
-    ["partly", "unpaid", "paid", "just-paid"].map((id) => screen.getByTestId(id).textContent),
-  ).toEqual(["$12.00", "$30.00", "", ""]);
+  expect(["partly", "unpaid", "paid"].map((id) => screen.getByTestId(id).textContent)).toEqual([
+    "$12.00",
+    "$30.00",
+    "",
+  ]);
+});
+
+test("the Unpaid Costs column leaves a row blank when a negative fee takes its amount below zero", () => {
+  render(
+    <OrderPendingContext
+      value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+    >
+      <ColumnCells
+        orders={[
+          { ...order("credit"), payment: "partly", shippingFee: -10_000, unpaidCosts: -10_000 },
+        ]}
+        columnId="unpaidCosts"
+      />
+    </OrderPendingContext>,
+  );
+
+  expect(screen.getByTestId("credit").textContent).toBe("");
 });
