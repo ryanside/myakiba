@@ -359,7 +359,7 @@ export const CollectionDataGrid = () => {
             })()}
             <div className="flex items-center justify-between">
               <div className="flex-1 text-sm text-muted-foreground">
-                {selectedCollectionIds.size} of {totalCount} row(s) selected
+                {selectedCollectionIds.size} row(s) selected
               </div>
               <DataGridPagination offset={offset} />
             </div>

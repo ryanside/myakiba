@@ -389,7 +389,7 @@ export default function OrdersDataGrid() {
                 })()}
                 <div className="flex items-center justify-between">
                   <div className="flex-1 text-sm text-muted-foreground">
-                    {selectedOrderIds.size} of {totalCount} row(s) selected
+                    {selectedOrderIds.size} row(s) selected
                   </div>
                   <DataGridPagination offset={offset} />
                 </div>
