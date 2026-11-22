@@ -1866,3 +1866,111 @@ test("an Item added again after its commit arrives unselected", async () => {
   await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
   expect(shows("In your collection")).toBe(true);
 });
+
+/** Adds an Item through Add's search, as a pick or the `?item=` link would add it to the draft. */
+async function addFromSearch(user: User, text: string, option: RegExp) {
+  await click(user, "Search myakiba");
+  await user.type(await screen.findByRole("combobox", { name: "Search myakiba" }), text);
+  await user.click(await screen.findByRole("option", { name: option }));
+  await user.keyboard("{Escape}");
+}
+
+/** Holds every read of the rows' Items until the returned function runs. */
+function holdItemReads() {
+  let release = () => {};
+  server.itemsGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return () =>
+    act(async () => {
+      server.itemsGate = null;
+      release();
+    });
+}
+
+/** Clicks whichever Add button the page shows, and reports whether that sent a commit. */
+async function tryToCommit() {
+  const before = server.commits.length;
+  const button = screen.queryByRole("button", { name: /^Add \d+ to collection/u });
+  if (button !== null) fireEvent.click(button);
+  await pause(200);
+  return server.commits.length > before;
+}
+
+test("an Item added again waits for a fresh read of what you own, and cannot be added from the old one", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+  const release = holdItemReads();
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID]));
+  expect([isChecked("Hatsune Miku"), await tryToCommit()]).toEqual([null, false]);
+
+  await release();
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  expect(await tryToCommit()).toBe(false);
+});
+
+test("a row waiting for its first fresh read stays out of a commit, so a retry after a reload repeats it", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const rem = screen.getByRole("checkbox", { name: "Select Rem" });
+  await user.click(rem);
+  await user.click(rem);
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([OTHER_ID]));
+  const release = holdItemReads();
+  const { commitAnswer } = server;
+  server.commitAnswer = () => new Promise(() => {});
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID, OTHER_ID]));
+  expect(await tryToCommit()).toBe(false);
+
+  await release();
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("true"));
+  expect(await tryToCommit()).toBe(true);
+  cleanup();
+  seedItems(
+    item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }),
+    item(OTHER_ID, { title: "Rem", externalId: 112_233, collectionCount: 1 }),
+  );
+  server.commitAnswer = commitAnswer;
+
+  openAddPage("/add?to=collection");
+  await waitFor(() =>
+    expect([isChecked("Hatsune Miku"), isChecked("Rem")]).toEqual(["true", "true"]),
+  );
+  expect(await tryToCommit()).toBe(true);
+  const [lost, retried] = server.commits;
+  expect([retried?.commitId, retried?.rows.map(({ itemId }) => itemId)]).toEqual([
+    lost?.commitId,
+    [ITEM_ID, OTHER_ID],
+  ]);
+});
+
+test("a failed read decides nothing: the row says it could not load, and the next good read decides it", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Remove Hatsune Miku");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+  server.itemsFailure = refused(503, "down");
+
+  await addFromSearch(user, "Hatsune", /Hatsune Miku/u);
+  await waitFor(() => expect(shows("Could not load this item")).toBe(true));
+  expect([isChecked("Hatsune Miku"), await tryToCommit()]).toEqual([null, false]);
+
+  server.itemsFailure = null;
+  await click(user, "Retry");
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+});
