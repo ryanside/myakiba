@@ -171,9 +171,9 @@ seed_user() {
       *) die "sign-up for $email answered $code: ${body%$'\n'*}" ;;
     esac
   fi
-  [ "$(psql_run "update \"user\" set email_verified = true where email = '$email' returning email")" = "$email" ] ||
-    die "no user row for $email after sign-up"
-  echo "user: $email / $password, username ${username:-generated} (email verified)"
+  username=$(psql_run "update \"user\" set email_verified = true where email = '$email' returning username")
+  [ -n "$username" ] || die "no user row for $email after sign-up"
+  echo "user: $email / $password, username $username (email verified)"
 }
 
 seed_items() {

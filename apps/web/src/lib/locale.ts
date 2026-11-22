@@ -215,10 +215,21 @@ const DATE_FORMAT_BY_ORDER = new Map<string, DateFormat>([
 
 type Formats = { readonly currency: Currency; readonly dateFormat: DateFormat };
 
+function parseLocale(locale: string): Intl.Locale | null {
+  try {
+    return new Intl.Locale(locale);
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
+}
+
 /** The currency and date format a browser locale suggests, or `fallback`'s where it suggests none. */
 export function localeFormats(locale: string, fallback: Formats): Formats {
-  const { region } = new Intl.Locale(locale).maximize();
-  const order = new Intl.DateTimeFormat(locale, {
+  const tag = parseLocale(locale);
+  if (tag === null) return fallback;
+  const { region } = tag.maximize();
+  const order = new Intl.DateTimeFormat(tag, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

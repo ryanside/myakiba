@@ -13,3 +13,9 @@ test("a locale picks its region's currency and its date order", () => {
   expect(localeFormats("de-AT", SAVED)).toEqual({ currency: "EUR", dateFormat: "DD/MM/YYYY" });
   expect(localeFormats("ko-KR", SAVED)).toEqual({ currency: "KRW", dateFormat: "YYYY/MM/DD" });
 });
+
+test("an empty or malformed language tag keeps the saved formats", () => {
+  for (const locale of ["", "en_US", "not a tag"]) {
+    expect(localeFormats(locale, SAVED), JSON.stringify(locale)).toEqual(SAVED);
+  }
+});

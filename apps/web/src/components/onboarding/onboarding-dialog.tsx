@@ -260,6 +260,12 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                             },
                             onBlur: USERNAME_SCHEMA,
                           }}
+                          listeners={{
+                            onChange: ({ fieldApi }) =>
+                              fieldApi.state.meta.errorMap.onBlur
+                                ? fieldApi.validate("blur")
+                                : undefined,
+                          }}
                         >
                           {(field) => (
                             <div className="flex flex-col gap-1.5">

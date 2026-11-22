@@ -362,3 +362,28 @@ test("a new account that saved preferences and reloads at Pick your first items 
 
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+
+test("a generated-name account that pressed Continue empty can type a name and save it with one click", async () => {
+  await openDashboard(false, { username: GENERATED_USERNAME });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  expect(await screen.findByText("Username must be at least 3 characters")).toBeTruthy();
+
+  fireEvent.change(preferences().username as HTMLInputElement, { target: { value: "collector" } });
+
+  await waitFor(() =>
+    expect(screen.queryByText("Username must be at least 3 characters")).toBeNull(),
+  );
+  const next = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
+  await waitFor(() => expect(next.disabled).toBe(false));
+  fireEvent.click(next);
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  expect(updates).toEqual([{ username: "collector", hasSeenOnboarding: true }]);
+});
+
+test("a new account whose browser reports an empty language opens onboarding with its saved formats", async () => {
+  setBrowserLocale("");
+  await openDashboard(false);
+
+  expect(preferences().currency).toContain("USD");
+  expect(preferences().dateFormat).toBe("MM/DD/YYYY");
+});
