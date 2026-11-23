@@ -444,6 +444,68 @@ describe("the edit-order sheet", () => {
       expect(call?.[1]).toEqual([]);
     }),
   );
+
+  const alsoUpdateItems = "Also update matching items in this order";
+  const changeShop = async (user: ReturnType<typeof userEvent.setup>) => {
+    const shop = screen.getByRole("combobox", { name: "Shop" });
+    await user.clear(shop);
+    await user.type(shop, "HLJ");
+  };
+
+  test(
+    "starts with the matching-items box ticked, and a Shop change copies it to the items that held the old Shop",
+    untilBodyDone(async () => {
+      const call = await editAndSave(async (user) => {
+        expect(
+          screen.getByRole("checkbox", { name: alsoUpdateItems }).getAttribute("aria-checked"),
+        ).toBe("true");
+        await changeShop(user);
+      });
+      expect(call).toEqual([
+        expect.objectContaining({ orderId: "od-alpha", shop: "HLJ" }),
+        ["shop"],
+      ]);
+    }),
+  );
+
+  test(
+    "with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
+    untilBodyDone(async () => {
+      const call = await editAndSave(async (user) => {
+        await user.click(screen.getByRole("checkbox", { name: alsoUpdateItems }));
+        await changeShop(user);
+      });
+      expect(call).toEqual([expect.objectContaining({ orderId: "od-alpha", shop: "HLJ" }), []]);
+    }),
+  );
+
+  test("offers the matching-items box only on an Order that has items", () => {
+    const offered = (itemCount: number) => {
+      const queryClient = new QueryClient();
+      try {
+        render(
+          <QueryClientProvider client={queryClient}>
+            <OrderForm
+              type="edit-order"
+              renderTrigger={trigger}
+              orderData={{ ...order, itemCount }}
+              callbackFn={async () => Result.ok()}
+              currency="USD"
+            />
+          </QueryClientProvider>,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Open" }));
+        return screen.queryByRole("checkbox", { name: alsoUpdateItems }) !== null;
+      } finally {
+        cleanup();
+        queryClient.clear();
+      }
+    };
+    expect({ withItems: offered(2), withoutItems: offered(0) }).toEqual({
+      withItems: true,
+      withoutItems: false,
+    });
+  });
 });
 
 describe("the merge dialog", () => {

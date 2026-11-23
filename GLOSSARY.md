@@ -103,7 +103,7 @@ The date the whole Order is expected to release. It remains separate from Select
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:
-Copying an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays; a date changed on a Dashboard order card is not copied. Merging Orders and moving Order Items to a new Order copy nothing, so every moved Order Item keeps its own details, and an Order fill copies to every Order Item. Paid is not copied, since an Order Item has no Paid of its own.
+Copying an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit, from Edit Order, the Orders table or the Dashboard board, copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays. Edit Order with "Also update matching items in this order" unticked writes the Order alone. Merging Orders and moving Order Items to a new Order copy nothing, so every moved Order Item keeps its own details, and an Order fill copies to every Order Item. Paid is not copied, since an Order Item has no Paid of its own.
 _Avoid_: Cascade when the copied details and affected Order Items are unclear
 
 **Shop**:

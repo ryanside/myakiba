@@ -3,6 +3,7 @@ import { call } from "@/data/api";
 import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 import { ApiNotFound } from "@/lib/errors/api-not-found";
+import { cascadeToItems } from "@/lib/order-cascade";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import type {
   CascadeOptions,
@@ -197,7 +198,7 @@ export function updateOrderStatus(orderId: string, status: OrderStatus) {
       order: {
         status,
       },
-      cascadeOptions: ["status"],
+      cascadeOptions: cascadeToItems(["status"]),
     }),
     { fallback: "Failed to update order status. Please try again." },
   );
@@ -223,7 +224,7 @@ export function updateOrderDate(orderId: string, field: OrderDateField, date: st
   return call(
     app.api.orders({ orderId }).put({
       order: { [field]: date },
-      cascadeOptions: [],
+      cascadeOptions: cascadeToItems([field]),
     }),
     { fallback: "Failed to update order date" },
   );
