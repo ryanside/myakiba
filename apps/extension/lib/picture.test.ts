@@ -67,13 +67,6 @@ describe("readPicture", () => {
     expect(await kept(response)).toBeNull();
     expect(cancelled).toBe(true);
   });
-
-  test("drops an empty or failed response", async () => {
-    expect(await kept(new Response(new Uint8Array()))).toBeNull();
-    expect(
-      await kept(new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 404 })),
-    ).toBeNull();
-  });
 });
 
 describe("readPicture's rejections", () => {

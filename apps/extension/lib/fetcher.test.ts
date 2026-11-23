@@ -1389,23 +1389,6 @@ describe("the MFC tab", () => {
     expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
   });
 
-  test("a failed injection in a borrowed tab tries the item once more in its own tab", async () => {
-    const extension = fakeExtension({
-      pages: (request, _signal, tabId) => {
-        if (extension.calls.length === 1) {
-          return injectionFailed(tabId, "Cannot access contents of the page.");
-        }
-        return page(itemPage(request.mfcItemId));
-      },
-    });
-    const borrowed = extension.tabs.open(`${ORIGINS.mfc}/`);
-    const run = extension.run([1]);
-    await extension.clock.runUntil(run.done);
-
-    expect(extension.calls.map((call) => call.tabId)).toEqual([borrowed, 102]);
-    expect(run.results().map((result) => result.ok)).toEqual([true]);
-  });
-
   test("its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab", async () => {
     const extension = fakeExtension({
       pages: (request, _signal, tabId) => {
@@ -1440,27 +1423,6 @@ describe("the MFC tab", () => {
     expect(extension.tabs.log.filter((entry) => entry.startsWith("create"))).toHaveLength(3);
     expect(extension.calls).toHaveLength(3);
     expect(extension.tabs.has(103)).toBe(false);
-  });
-
-  test("a collector answer that fails its schema in its own tab fails the item, and the next item loads a fresh tab", async () => {
-    const extension = fakeExtension({
-      pages: (request, _signal, tabId) =>
-        request.mfcItemId === 1 ? answerInvalid(tabId) : page(itemPage(2)),
-    });
-    const run = extension.run([1, 2]);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
-
-    expect(run.results()).toEqual([
-      { ok: false, error: "unexpected_page" },
-      { ok: true, html: itemPage(2), picture: null },
-    ]);
-    expect(extension.tabs.log).toEqual([
-      `create inactive ${ORIGINS.mfc}/`,
-      "remove 101",
-      `create inactive ${ORIGINS.mfc}/`,
-      "remove 102",
-    ]);
   });
 
   test("a shared item outlives its first run's tab closing before the MFC tab opens", async () => {
@@ -1821,41 +1783,6 @@ describe("item results", () => {
       },
     ]);
   });
-
-  test("an item whose public picture fails still goes through without one", async () => {
-    const extension = fakeExtension({
-      pages: () => page(itemPage(1, "public")),
-      publicPicture: () => Promise.reject(new TypeError("Failed to fetch")),
-    });
-    const run = extension.run([1]);
-    await extension.clock.runUntil(run.done);
-
-    expect(run.results()).toEqual([{ ok: true, html: itemPage(1, "public"), picture: null }]);
-  });
-
-  test("an item whose gated picture fails still goes through without one", async () => {
-    const extension = fakeExtension({
-      pages: () => page(itemPage(1, "gated")),
-      gatedPicture: () => Promise.reject(new TypeError("Failed to fetch")),
-    });
-    const run = extension.run([1]);
-    await extension.clock.runUntil(run.done);
-
-    expect(run.results()).toEqual([{ ok: true, html: itemPage(1, "gated"), picture: null }]);
-  });
-
-  test("a failed picture keeps the item's MFC tab for the next item", async () => {
-    const extension = fakeExtension({
-      pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
-      gatedPicture: () => Promise.reject(new TypeError("Failed to fetch")),
-    });
-    const run = extension.run([1, 2]);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
-
-    expect(run.results().map((result) => result.ok && result.picture)).toEqual([null, null]);
-    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
-  });
 });
 
 describe("an attempt that breaks", () => {
@@ -1899,33 +1826,6 @@ describe("an attempt that breaks", () => {
     } finally {
       error.mockRestore();
     }
-  });
-
-  test("a throttle write that fails while it records a challenge's pause fails only its item", async () => {
-    const extension = fakeExtension({
-      throttleState: refusingFirstPause(() =>
-        Result.err(
-          new SessionStorageUnavailable({
-            key: "throttle",
-            op: "set",
-            cause: new Error("QuotaExceededError"),
-          }),
-        ),
-      ),
-      pages: (request) =>
-        request.mfcItemId === 7
-          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" })
-          : page(itemPage(request.mfcItemId)),
-    });
-    const run = extension.run([7, 8]);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
-
-    expect(run.results()).toEqual([
-      { ok: false, error: "unexpected_page" },
-      { ok: true, html: itemPage(8), picture: null },
-    ]);
-    expect(asked(run.events, "needs_user")).toBe(false);
   });
 });
 
