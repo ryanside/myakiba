@@ -9,6 +9,7 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import { Result } from "better-result";
 import type { Saving } from "@/data/client";
 import { ApiNotFound } from "@/lib/errors/api-not-found";
+import { ApiServerError } from "@/lib/errors/api-server-error";
 import { WriteFailed } from "@/lib/errors/write-failed";
 
 type Answered = Awaited<Saving>;
@@ -925,6 +926,52 @@ describe("moving items to a New Order", () => {
       } finally {
         answerItemsDraft = previous;
       }
+    }),
+  );
+
+  test(
+    "shows the server's failure with no way to submit when the items cannot be read",
+    untilBodyDone(async () => {
+      const previous = answerItemsDraft;
+      answerItemsDraft = async () =>
+        Result.err(
+          new ApiServerError({
+            status: 500,
+            body: "Internal Server Error",
+            message: "Couldn't load the selected items.",
+          }),
+        );
+      try {
+        const move = renderMove(mock(async (): Saving => Result.ok()));
+        move.openNew();
+        await waitFor(() =>
+          expect(screen.queryByText("Couldn't load the selected items.") !== null).toBe(true),
+        );
+        expect(screen.queryByRole("button", { name: "Move to New Order" }) === null).toBe(true);
+        move.queryClient.clear();
+      } finally {
+        answerItemsDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "takes 10,000 characters of Notes and saves them",
+    untilBodyDone(async () => {
+      const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+      const move = renderMove(send);
+      move.openNew();
+      const submit = await screen.findByRole("button", { name: "Move to New Order" });
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Notes" }));
+      await user.click(screen.getByPlaceholderText("Add any notes..."));
+      await user.paste("n".repeat(10_000));
+      await user.click(submit);
+
+      await waitFor(() => expect(send.mock.calls.length).toBe(1));
+      const [values] = send.mock.calls[0] ?? [];
+      expect((values as { notes: string }).notes.length).toBe(10_000);
+      move.queryClient.clear();
     }),
   );
 

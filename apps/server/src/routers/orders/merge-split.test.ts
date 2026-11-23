@@ -312,8 +312,10 @@ describe("a merge starts from its source Orders", () => {
 
   const draftOf = async (orderIds: readonly string[]) => {
     const response = await app.handle(
-      new Request(`http://localhost/api/orders/merge-draft?orderIds=${orderIds.join(",")}`, {
-        headers: { "x-test-user": userId },
+      new Request("http://localhost/api/orders/merge-draft", {
+        method: "POST",
+        headers: { "x-test-user": userId, "content-type": "application/json" },
+        body: JSON.stringify({ orderIds }),
       }),
     );
     const json = response.headers.get("content-type")?.includes("json");
@@ -341,6 +343,13 @@ describe("a merge starts from its source Orders", () => {
         notes: "Box 1",
       },
     });
+  });
+
+  test("the draft reads 1,000 Orders, as many as a merge takes", async () => {
+    const ids = Array.from({ length: 1000 }, (_, i) => `bulk-order-${i}`);
+    await db.insert(order).values(ids.map((id) => ({ id, userId, title: id, shippingFee: 1 })));
+
+    expect(await draftOf(ids)).toMatchObject({ status: 200, body: { shippingFee: 1000 } });
   });
 
   test("the draft leaves the Shop blank when the sources differ and Paid off when one source is unpaid", async () => {
@@ -423,10 +432,11 @@ describe("a New Order starts from the selected items", () => {
 
   const draftOf = async (collectionIds: readonly string[]) => {
     const response = await app.handle(
-      new Request(
-        `http://localhost/api/orders/new-order-draft?collectionIds=${collectionIds.join(",")}`,
-        { headers: { "x-test-user": userId } },
-      ),
+      new Request("http://localhost/api/orders/new-order-draft", {
+        method: "POST",
+        headers: { "x-test-user": userId, "content-type": "application/json" },
+        body: JSON.stringify({ collectionIds }),
+      }),
     );
     const json = response.headers.get("content-type")?.includes("json");
     return { status: response.status, body: json ? await response.json() : await response.text() };
@@ -500,6 +510,18 @@ describe("a New Order starts from the selected items", () => {
     expect(await draftOf(["collection-1", "collection-3"])).toMatchObject({
       status: 200,
       body: { paid: false },
+    });
+  });
+
+  test("the draft reads 1,000 items, as many as a move takes", async () => {
+    const ids = Array.from({ length: 1000 }, (_, i) => `bulk-item-${i}`);
+    await db
+      .insert(collection)
+      .values(ids.map((id) => ({ id, userId, itemId: "item-1", shop: "AmiAmi", paid: true })));
+
+    expect(await draftOf(ids)).toMatchObject({
+      status: 200,
+      body: { shop: "AmiAmi", paid: true, shippingFee: 0 },
     });
   });
 
