@@ -4989,7 +4989,7 @@
         "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > Scoped Shop Spend for Orders names only the Paid Order's Shop and adds up to Order Spend",
         "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Dashboard month splits its Orders' amounts the same way"
       ],
-      "reason": "The change that made Paid its own yes/no reseeds this file with a stored paid flag and three statuses, which do not exist at this fix, so its harness stays at the fix."
+      "reason": "The change that made Paid its own yes/no reseeds this file with a stored paid flag and three statuses, which do not exist at this fix, so its harness stays at the fix. Paid lives on the Order alone rewrote the HEAD file, so atHead names its agreement tests, which judge each Order by its own Paid: they check the same three pages agree, under the one rule."
     },
     {
       "fix": "579506775fecaa045ade24ac0d08e69bd6a3084a",
@@ -5001,7 +5001,7 @@
         "a row with a status outside Ordered, Shipped and Owned rolls the step back, and db-push stops before the push"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone made db-push run a second Paid step after this one, so HEAD's copy expects each Order's Paid after both steps and no item paid column. At this fix there is no second step and the column stays, so HEAD's copy fails on both sides; main's copy holds this step's own result."
     },
     {
       "fix": "ecb924179e0701d5a5ed60b1a551f5600b81954c",
@@ -5017,7 +5017,7 @@
         "Paid is apart from the Acquisition Status > a Shipped Order that is unpaid counts as Unpaid Costs and not Spend, and an Ordered Order that is paid counts as Spend"
       ],
       "testAt": "ecb924179e0701d5a5ed60b1a551f5600b81954c",
-      "reason": "A later test of the Orders list's Unpaid Costs filter also passes at this fix: the fix adds the Paid filter that test compares against, and the Unpaid Costs filter does not exist yet, so the list returns both Orders, which both owe money. The harness stays at the fix.",
+      "reason": "A later test of the Orders list's Unpaid Costs filter also passes at this fix: the fix adds the Paid filter that test compares against, and the Unpaid Costs filter does not exist yet, so the list returns both Orders, which both owe money. The harness stays at the fix. Paid lives on the Order alone rewrote the HEAD file, so atHead names its agreement tests, which judge each Order by its own Paid: they check the same three pages agree, under the one rule.",
       "atHead": [
         "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Dashboard, the Orders page and Expenses show the Unpaid Order's whole Order Total as Unpaid Costs",
         "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > an Expenses date range does not hide the Unpaid Order, and a Shop filter for the other Shop leaves no Unpaid Costs",
@@ -5036,9 +5036,10 @@
         "the Orders page lists the Orders behind Unpaid Costs > an Unpaid Costs range keeps only the Orders inside it"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix. atHead names the HEAD tests of the Unpaid Costs filter: its minimum keeps only Orders that owe money and its maximum keeps only Orders under the limit, now judged by each Order's Paid.",
       "atHead": [
-        "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's money filters and its Paid and Unpaid filters keep the same Orders"
+        "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's money filters and its Paid and Unpaid filters keep the same Orders",
+        "the Orders page's Unpaid Costs and Order Spend ranges > a maximum keeps only the Orders at or under it, judged by each Order's own Paid"
       ]
     },
     {
@@ -5051,9 +5052,7 @@
         "an Order's money is a JSON number on every page that shows it > the Dashboard sends each kanban Order Total as a number",
         "an Order's money is a JSON number on every page that shows it > the Dashboard month sends each kanban Order Total as a number",
         "an Order's money is a JSON number on every page that shows it > the Calendar sends each Order Total as a number"
-      ],
-      "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      ]
     },
     {
       "fix": "85ff4a5110430de64cd59d9cfa61691821d2727b",
@@ -5077,7 +5076,7 @@
         "an Order edit accepts only the fields a user edits > a top-level unknownField answers 422 and writes nothing"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone changed this file's Paid tests (a Paid change no longer reaches the items, and paid in Cascade to Items answers 422) and dropped paid from its item row. At this fix Paid still cascades and the item still stores it, so those tests fail there; main's copy replays the fix without them. The listed tests are unchanged at HEAD."
     },
     {
       "fix": "85ff4a5110430de64cd59d9cfa61691821d2727b",
@@ -5094,7 +5093,7 @@
         "saves a fee edit without cascading"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone dropped payment from this file's Order fixture and replaced its Partly paid test. At this fix the Paid cell still reads payment, so HEAD's fixture leaves it unset there; main's copy replays the fix. The listed tests are unchanged at HEAD."
     },
     {
       "fix": "c63a42f18fceedbf6f0b1e3aa3e6d1f1d42b86b2",
@@ -5105,9 +5104,10 @@
         "the Orders page lists the Orders behind Order Spend > an Order Spend range keeps only the Orders inside it"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix. atHead names the HEAD tests of the Order Spend filter: its minimum keeps only Orders with Spend and its maximum keeps only Orders under the limit, now judged by each Order's Paid.",
       "atHead": [
-        "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's money filters and its Paid and Unpaid filters keep the same Orders"
+        "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's money filters and its Paid and Unpaid filters keep the same Orders",
+        "the Orders page's Unpaid Costs and Order Spend ranges > a maximum keeps only the Orders at or under it, judged by each Order's own Paid"
       ]
     },
     {
@@ -5118,7 +5118,7 @@
         "the Orders page lists every Order that holds an item the Expenses Order Items count counts"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone reseeded this file: its items carry no Paid, and each Order is Paid or Unpaid as a whole. At this fix the Expenses count follows each item's own Paid, so HEAD's rows give it a different count; main's copy replays the fix. The listed test is unchanged at HEAD."
     },
     {
       "fix": "1b939e145a45c66254ffee43e7cc55aa11d8a938",
@@ -5135,7 +5135,7 @@
         "every count and sum the contracts call a number is a JSON number > the Analytics scales page sends its totals and each row's count and spend as numbers"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone dropped paid from three Collection Item rows in this file, since HEAD has no such column. At this fix that column still decides which prices are Spend, so HEAD's rows would sum different amounts; main's copy keeps the rows this fix was tested with. The listed tests are unchanged at HEAD."
     },
     {
       "fix": "ffe35d1290d6e05827218619b708f8ed3397412b",
@@ -5147,7 +5147,7 @@
         "an edit to Shipped of an Order Item its Order drops meanwhile answers 409 and leaves it Owned"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone dropped paid from this file's edit body and expected row. At this fix the strict edit contract still requires paid, so HEAD's body answers 422 there; main's copy replays the fix. The listed tests are unchanged at HEAD."
     },
     {
       "fix": "ffe35d1290d6e05827218619b708f8ed3397412b",
@@ -5159,7 +5159,7 @@
         "only an Order Item can be Ordered or Shipped > a Shipped fill of an Order Item its Order drops meanwhile answers 409 and leaves it Owned"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone removed this file's Paid fill cases and made a Paid fill answer 422. At this fix Paid is still an item fill, so HEAD's 422 case fails there; main's copy replays the fix. The listed tests are unchanged at HEAD."
     },
     {
       "fix": "f12a284026f76aebeba82fcd8719ec4b87e48303",
@@ -5341,7 +5341,7 @@
         "an Owned Order Item that is still unpaid > Collection Spend, Fee Spend and Unpaid Costs add up to the Order Total"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix. atHead names the HEAD tests that keep this fix's point: an Owned item that is unpaid, now because its Order is Unpaid, counts as Unpaid Costs and in no Spend, and Spend and Unpaid Costs still add up to the Order Total.",
       "atHead": [
         "an Owned item in an Unpaid Order beside an Owned item outside any Order > the item in the Unpaid Order counts as Unpaid Costs, and only the item outside any Order is Collection Spend",
         "an Owned item in an Unpaid Order beside an Owned item outside any Order > Order Spend and Unpaid Costs add up to the Order Total"
@@ -5355,7 +5355,7 @@
         "a Collection Item write on the collection page > an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone removed the optimistic lowering of the Collection totals on delete: a row no longer says whether its Order is Paid, so the totals wait for the server. The test this fix added asserted that lowering and has no HEAD equivalent; main's copy replays it. atHead names the HEAD test that shows no total moves before the server answers, which still keeps an unpaid price from being subtracted. It asserts the opposite of the lowering and is not its equivalent.",
       "atHead": [
         "a Collection Item write on the collection page > an unfiltered delete hides the items before the server answers, and its totals follow the server's answer"
       ]
@@ -5368,7 +5368,7 @@
         "an Owned Order Item that is still unpaid > averages divide Collection Spend by the paid items it sums"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, which fails at this fix on both sides. Main's copy replays the fix. atHead names the HEAD test that still divides Collection Spend by the items it sums, under the one rule.",
       "atHead": [
         "an Owned item in an Unpaid Order beside an Owned item outside any Order > averages divide Collection Spend by the paid items it sums"
       ]
@@ -5381,9 +5381,9 @@
         "a Collection Item write on the collection page > an unfiltered delete lowers the paid item count before the server answers"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone removed the optimistic lowering of the paid item count on delete, for the same reason the totals wait for the server: a row no longer says whether its Order is Paid. The test this fix added asserted that lowering and has no HEAD equivalent; main's copy replays it. atHead names the HEAD test of the other half of this fix, Average Cost divided by the paid item count the list returns.",
       "atHead": [
-        "a Collection Item write on the collection page > an unfiltered delete leaves the paid item count to the server's answer"
+        "a Collection Item write on the collection page > Average Cost is the mean of the paid prices, before and after a delete"
       ]
     },
     {
@@ -5394,7 +5394,7 @@
         "a Collection Item write on the collection page > Average Cost is the mean of the paid prices, before and after a delete"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone changed this file's fake rows (they say whether the server counts them, not an item's Paid) and its delete tests (totals wait for the server). At this fix the delete still lowers the totals by each row's paid flag, so main's copy replays the fix. The listed test is unchanged at HEAD."
     },
     {
       "fix": "4caa10c3d96a41d8bbd2cdac0e4362d78bd54f42",
@@ -5406,7 +5406,7 @@
         "an Order edit copies to its items only what it changed > a cleared date clears only the items that held the Order's date"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before."
+      "reason": "Paid lives on the Order alone changed this file's Paid tests (a Paid change no longer reaches the items, and paid in Cascade to Items answers 422), dropped paid from its item rows and took paid out of the cascade lists these tests send. At this fix paid is still a cascade option the items store, so main's copy replays the fix; the listed tests pass at HEAD with paid gone from their lists."
     },
     {
       "fix": "4caa10c3d96a41d8bbd2cdac0e4362d78bd54f42",
@@ -5417,10 +5417,9 @@
         "the edit-order sheet > a Paid change copies only Paid to the items"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone took Paid out of Cascade to Items, so this fix's Paid half is retired: the HEAD test of a Paid change asserts nothing reaches the items, the opposite of this fix's paid, and is not named. Main's copy replays the fix. atHead names only the title test, which still shows no Cascade picker and nothing sent for a title change.",
       "atHead": [
-        "the edit-order sheet > a title change copies nothing to the items, and no Cascade to Items choice is offered",
-        "the edit-order sheet > a Paid change copies nothing to the items, since Paid is the Order's alone"
+        "the edit-order sheet > a title change copies nothing to the items, and no Cascade to Items choice is offered"
       ]
     },
     {
@@ -5447,7 +5446,7 @@
         "a Paid click on a partly paid Order sets Paid on the Order and every item, not an edit"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this test file, so the entry keeps main's copy, which it replayed before. Its tests were renamed or replaced under the one Paid rule; atHead names the HEAD tests that hold the same behavior.",
+      "reason": "Paid lives on the Order alone removed Partly paid, so the test this fix added, a click on a Partly paid Order, has no HEAD form; main's copy replays the fix. atHead names the HEAD test that keeps the rest of it: a Paid click on the Orders table sends a Paid write, not an edit, now to the Order alone.",
       "atHead": [
         "the Paid checkbox shows the Order's own Paid, never half-ticked, and a click sets the Order's Paid, not an edit"
       ]
@@ -5509,7 +5508,8 @@
         "an Owned item in an Unpaid Order beside an Owned item outside any Order > the item in the Unpaid Order counts as Unpaid Costs, and only the item outside any Order is Collection Spend",
         "an Owned item in an Unpaid Order beside an Owned item outside any Order > averages divide Collection Spend by the paid items it sums",
         "an Owned item removed from an Unpaid Order > leaves Unpaid Costs and becomes Collection Spend, since it is now outside any Order",
-        "a Collection Item edit from a tab opened before Paid left the items > still sends paid, so the strict contract answers 422 and the item keeps its price"
+        "a Collection Item edit from a tab opened before Paid left the items > still sends paid, so the strict contract answers 422 and the item keeps its price",
+        "the Orders page's Unpaid Costs and Order Spend ranges > a maximum keeps only the Orders at or under it, judged by each Order's own Paid"
       ]
     },
     {
@@ -5523,7 +5523,8 @@
         "a brand-new database is marked by its first db-push, so a rollback's item Paid column is only dropped",
         "db-push from the shape before the paid columns runs both Paid steps in one go, setting each Order's Paid from what its items' statuses made them",
         "db-push on a brand-new database has nothing to convert and never makes an item Paid column",
-        "a failed step rolls back, keeps the item Paid column, and db-push stops before the push"
+        "a failed step rolls back, keeps the item Paid column, and db-push stops before the push",
+        "drizzle-kit push alone leaves the mark on order.paid, so it outlives a push that does not write it"
       ]
     },
     {
@@ -5564,7 +5565,15 @@
         "Order Items offer Status and every Collection Item field, and a fill sends their ids",
         "an Orders fill of Paid starts checked and sets only the Orders",
         "Orders and Order Items selected together list their fields under two headings"
-      ]
+      ],
+      "testAt": "992a63a1fb924cea848394bb40087302ec672ca5",
+      "atHead": [
+        "offers every Collection Item field but Status, and counts items",
+        "Order Items offer Status and every Collection Item field, and a fill sends their ids",
+        "an Orders fill of Paid starts checked, says nothing beside the checkbox, and sets only the Orders",
+        "Orders and Order Items selected together list their fields under two headings"
+      ],
+      "reason": "A later fix cut the hint beside an Orders fill of Paid, so HEAD's test asserts no hint where this fix's tested one. The entry keeps the file as it stood at 992a63a1f, which matches this fix; atHead names the renamed HEAD test, which still checks Paid starts checked and fills only the Orders."
     },
     {
       "fix": "2f891693334018192a5ef47163c9b1bae9534f1e",
@@ -5577,6 +5586,31 @@
       "bug": "A Collection Items fill accepted Paid, which only an Order holds now.",
       "test": "apps/server/src/routers/collection/fill.test.ts",
       "fixed": ["a fill with a Paid fill, which only an Order takes answers 422 and changes no row"]
+    },
+    {
+      "fix": "cfa6e945448ec4963097cbab6173d3e8d3bda73b",
+      "bug": "After an Orders fill of Paid, the toast said the fill reached the Orders and their items, though Paid is the Order's alone and the fill writes only the Orders.",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "a fill on the orders page > an Order fill of Paid names only the Orders in its toast, since Paid is the Order's alone",
+        "a fill on the orders page > an Order fill of one Order names the Order, and its items only for a field that cascades"
+      ]
+    },
+    {
+      "fix": "cfa6e945448ec4963097cbab6173d3e8d3bda73b",
+      "bug": "An Orders fill of Paid showed the hint 'Replaces Paid on every selected order.', which only restated the Paid checkbox and the Fill button.",
+      "test": "apps/web/src/components/fill/saved-fill-menu.test.tsx",
+      "fixed": [
+        "an Orders fill of Paid starts checked, says nothing beside the checkbox, and sets only the Orders"
+      ]
+    },
+    {
+      "fix": "cfa6e945448ec4963097cbab6173d3e8d3bda73b",
+      "bug": "Every db-push took an exclusive lock on collection before the Paid-on-Order step looked for a column to convert, so a db-push with nothing to convert waited behind any reader and blocked the server's reads meanwhile.",
+      "test": "packages/db/src/paid/order-paid.test.ts",
+      "fixed": [
+        "a db-push with nothing to convert takes no lock on collection, so it does not wait behind a reader"
+      ]
     }
   ],
   "lint": [
