@@ -509,14 +509,16 @@ function OrderFormContent(
   if (type === "edit-order") {
     return (
       <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
-        <form onSubmit={formSubmitHandler(form)}>
+        <form className="flex max-h-full flex-col" onSubmit={formSubmitHandler(form)}>
           <SheetHeader>
             <SheetTitle>Edit Order</SheetTitle>
             <SheetDescription>
               {orderData ? orderData.title : "Edit the selected order."}
             </SheetDescription>
           </SheetHeader>
-          <div className="overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">{formFields}</div>
+          <div className="min-h-0 overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">
+            {formFields}
+          </div>
           {orderData && orderData.itemCount > 0 ? (
             <div className="flex items-center gap-2 px-4 pt-4">
               <Checkbox
