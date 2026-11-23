@@ -5810,6 +5810,32 @@
       "fixed": [
         "a Collection Item's Paid reads its joined Order, never a lookup on order for each row"
       ]
+    },
+    {
+      "fix": "9394323cc24319019b9a521983482aa166f94396",
+      "bug": "A date changed on a Dashboard order card sent no Cascade to Items, so its Order Items kept the old date while the same change from the Orders table or Edit Order reached them.",
+      "test": "apps/web/src/queries/orders.test.ts",
+      "fixed": [
+        "a date changed on a Dashboard card names its field, so its Order Items that held the old date follow it"
+      ]
+    },
+    {
+      "fix": "9394323cc24319019b9a521983482aa166f94396",
+      "bug": "A date changed on a Dashboard order card sent no Cascade to Items, so its Order Items kept the old date while the same change from the Orders table or Edit Order reached them.",
+      "test": "apps/web/src/components/orders/order-edit-cascade.test.tsx",
+      "fixed": [
+        "a Shipping Date change sends the same Cascade to Items from the Dashboard, the Orders table and the Edit Order sheet"
+      ]
+    },
+    {
+      "fix": "9394323cc24319019b9a521983482aa166f94396",
+      "bug": "Edit Order always copied its changed details to the Order Items that held the old value, with no way to write the Order alone and nothing on screen saying it copies.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the edit-order sheet > starts with the matching-items box ticked, and a Shop change copies it to the items that held the old Shop",
+        "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
+        "the edit-order sheet > offers the matching-items box only on an Order that has items"
+      ]
     }
   ],
   "lint": [
