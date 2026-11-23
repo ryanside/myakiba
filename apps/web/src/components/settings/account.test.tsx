@@ -117,12 +117,12 @@ const user = {
   updatedAt: new Date(),
 } satisfies User;
 
-function openAccount() {
+function openAccount({ emailVerified = false }: { readonly emailVerified?: boolean } = {}) {
   const root = createRootRoute();
   const app = createRoute({
     getParentRoute: () => root,
     id: "(app)",
-    beforeLoad: () => ({ session: { user, session: thisSession } }),
+    beforeLoad: () => ({ session: { user: { ...user, emailVerified }, session: thisSession } }),
   });
   const settings = createRoute({
     getParentRoute: () => app,
@@ -163,6 +163,21 @@ test.each([
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
   },
 );
+
+test("a verified email shows no status and no resend", async () => {
+  openAccount({ emailVerified: true });
+
+  expect(await screen.findByText(user.email)).toBeTruthy();
+  expect(screen.queryByText("Verified") === null).toBe(true);
+  expect(screen.queryByRole("button", { name: "Resend verification email" }) === null).toBe(true);
+});
+
+test("an unverified email says so beside its resend", async () => {
+  openAccount({ emailVerified: false });
+
+  expect(await screen.findByText("Not verified")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Resend verification email" }) !== null).toBe(true);
+});
 
 test("Disconnect unlinks the Google account by its local id", async () => {
   isGoogleLinked = true;
