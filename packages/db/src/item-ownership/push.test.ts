@@ -3,6 +3,7 @@ import { snapshot, testDatabases } from "../../test/database";
 import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { ownershipMismatches } from "../../test/ownership";
 import { migratePaid } from "../paid/migrate";
+import { migrateOrderPaid } from "../paid/order-paid";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
@@ -34,6 +35,7 @@ test(
     const { sql, url } = await databases.create(seeded);
     await migrateItemOwnership(sql);
     await migratePaid(sql);
+    await migrateOrderPaid(sql);
     const before = await snapshot(sql);
     expect(before.triggers.map((trigger) => trigger.tgname)).toEqual(OWNER_GUARDS);
     expect(await pushSchema(url)).toMatchObject({

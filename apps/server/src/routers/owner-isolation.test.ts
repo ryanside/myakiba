@@ -169,7 +169,6 @@ type CollectionRow = typeof collection.$inferSelect;
 function collectionEdit(row: CollectionRow, releaseId: string | null) {
   return {
     status: row.status,
-    paid: row.paid,
     count: row.count,
     score: row.score,
     price: row.price,
@@ -744,7 +743,6 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
 
     const edited = await call(BOB, "PUT", `/collection/${own.id}`, {
       status: own.status,
-      paid: own.paid,
       count: own.count,
       score: own.score,
       price: own.price,

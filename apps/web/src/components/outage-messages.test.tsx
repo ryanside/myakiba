@@ -109,7 +109,6 @@ const collectionItem = {
   itemTitle: "Hatsune Miku",
   itemImage: null,
   status: "Owned",
-  paid: true,
   count: 1,
   score: "0",
   price: 12_000,

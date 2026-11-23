@@ -37,7 +37,6 @@ const createdAt = new Date("2026-01-05T10:20:30.456Z");
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const edit: CollectionUpdateType = {
   status: "Owned",
-  paid: true,
   count: 1,
   score: "0",
   price: 0,
@@ -111,7 +110,6 @@ test("an edit answers its row with ISO timestamp strings and YYYY-MM-DD dates", 
     body: {
       update: {
         id: "c-1",
-        paid: true,
         collectionDate: "2026-02-01",
         createdAt: createdAt.toISOString(),
         updatedAt: expect.stringMatching(ISO),

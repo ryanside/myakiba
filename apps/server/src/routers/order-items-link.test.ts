@@ -42,16 +42,15 @@ beforeAll(async () => {
     })),
   );
   await db.insert(order).values([
-    { id: "split", userId, title: "Unpaid, one item paid", shop: "AmiAmi", paid: false },
+    { id: "open", userId, title: "Unpaid, two items", shop: "AmiAmi", paid: false },
     { id: "fees", userId, title: "Paid, fees only", shop: "AmiAmi", paid: true, shippingFee: 500 },
-    { id: "open", userId, title: "Unpaid, nothing paid", shop: "AmiAmi", paid: false },
-    { id: "gift", userId, title: "Paid, free item", shop: "AmiAmi", paid: true },
+    { id: "paid", userId, title: "Paid, two items", shop: "AmiAmi", paid: true },
   ]);
   await db.insert(collection).values([
-    { id: "split-paid", userId, itemId: "miku", orderId: "split", paid: true, price: 2000 },
-    { id: "split-unpaid", userId, itemId: "rin", orderId: "split", paid: false, price: 1000 },
-    { id: "open-unpaid", userId, itemId: "rin", orderId: "open", paid: false, price: 3000 },
-    { id: "gift-paid", userId, itemId: "len", orderId: "gift", paid: true, price: 0 },
+    { id: "open-miku", userId, itemId: "miku", orderId: "open", price: 2000 },
+    { id: "open-rin", userId, itemId: "rin", orderId: "open", price: 1000 },
+    { id: "paid-rin", userId, itemId: "rin", orderId: "paid", price: 3000 },
+    { id: "paid-free", userId, itemId: "len", orderId: "paid", price: 0 },
   ]);
 });
 
@@ -75,6 +74,6 @@ test("the Orders page lists every Order that holds an item the Expenses Order It
     holding: holding.items.map((row) => row.title).toSorted(),
   }).toEqual({
     orderItemCount: 2,
-    holding: ["Paid, free item", "Unpaid, one item paid"],
+    holding: ["Paid, two items"],
   });
 });

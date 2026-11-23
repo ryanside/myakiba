@@ -211,15 +211,24 @@ describe("an Order edit writes each shape the app sends", () => {
     expect(after.item).toEqual({ ...before.item, status: "Shipped" });
   });
 
-  test("a Paid change sets the Order's Paid and copies it to its items", async () => {
+  test("a Paid change sets the Order's Paid and leaves its items alone", async () => {
     const before = await readState();
 
-    const response = await put({ paid: true }, ["paid"]);
+    const response = await put({ paid: true }, []);
 
     expect(response.status).toBe(200);
     const after = await readState();
     expect(after.order).toEqual({ ...before.order, paid: true, updatedAt: expect.any(Date) });
-    expect(after.item).toEqual({ ...before.item, paid: true });
+    expect(after.item).toEqual(before.item);
+  });
+
+  test("a Paid cascade option, as a tab opened before Paid left the items sends, answers 422 and changes nothing", async () => {
+    const before = await readState();
+
+    const response = await put({ paid: true }, ["paid"]);
+
+    expect(response.status).toBe(422);
+    expect(await readState()).toEqual(before);
   });
 
   test.each([
@@ -259,7 +268,6 @@ describe("an Order edit copies to its items only what it changed", () => {
     itemId: "item-2",
     orderId: "order-1",
     status: "Owned",
-    paid: true,
     shop: "HLJ",
     orderDate: "2025-12-30",
     paymentDate: "2026-02-01",
@@ -284,7 +292,6 @@ describe("an Order edit copies to its items only what it changed", () => {
 
   const everyCascadeOption = [
     "status",
-    "paid",
     "shop",
     "orderDate",
     "paymentDate",
@@ -330,12 +337,12 @@ describe("an Order edit copies to its items only what it changed", () => {
 
     const response = await put(
       { status: "Shipped", paid: true, shop: "Mandarake", paymentDate: "2026-03-01" },
-      ["status", "paid", "shop", "paymentDate"],
+      ["status", "shop", "paymentDate"],
     );
 
     expect(response.status).toBe(200);
     expect(await readItems()).toEqual([
-      { ...following, status: "Shipped", paid: true, shop: "Mandarake", paymentDate: "2026-03-01" },
+      { ...following, status: "Shipped", shop: "Mandarake", paymentDate: "2026-03-01" },
       own,
     ]);
   });

@@ -102,7 +102,6 @@ const order: Order = {
   collectionDate: null,
   status: "Ordered",
   paid: false,
-  payment: "unpaid",
   total: 0,
   shippingFee: 0,
   taxes: 0,
@@ -212,7 +211,6 @@ const collectionItem: CollectionItemFormValues = {
   itemTitle: "Alpha Figure",
   itemImage: null,
   status: "Ordered",
-  paid: false,
   count: 1,
   score: "0",
   price: 0,
@@ -386,12 +384,12 @@ describe("the edit-order sheet", () => {
   );
 
   test(
-    "a Paid change copies only Paid to the items",
+    "a Paid change copies nothing to the items, since Paid is the Order's alone",
     untilBodyDone(async () => {
       const call = await editAndSave(async (user) => {
         await user.click(screen.getByRole("checkbox", { name: "Paid" }));
       });
-      expect(call?.[1]).toEqual(["paid"]);
+      expect(call?.[1]).toEqual([]);
     }),
   );
 });

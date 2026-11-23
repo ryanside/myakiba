@@ -64,7 +64,6 @@ beforeAll(async () => {
     itemId: "miku",
     orderId: "order-1",
     status: "Ordered",
-    paid: false,
     price: 3000,
   });
 });

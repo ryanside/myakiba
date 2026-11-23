@@ -17,7 +17,6 @@ const order: Order = {
   collectionDate: null,
   status: "Owned",
   paid: true,
-  payment: "paid",
   total: 0,
   shippingFee: 0,
   taxes: 0,
@@ -53,7 +52,7 @@ test("an Owned order without dates shows three completed undated steps: Ordered,
 });
 
 test("only future undated steps show Pending", () => {
-  summary({ status: "Ordered", paid: false, payment: "unpaid" });
+  summary({ status: "Ordered", paid: false });
   expect(screen.getAllByText("Pending")).toHaveLength(2);
   expect(screen.getAllByText("—")).toHaveLength(1);
 });
@@ -64,13 +63,13 @@ test("a recorded timeline date stays visible", () => {
 });
 
 test("payment shows apart from the steps, with the Payment Date when there is one", () => {
-  summary({ status: "Shipped", paid: true, payment: "partly", paymentDate: "2026-02-03" });
-  expect(screen.getByText("Partly paid")).not.toBeNull();
+  summary({ status: "Shipped", paid: true, paymentDate: "2026-02-03" });
+  expect(screen.getByText("Paid")).not.toBeNull();
   expect(screen.getByText("02/03/2026")).not.toBeNull();
   expect(screen.getAllByText("Pending")).toHaveLength(1);
 });
 
 test("an unpaid order says so with no date", () => {
-  summary({ status: "Ordered", paid: false, payment: "unpaid" });
+  summary({ status: "Ordered", paid: false });
   expect(screen.getByText("Unpaid")).not.toBeNull();
 });

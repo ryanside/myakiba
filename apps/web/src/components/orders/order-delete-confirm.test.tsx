@@ -43,7 +43,6 @@ const ORDER = {
   shippingMethod: "n/a",
   status: "Ordered",
   paid: true,
-  payment: "paid",
   total: 0,
   shippingFee: 0,
   taxes: 0,

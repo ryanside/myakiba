@@ -19,7 +19,6 @@ const ITEM: CollectionItemFormValues = {
   itemTitle: "Hatsune Miku 1/7",
   itemImage: null,
   status: "Owned",
-  paid: true,
   count: 1,
   score: "0",
   price: 1000,
@@ -125,7 +124,7 @@ test("a typed tag saves exactly as typed, and a picked tag saves in its saved sp
   expect(saves[0]?.tags).toEqual(["favorite", "Favorite"]);
 });
 
-test("Paid is a field of its own, and saves what it shows", async () => {
+test("the sheet has no Paid field, and an update sends no paid", async () => {
   const saves: CollectionItemFormValues[] = [];
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -142,13 +141,11 @@ test("Paid is a field of its own, and saves what it shows", async () => {
   );
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Edit" }));
-  const paid = await screen.findByRole("checkbox", { name: "Paid", checked: true });
-  expect(screen.getByRole("button", { name: "Payment Date" })).toBeTruthy();
+  await screen.findByRole("button", { name: "Payment Date" });
+  expect(screen.queryByRole("checkbox", { name: "Paid" }) === null).toBe(true);
 
-  await user.click(paid);
-  expect(screen.getByRole("checkbox", { name: "Paid", checked: false })).toBeDefined();
   await user.click(screen.getByRole("button", { name: "Update" }));
 
   await waitFor(() => expect(saves).toHaveLength(1));
-  expect(saves[0]).toMatchObject({ paid: false, paymentDate: null });
+  expect(Object.keys(saves[0] ?? {}).includes("paid")).toBe(false);
 });

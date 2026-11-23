@@ -68,7 +68,6 @@ const orders = [
       collectionDate: null,
       status: "Ordered",
       paid: true,
-      payment: "paid",
       total: 12_000,
       shippingFee: 0,
       taxes: 0,

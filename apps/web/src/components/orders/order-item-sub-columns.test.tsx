@@ -18,7 +18,6 @@ function orderItem(id: string): OrderItem {
     itemImage: null,
     itemCategory: null,
     status: "Ordered",
-    paid: false,
     count: 1,
     score: "0",
     price: 0,
@@ -81,4 +80,15 @@ test("disables only the pending order item's cells", () => {
   const status = (id: string) => within(screen.getByTestId(id)).getByLabelText("Status");
   expect("disabled" in status("saving").dataset).toBe(true);
   expect("disabled" in status("idle").dataset).toBe(false);
+});
+
+test("the Order Items table has no Paid column", () => {
+  const ids = new Set(
+    columns.map((column) => column.id ?? ("accessorKey" in column ? column.accessorKey : "")),
+  );
+
+  expect({ hasStatus: ids.has("status"), hasPaid: ids.has("paid") }).toEqual({
+    hasStatus: true,
+    hasPaid: false,
+  });
 });

@@ -34,104 +34,79 @@ const app = new Elysia({ prefix: "/api" })
   .use(collectionRouter)
   .use(analyticsRouter);
 
-const oneOrder = "user-one-order";
-const twoOrders = "user-two-orders";
+const mixed = "user-mixed";
 const paidApart = "user-paid-apart";
 const ownedUnpaid = "user-owned-unpaid";
+const detached = "user-detached";
 
-async function seedOrderedOrder(userId: string) {
+async function seedMixed() {
   await db.insert(item).values([
-    {
-      id: `${userId}-miku`,
-      ownerId: userId,
-      externalId: 101,
-      title: "Miku",
-      category: "Prepainted",
-    },
-    { id: `${userId}-rin`, ownerId: userId, externalId: 102, title: "Rin", category: "Prepainted" },
+    { id: "miku", ownerId: mixed, externalId: 101, title: "Miku", category: "Prepainted" },
+    { id: "rin", ownerId: mixed, externalId: 102, title: "Rin", category: "Prepainted" },
+    { id: "len", ownerId: mixed, externalId: 103, title: "Len", category: "Prepainted" },
+    { id: "luka", ownerId: mixed, externalId: 104, title: "Luka", category: "Prepainted" },
   ]);
-  await db.insert(order).values({
-    id: `${userId}-ordered`,
-    userId,
-    title: "AmiAmi",
-    shop: "AmiAmi",
-    status: "Ordered",
-    paid: false,
-    orderDate: "2024-03-01",
-    releaseDate: "2024-03-15",
-    shippingFee: 500,
-  });
-  await db.insert(collection).values([
+  await db.insert(order).values([
     {
-      id: `${userId}-ordered-item`,
-      userId,
-      itemId: `${userId}-miku`,
-      orderId: `${userId}-ordered`,
+      id: "unpaid-order",
+      userId: mixed,
+      title: "AmiAmi",
+      shop: "AmiAmi",
       status: "Ordered",
       paid: false,
+      orderDate: "2024-03-01",
+      releaseDate: "2024-03-15",
+      shippingFee: 500,
+    },
+    {
+      id: "paid-order",
+      userId: mixed,
+      title: "HLJ",
+      shop: "HLJ",
+      status: "Ordered",
+      paid: true,
+      orderDate: "2024-03-02",
+      paymentDate: "2024-03-05",
+      releaseDate: "2024-03-20",
+      shippingFee: 300,
+      taxes: 200,
+    },
+  ]);
+  await db.insert(collection).values([
+    {
+      id: "unpaid-order-miku",
+      userId: mixed,
+      itemId: "miku",
+      orderId: "unpaid-order",
+      status: "Ordered",
       price: 1000,
     },
     {
-      id: `${userId}-paid-item`,
-      userId,
-      itemId: `${userId}-rin`,
-      orderId: `${userId}-ordered`,
+      id: "unpaid-order-rin",
+      userId: mixed,
+      itemId: "rin",
+      orderId: "unpaid-order",
       status: "Ordered",
-      paid: true,
       price: 2000,
     },
-  ]);
-}
-
-beforeAll(async () => {
-  await db.insert(authSchema.user).values([
-    { id: oneOrder, name: "Ryan", email: "r@example.com", username: "ryan" },
-    { id: twoOrders, name: "Aki", email: "a@example.com", username: "aki" },
-    { id: paidApart, name: "Mei", email: "m@example.com", username: "mei" },
-    { id: ownedUnpaid, name: "Yui", email: "y@example.com", username: "yui" },
-  ]);
-  await seedOrderedOrder(oneOrder);
-  await seedOrderedOrder(twoOrders);
-  await db.insert(item).values([
-    { id: "len", ownerId: twoOrders, externalId: 103, title: "Len", category: "Prepainted" },
-    { id: "luka", ownerId: twoOrders, externalId: 104, title: "Luka", category: "Prepainted" },
-  ]);
-  await db.insert(order).values({
-    id: "paid-order",
-    userId: twoOrders,
-    title: "HLJ",
-    shop: "HLJ",
-    status: "Ordered",
-    paid: true,
-    orderDate: "2024-03-02",
-    paymentDate: "2024-03-05",
-    releaseDate: "2024-03-20",
-    shippingFee: 300,
-    taxes: 200,
-  });
-  await db.insert(collection).values([
     {
-      id: "paid-order-ordered-item",
-      userId: twoOrders,
+      id: "paid-order-len",
+      userId: mixed,
       itemId: "len",
       orderId: "paid-order",
       status: "Ordered",
-      paid: false,
       price: 4000,
     },
     {
-      id: "paid-order-owned-item",
-      userId: twoOrders,
+      id: "paid-order-luka",
+      userId: mixed,
       itemId: "luka",
       orderId: "paid-order",
       status: "Owned",
-      paid: true,
       price: 8000,
     },
   ]);
-  await seedPaidApartFromStatus();
-  await seedOwnedUnpaid();
-});
+}
 
 async function seedPaidApartFromStatus() {
   await db.insert(item).values([
@@ -168,7 +143,6 @@ async function seedPaidApartFromStatus() {
       itemId: "teto",
       orderId: "shipped-unpaid",
       status: "Shipped",
-      paid: false,
       price: 3000,
     },
     {
@@ -177,7 +151,6 @@ async function seedPaidApartFromStatus() {
       itemId: "gumi",
       orderId: "ordered-paid",
       status: "Ordered",
-      paid: true,
       price: 6000,
     },
   ]);
@@ -215,37 +188,75 @@ async function seedOwnedUnpaid() {
     title: "Received, paid later",
     shop: "AmiAmi",
     status: "Owned",
-    paid: true,
+    paid: false,
     orderDate: "2024-05-01",
-    paymentDate: "2024-05-02",
     collectionDate: "2024-06-01",
     shippingFee: 500,
   });
   await db.insert(collection).values([
     {
-      id: "owned-unpaid-item",
+      id: "owned-in-unpaid-order",
       userId: ownedUnpaid,
       itemId: "kaito",
       orderId: "received-order",
       status: "Owned",
-      paid: false,
       price: 30_000,
       shop: "AmiAmi",
       collectionDate: "2024-06-01",
     },
     {
-      id: "owned-paid-item",
+      id: "owned-outside-orders",
       userId: ownedUnpaid,
       itemId: "meiko",
-      orderId: "received-order",
       status: "Owned",
-      paid: true,
       price: 8000,
       shop: "AmiAmi",
       collectionDate: "2024-06-01",
     },
   ]);
 }
+
+async function seedDetached() {
+  await db.insert(item).values({
+    id: "nendo",
+    ownerId: detached,
+    externalId: 109,
+    title: "Nendo",
+    category: "Prepainted",
+  });
+  await db.insert(order).values({
+    id: "pay-later",
+    userId: detached,
+    title: "Pay later",
+    shop: "Mandarake",
+    status: "Owned",
+    paid: false,
+    orderDate: "2024-07-01",
+  });
+  await db.insert(collection).values({
+    id: "nendo-in-pay-later",
+    userId: detached,
+    itemId: "nendo",
+    orderId: "pay-later",
+    status: "Owned",
+    price: 5000,
+    shop: "Mandarake",
+    collectionDate: "2024-07-01",
+  });
+}
+
+beforeAll(async () => {
+  await db.insert(authSchema.user).values([
+    { id: mixed, name: "Ryan", email: "r@example.com", username: "ryan" },
+    { id: paidApart, name: "Mei", email: "m@example.com", username: "mei" },
+    { id: ownedUnpaid, name: "Yui", email: "y@example.com", username: "yui" },
+    { id: detached, name: "Rei", email: "d@example.com", username: "rei" },
+  ]);
+  await seedMixed();
+  await seedPaidApartFromStatus();
+  await seedOwnedUnpaid();
+  await seedDetached();
+});
 
 type Dashboard = {
   readonly unpaidCosts: number;
@@ -320,65 +331,33 @@ const get = async <T>(userId: string, path: string): Promise<T> => {
   return (await response.json()) as T;
 };
 
-describe("an Unpaid Order holding an unpaid item, a paid item and a shipping fee", () => {
-  test("the Dashboard, the Orders page and Expenses show the same Unpaid Costs with no filter", async () => {
-    const dashboard = await get<Dashboard>(oneOrder, "/dashboard");
-    const orders = await get<OrdersList>(oneOrder, "/orders?limit=10");
-    const expenses = await get<ExpensesOrders>(oneOrder, "/expenses/orders");
+const titles = (list: OrdersList) => list.items.map((row) => row.title).toSorted();
+
+describe("a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own", () => {
+  test("the Dashboard, the Orders page and Expenses show the Unpaid Order's whole Order Total as Unpaid Costs", async () => {
+    const dashboard = await get<Dashboard>(mixed, "/dashboard");
+    const orders = await get<OrdersList>(mixed, "/orders?limit=10");
+    const expenses = await get<ExpensesOrders>(mixed, "/expenses/orders");
 
     expect({
       dashboard: dashboard.unpaidCosts,
       orders: orders.unpaidCosts,
       expenses: expenses.kpis.unpaidCosts,
-    }).toEqual({ dashboard: 1500, orders: 1500, expenses: 1500 });
+    }).toEqual({ dashboard: 3500, orders: 3500, expenses: 3500 });
   });
 
-  test("an Expenses date range does not hide an Unpaid Order", async () => {
-    const expenses = await get<ExpensesOrders>(
-      oneOrder,
-      "/expenses/orders?dateStart=2025-01-01&dateEnd=2025-12-31",
-    );
-
-    expect({
-      unpaidOrderCount: expenses.kpis.unpaidOrderCount,
-      unpaidCosts: expenses.kpis.unpaidCosts,
-    }).toEqual({ unpaidOrderCount: 1, unpaidCosts: 1500 });
-  });
-
-  test("an Expenses Shop filter for another Shop leaves no Unpaid Costs", async () => {
-    const expenses = await get<ExpensesOrders>(oneOrder, "/expenses/orders?shop=HLJ");
-
-    expect({
-      unpaidOrderCount: expenses.kpis.unpaidOrderCount,
-      unpaidCosts: expenses.kpis.unpaidCosts,
-    }).toEqual({ unpaidOrderCount: 0, unpaidCosts: 0 });
-  });
-});
-
-describe("each item's price follows its own Paid and each Order's fees follow the Order's", () => {
-  test("Spend and Unpaid Costs on the Orders page add up to its Order Totals", async () => {
-    const orders = await get<OrdersList>(twoOrders, "/orders?limit=10");
+  test("the Paid Order's whole Order Total is Spend, and Spend plus Unpaid Costs is every Order Total", async () => {
+    const orders = await get<OrdersList>(mixed, "/orders?limit=10");
     const orderTotals = orders.items.reduce((sum, row) => sum + row.total, 0);
 
-    expect(orderTotals).toBe(16_000);
-    expect(orders.totalSpent + orders.unpaidCosts).toBe(orderTotals);
+    expect({ orderTotals, totalSpent: orders.totalSpent, unpaidCosts: orders.unpaidCosts }).toEqual(
+      { orderTotals: 16_000, totalSpent: 12_500, unpaidCosts: 3500 },
+    );
   });
 
-  test("an unpaid item on a Paid Order counts as Unpaid Costs on every page", async () => {
-    const dashboard = await get<Dashboard>(twoOrders, "/dashboard");
-    const orders = await get<OrdersList>(twoOrders, "/orders?limit=10");
-    const expenses = await get<ExpensesOrders>(twoOrders, "/expenses/orders");
-
-    expect({
-      dashboard: dashboard.unpaidCosts,
-      orders: orders.unpaidCosts,
-      expenses: expenses.kpis.unpaidCosts,
-    }).toEqual({ dashboard: 5500, orders: 5500, expenses: 5500 });
-  });
-
-  test("Expenses counts a paid item on an Unpaid Order as Order Item Spend, and an unpaid item on a Paid Order as neither", async () => {
-    const orders = await get<OrdersList>(twoOrders, "/orders?limit=10");
-    const expenses = await get<ExpensesOrders>(twoOrders, "/expenses/orders");
+  test("Expenses counts the Paid Order's items and fees as Order Spend, and one Paid Order and one Unpaid Order", async () => {
+    const orders = await get<OrdersList>(mixed, "/orders?limit=10");
+    const expenses = await get<ExpensesOrders>(mixed, "/expenses/orders");
 
     expect({
       orderSpend: expenses.summary.spend,
@@ -389,7 +368,7 @@ describe("each item's price follows its own Paid and each Order's fees follow th
       unpaidOrderCount: expenses.kpis.unpaidOrderCount,
     }).toEqual({
       orderSpend: orders.totalSpent,
-      orderItemSpend: 10_000,
+      orderItemSpend: 12_000,
       feeSpend: 500,
       orderItemCount: 2,
       paidOrderCount: 1,
@@ -397,23 +376,58 @@ describe("each item's price follows its own Paid and each Order's fees follow th
     });
   });
 
-  test("Scoped Shop Spend for Orders adds up to Order Spend", async () => {
-    const expenses = await get<ExpensesOrders>(twoOrders, "/expenses/orders");
-    const shops = await get<ExpenseShops>(twoOrders, "/expenses/shops?scope=orders");
+  test("Scoped Shop Spend for Orders names only the Paid Order's Shop and adds up to Order Spend", async () => {
+    const expenses = await get<ExpensesOrders>(mixed, "/expenses/orders");
+    const shops = await get<ExpenseShops>(mixed, "/expenses/shops?scope=orders");
     const spendByShop = Object.fromEntries(shops.items.map((row) => [row.shop, row.spend]));
 
-    expect(spendByShop).toEqual({ AmiAmi: 2000, HLJ: 8500 });
+    expect(spendByShop).toEqual({ HLJ: 12_500 });
     expect(shops.items.reduce((sum, row) => sum + row.spend, 0)).toBe(expenses.summary.spend);
   });
 
   test("the Dashboard month splits its Orders' amounts the same way", async () => {
-    const monthly = await get<Monthly>(twoOrders, "/dashboard/monthly?month=3&year=2024");
+    const monthly = await get<Monthly>(mixed, "/dashboard/monthly?month=3&year=2024");
 
     expect({
       paidAmount: monthly.paidAmount,
       unpaidAmount: monthly.unpaidAmount,
       unpaidOrderCount: monthly.unpaidOrderCount,
-    }).toEqual({ paidAmount: 10_500, unpaidAmount: 5500, unpaidOrderCount: 1 });
+    }).toEqual({ paidAmount: 12_500, unpaidAmount: 3500, unpaidOrderCount: 1 });
+  });
+
+  test("an Expenses date range does not hide the Unpaid Order, and a Shop filter for the other Shop leaves no Unpaid Costs", async () => {
+    const dated = await get<ExpensesOrders>(
+      mixed,
+      "/expenses/orders?dateStart=2025-01-01&dateEnd=2025-12-31",
+    );
+    const otherShop = await get<ExpensesOrders>(mixed, "/expenses/orders?shop=HLJ");
+
+    expect({
+      dated: [dated.kpis.unpaidOrderCount, dated.kpis.unpaidCosts],
+      otherShop: [otherShop.kpis.unpaidOrderCount, otherShop.kpis.unpaidCosts],
+    }).toEqual({ dated: [1, 3500], otherShop: [0, 0] });
+  });
+
+  test("the Orders page's money filters and its Paid and Unpaid filters keep the same Orders", async () => {
+    const owing = await get<OrdersList>(mixed, "/orders?limit=10&unpaidCostsMin=1");
+    const unpaid = await get<OrdersList>(mixed, "/orders?limit=10&paid=false");
+    const spent = await get<OrdersList>(mixed, "/orders?limit=10&orderSpendMin=1");
+    const paid = await get<OrdersList>(mixed, "/orders?limit=10&paid=true");
+    const holdingPaidItems = await get<OrdersList>(mixed, "/orders?limit=10&paidItemsMin=1");
+
+    expect({
+      owing: [titles(owing), owing.unpaidCosts],
+      unpaid: [titles(unpaid), unpaid.unpaidCosts],
+      spent: [titles(spent), spent.totalSpent],
+      paid: [titles(paid), paid.totalSpent],
+      holdingPaidItems: titles(holdingPaidItems),
+    }).toEqual({
+      owing: [["AmiAmi"], 3500],
+      unpaid: [["AmiAmi"], 3500],
+      spent: [["HLJ"], 12_500],
+      paid: [["HLJ"], 12_500],
+      holdingPaidItems: ["HLJ"],
+    });
   });
 });
 
@@ -443,72 +457,8 @@ describe("Paid is apart from the Acquisition Status", () => {
   });
 });
 
-describe("the Orders page lists the Orders behind Unpaid Costs", () => {
-  test("Unpaid Costs of at least 1 keeps a Paid Order that holds an unpaid item, which the Paid filter leaves out", async () => {
-    const everyOrder = await get<OrdersList>(twoOrders, "/orders?limit=10");
-    const owing = await get<OrdersList>(twoOrders, "/orders?limit=10&unpaidCostsMin=1");
-    const unpaidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&paid=false");
-
-    expect({
-      owing: owing.items.map((row) => row.title).toSorted(),
-      owingUnpaidCosts: owing.unpaidCosts,
-      unpaidOrders: unpaidOrders.items.map((row) => row.title),
-      unpaidOrdersUnpaidCosts: unpaidOrders.unpaidCosts,
-    }).toEqual({
-      owing: ["AmiAmi", "HLJ"],
-      owingUnpaidCosts: everyOrder.unpaidCosts,
-      unpaidOrders: ["AmiAmi"],
-      unpaidOrdersUnpaidCosts: 1500,
-    });
-  });
-
-  test("Unpaid Costs of at least 1 leaves out an Order with nothing unpaid", async () => {
-    const owing = await get<OrdersList>(paidApart, "/orders?limit=10&unpaidCostsMin=1");
-
-    expect(owing.items.map((row) => row.title)).toEqual(["Pay on delivery"]);
-  });
-
-  test("an Unpaid Costs range keeps only the Orders inside it", async () => {
-    const small = await get<OrdersList>(twoOrders, "/orders?limit=10&unpaidCostsMax=2000");
-
-    expect(small.items.map((row) => row.title)).toEqual(["AmiAmi"]);
-  });
-});
-
-describe("the Orders page lists the Orders behind Order Spend", () => {
-  test("Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid filter leaves out", async () => {
-    const everyOrder = await get<OrdersList>(twoOrders, "/orders?limit=10");
-    const spent = await get<OrdersList>(twoOrders, "/orders?limit=10&orderSpendMin=1");
-    const paidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&paid=true");
-
-    expect({
-      spent: spent.items.map((row) => row.title).toSorted(),
-      spentTotalSpent: spent.totalSpent,
-      paidOrders: paidOrders.items.map((row) => row.title),
-      paidOrdersTotalSpent: paidOrders.totalSpent,
-    }).toEqual({
-      spent: ["AmiAmi", "HLJ"],
-      spentTotalSpent: everyOrder.totalSpent,
-      paidOrders: ["HLJ"],
-      paidOrdersTotalSpent: 8500,
-    });
-  });
-
-  test("Order Spend of at least 1 leaves out an Order with nothing paid", async () => {
-    const spent = await get<OrdersList>(paidApart, "/orders?limit=10&orderSpendMin=1");
-
-    expect(spent.items.map((row) => row.title)).toEqual(["Paid up front"]);
-  });
-
-  test("an Order Spend range keeps only the Orders inside it", async () => {
-    const small = await get<OrdersList>(twoOrders, "/orders?limit=10&orderSpendMax=3000");
-
-    expect(small.items.map((row) => row.title)).toEqual(["AmiAmi"]);
-  });
-});
-
-describe("an Owned Order Item that is still unpaid", () => {
-  test("counts as Unpaid Costs and in no page's Spend", async () => {
+describe("an Owned item in an Unpaid Order beside an Owned item outside any Order", () => {
+  test("the item in the Unpaid Order counts as Unpaid Costs, and only the item outside any Order is Collection Spend", async () => {
     const collectionPage = await get<CollectionList>(ownedUnpaid, "/collection?limit=10");
     const dashboard = await get<Dashboard>(ownedUnpaid, "/dashboard");
     const expenses = await get<ExpensesCollection>(ownedUnpaid, "/expenses/collection");
@@ -542,11 +492,11 @@ describe("an Owned Order Item that is still unpaid", () => {
     }).toEqual({
       collectionPage: 8000,
       dashboardCategories: [8000],
-      dashboardUnpaidCosts: 30_000,
+      dashboardUnpaidCosts: 30_500,
       dashboardTotalSpent: 8000,
       expenses: 8000,
-      expensesOrderLinked: 8000,
-      expensesStandalone: 0,
+      expensesOrderLinked: 0,
+      expensesStandalone: 8000,
       expensesByPeriod: 8000,
       expensesByCategory: [8000],
       expenseShops: [8000],
@@ -559,13 +509,13 @@ describe("an Owned Order Item that is still unpaid", () => {
     });
   });
 
-  test("Collection Spend, Fee Spend and Unpaid Costs add up to the Order Total", async () => {
+  test("Order Spend and Unpaid Costs add up to the Order Total", async () => {
     const orders = await get<OrdersList>(ownedUnpaid, "/orders?limit=10");
     const collectionExpenses = await get<ExpensesCollection>(ownedUnpaid, "/expenses/collection");
     const orderExpenses = await get<ExpensesOrders>(ownedUnpaid, "/expenses/orders");
     const orderTotal = orders.items.reduce((total, row) => total + row.total, 0);
 
-    expect(orderTotal).toBe(38_500);
+    expect(orderTotal).toBe(30_500);
     expect(orders.totalSpent + orders.unpaidCosts).toBe(orderTotal);
     expect(orderExpenses.summary.spend + orderExpenses.kpis.unpaidCosts).toBe(orderTotal);
     expect(
@@ -601,6 +551,61 @@ describe("an Owned Order Item that is still unpaid", () => {
       expensesToDate: [8000],
       expenseShops: [8000],
       analyticsSections: [8000, 8000, 8000],
+    });
+  });
+});
+
+describe("an Owned item removed from an Unpaid Order", () => {
+  test("leaves Unpaid Costs and becomes Collection Spend, since it is now outside any Order", async () => {
+    const before = await get<Dashboard>(detached, "/dashboard");
+    const removed = await app.handle(
+      new Request("http://localhost/api/orders/pay-later/items/nendo-in-pay-later", {
+        method: "DELETE",
+        headers: { "x-test-user": detached },
+      }),
+    );
+    expect(removed.status).toBe(200);
+    const after = await get<Dashboard>(detached, "/dashboard");
+    const collectionPage = await get<CollectionList>(detached, "/collection?limit=10");
+
+    expect({
+      before: [before.unpaidCosts, before.collectionStats.totalSpent],
+      after: [after.unpaidCosts, after.collectionStats.totalSpent],
+      collectionPage: collectionPage.totalValue,
+    }).toEqual({ before: [5000, 0], after: [0, 5000], collectionPage: 5000 });
+  });
+});
+
+describe("a Collection Item edit from a tab opened before Paid left the items", () => {
+  test("still sends paid, so the strict contract answers 422 and the item keeps its price", async () => {
+    const edited = await app.handle(
+      new Request("http://localhost/api/collection/owned-outside-orders", {
+        method: "PUT",
+        headers: { "x-test-user": ownedUnpaid, "content-type": "application/json" },
+        body: JSON.stringify({
+          status: "Owned",
+          paid: false,
+          count: 1,
+          score: "0",
+          price: 1,
+          shop: "AmiAmi",
+          orderDate: null,
+          paymentDate: null,
+          shippingDate: null,
+          collectionDate: "2024-06-01",
+          shippingMethod: "n/a",
+          tags: [],
+          notes: "",
+          releaseId: null,
+          condition: "New",
+        }),
+      }),
+    );
+    const collectionPage = await get<CollectionList>(ownedUnpaid, "/collection?limit=10");
+
+    expect({ status: edited.status, totalValue: collectionPage.totalValue }).toEqual({
+      status: 422,
+      totalValue: 8000,
     });
   });
 });

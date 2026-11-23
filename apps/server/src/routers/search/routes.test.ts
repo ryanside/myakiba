@@ -154,7 +154,7 @@ describe("each search route answers as before", () => {
     await db.insert(collection).values([
       { id: "c-plain", userId, itemId: "item-1" },
       { id: "c-ordered", userId, itemId: "item-2", orderId: "order-2", status: "Ordered" },
-      { id: "c-paid", userId, itemId: "item-3", status: "Ordered", paid: true },
+      { id: "c-paid", userId, itemId: "item-3", status: "Ordered" },
       { id: "c-shipped", userId, itemId: "item-3", status: "Shipped" },
       { id: "c-other-2", userId: "user-2", itemId: "aki-1", status: "Ordered" },
       { id: "c-other-3", userId: "user-2", itemId: "aki-3" },
@@ -259,7 +259,7 @@ describe("each search route answers as before", () => {
     await db.insert(collection).values([
       { id: "c-owned", userId, itemId: "item-2", status: "Owned" },
       { id: "c-ordered", userId, itemId: "item-2", status: "Ordered" },
-      { id: "c-paid", userId, itemId: "item-2", status: "Ordered", paid: true },
+      { id: "c-paid", userId, itemId: "item-2", status: "Ordered" },
       { id: "c-shipped", userId, itemId: "item-2", status: "Shipped" },
     ]);
     await db

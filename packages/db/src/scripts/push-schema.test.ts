@@ -12,6 +12,7 @@ import {
 import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
 import { migratePaid } from "../paid/migrate";
+import { migrateOrderPaid } from "../paid/order-paid";
 import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
@@ -23,6 +24,7 @@ test(
     const migratedOnly = await databases.create(seeded);
     await migrateItemOwnership(migratedOnly.sql);
     await migratePaid(migratedOnly.sql);
+    await migrateOrderPaid(migratedOnly.sql);
     const expected = await snapshot(migratedOnly.sql);
 
     const { sql, url } = await databases.create(seeded);
