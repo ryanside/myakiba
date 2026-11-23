@@ -16,7 +16,7 @@ import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 
 export function useCollectionFilters() {
   return useFilters("/(app)/collection", { resetOffsetOnFilterChange: true });
@@ -105,11 +105,7 @@ export function useCollectionOrderMutations() {
   );
 
   const handleAddCollectionItemsToNewOrder = useCallback(
-    async (
-      values: NewOrder,
-      cascadeOptions: CascadeOptions,
-      collectionIds: ReadonlySet<string>,
-    ): Saving => {
+    async (values: NewOrder, collectionIds: ReadonlySet<string>): Saving => {
       const ids = [...collectionIds];
       const loadingToastId = toast.add({
         type: "loading",
@@ -118,11 +114,7 @@ export function useCollectionOrderMutations() {
       });
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
-      const saved = await splitItemsMutationRef.current.run({
-        values,
-        cascadeOptions,
-        collectionIds,
-      });
+      const saved = await splitItemsMutationRef.current.run({ values, collectionIds });
       toast.close(loadingToastId);
       setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
       return saved;

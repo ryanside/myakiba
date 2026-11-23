@@ -9,7 +9,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { OrderFill } from "@myakiba/contracts/orders/fill";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import { SavedFillMenu } from "@/components/fill/saved-fill-menu";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { OrderForm } from "@/components/orders/order-form";
@@ -56,16 +56,8 @@ export function OrdersActionBar({
   };
   readonly onClearOrderSelection: () => void;
   readonly onClearSelection: () => void;
-  readonly onMerge: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    orderIds: ReadonlySet<string>,
-  ) => Saving;
-  readonly onSplit: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-  ) => Saving;
+  readonly onMerge: (values: NewOrder, orderIds: ReadonlySet<string>) => Saving;
+  readonly onSplit: (values: NewOrder, collectionIds: ReadonlySet<string>) => Saving;
   readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly onMoveItem: (
     targetOrderId: string,

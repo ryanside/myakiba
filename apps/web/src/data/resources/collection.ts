@@ -7,7 +7,7 @@ import type {
   CollectionItemFormValues,
   CollectionPage,
 } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import { Result } from "better-result";
 import { FILL_FIELD } from "@/lib/fill-fields";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
@@ -197,12 +197,10 @@ export const assignToNewOrderCommand = defineCommand({
   persist: ({
     values,
     collectionIds,
-    cascadeOptions,
   }: {
     readonly values: NewOrder;
     readonly collectionIds: ReadonlySet<string>;
-    readonly cascadeOptions: CascadeOptions;
-  }) => splitOrders(values, collectionIds, cascadeOptions),
+  }) => splitOrders(values, collectionIds),
   successTitle: ({ collectionIds }) =>
     collectionIds.size === 1
       ? "Order assigned"

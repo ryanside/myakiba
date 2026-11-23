@@ -37,6 +37,8 @@ const catalog = {
   devices: { kind: "account", roots: ["devices"] },
   linkedAccounts: { kind: "account", roots: ["linked-accounts"] },
   usernameAvailability: { kind: "live", roots: ["username-availability"] },
+  orderMergeDraft: { kind: "live", roots: ["orderMergeDraft"] },
+  orderNewDraft: { kind: "live", roots: ["orderNewDraft"] },
   version: { kind: "static", roots: ["version"] },
 } as const satisfies Record<string, FamilySpec>;
 

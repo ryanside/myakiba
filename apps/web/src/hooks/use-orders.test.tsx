@@ -47,6 +47,12 @@ await mock.module("@/queries/orders", () => ({
   },
   getOrderItems: async () => Result.ok({ items: [], totalCount: 0 }),
   getOrderItemReleases: async () => Result.ok([]),
+  getMergeDraft: async () => {
+    throw new Error("no merge dialog in these tests");
+  },
+  getNewOrderDraft: async () => {
+    throw new Error("no New Order dialog in these tests");
+  },
   mergeOrders: write("merge"),
   splitOrders: write("split"),
   editOrder: write("edit order"),
@@ -86,8 +92,8 @@ const ids = new Set(["a", "b"]);
 
 type Handlers = ReturnType<typeof useOrdersMutations>;
 const HANDLERS: readonly (readonly [string, (h: Handlers) => Saving])[] = [
-  ["handleMerge", (h) => h.handleMerge(newOrder, cascade, ids)],
-  ["handleSplit", (h) => h.handleSplit(newOrder, cascade, ids)],
+  ["handleMerge", (h) => h.handleMerge(newOrder, ids)],
+  ["handleSplit", (h) => h.handleSplit(newOrder, ids)],
   ["handleDeleteItems", (h) => h.handleDeleteItems(ids)],
   ["handleMoveItem", (h) => h.handleMoveItem("target", ids)],
   ["handleDeleteOrders", (h) => h.handleDeleteOrders(ids)],

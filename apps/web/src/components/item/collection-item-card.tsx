@@ -31,7 +31,7 @@ import { PaymentLine } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { Saving } from "@/data/client";
 
@@ -87,11 +87,7 @@ export function CollectionItemCard({
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
   ) => Saving;
-  readonly onMoveToNew: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-  ) => Saving;
+  readonly onMoveToNew: (values: NewOrder, collectionIds: ReadonlySet<string>) => Saving;
   readonly isOrderActionPending: boolean;
   readonly className?: string;
 }): ReactNode {

@@ -423,7 +423,7 @@ const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Saving])[
   ],
   [
     "handleAddCollectionItemsToNewOrder",
-    (h) => h.handleAddCollectionItemsToNewOrder({ title: "New" } as never, [], new Set([MIKU.id])),
+    (h) => h.handleAddCollectionItemsToNewOrder({ title: "New" } as never, new Set([MIKU.id])),
   ],
 ];
 

@@ -2,20 +2,21 @@ import { afterAll, expect, test } from "bun:test";
 
 const realFetch = globalThis.fetch;
 const requested: { url: URL; method: string; body: unknown }[] = [];
+let respond = () => new Response("Order updated successfully");
 globalThis.fetch = Object.assign(
   async (input: string | URL | Request, init?: RequestInit) => {
     const request = new Request(input, init);
     requested.push({
       url: new URL(request.url),
       method: request.method,
-      body: await request.json(),
+      body: request.method === "GET" ? null : await request.json(),
     });
-    return new Response("Order updated successfully");
+    return respond();
   },
   { preconnect: realFetch.preconnect },
 );
 
-const { editOrder, fillOrderPaid } = await import("./orders");
+const { editOrder, fillOrderPaid, getMergeDraft, getNewOrderDraft } = await import("./orders");
 
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -55,4 +56,31 @@ test("Paid from a checkbox writes Paid to the Order and every item in it, as an 
   expect(requested.map(({ url, method, body }) => [url.pathname, method, body])).toEqual([
     ["/api/orders/fill", "PUT", { orderIds: ["order-1"], fill: { field: "paid", value: true } }],
   ]);
+});
+
+test("the draft reads carry their ids in the body, so a selection of any size fits", async () => {
+  requested.length = 0;
+  const orderIds = Array.from({ length: 1000 }, (_, i) => `order-${i}`);
+  const collectionIds = Array.from({ length: 1000 }, (_, i) => `item-${i}`);
+  await getMergeDraft(orderIds);
+  await getNewOrderDraft(collectionIds);
+
+  expect(
+    requested.map(({ url, method, body }) => [url.pathname, url.search, method, body]),
+  ).toEqual([
+    ["/api/orders/merge-draft", "", "POST", { orderIds }],
+    ["/api/orders/new-order-draft", "", "POST", { collectionIds }],
+  ]);
+});
+
+test("a New Order draft the server cannot answer says the selected items did not load", async () => {
+  respond = () => new Response("Internal Server Error", { status: 500 });
+  try {
+    const draft = await getNewOrderDraft(["item-1"]);
+    expect(draft.isErr() ? draft.error.message : "loaded").toBe(
+      "Couldn't load the selected items.",
+    );
+  } finally {
+    respond = () => new Response("Order updated successfully");
+  }
 });

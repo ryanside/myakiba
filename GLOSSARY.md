@@ -94,12 +94,16 @@ An Order whose Paid is yes. Its whole Order Total is Spend. A Payment Date by it
 **Unpaid Order**:
 An Order whose Paid is no, whatever its Acquisition Status. Its whole Order Total counts as Unpaid Costs, not Spend.
 
+**Order Merge**:
+Moving the Order Items of several Orders into one new Order and deleting those Orders. The new Order starts from them: their Shop when they all share it, the least advanced Acquisition Status, Paid only when every one is a Paid Order, the earliest Order Date, the latest Release, Payment, Shipping and Collection Dates, their Shipping Method when they all share it, every Order Fee summed, and their Notes. The user can change any of it before merging. Moving or assigning Collection Items to a new Order starts that Order from the items by the same rules, with no Order Fees and no Notes; it starts Paid only when every item counts as paid, being outside an Order or in a Paid Order.
+_Avoid_: Combine
+
 **Order Release Date**:
 The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:
-Copying an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays; a date changed on a Dashboard order card is not copied. Merging or splitting Orders and moving Order Items to a new Order copy the details chosen there to every moved Order Item, and an Order fill copies to every Order Item. Paid is not copied, since an Order Item has no Paid of its own.
+Copying an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays; a date changed on a Dashboard order card is not copied. Merging Orders and moving Order Items to a new Order copy nothing, so every moved Order Item keeps its own details, and an Order fill copies to every Order Item. Paid is not copied, since an Order Item has no Paid of its own.
 _Avoid_: Cascade when the copied details and affected Order Items are unclear
 
 **Shop**:

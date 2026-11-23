@@ -7,7 +7,7 @@ import {
 import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { orderSearchSortSchema } from "@myakiba/contracts/search/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
-import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
+import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 
 const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
 const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STATUSES);
@@ -21,5 +21,9 @@ export const ordersQuerySchema = searchSchema.extend({
 });
 
 export const orderIdParamSchema = z.object({ orderId: z.string().max(WRITE_LIMITS.id) });
+
+export const mergeDraftBodySchema = z.strictObject({ orderIds: idListSchema });
+
+export const newOrderDraftBodySchema = z.strictObject({ collectionIds: idListSchema });
 
 export type OrdersQuery = z.infer<typeof ordersQuerySchema>;

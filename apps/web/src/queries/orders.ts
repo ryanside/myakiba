@@ -7,6 +7,7 @@ import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import type {
   CascadeOptions,
   EditedOrder,
+  OrderDraft,
   NewOrder,
   OrderFilters,
   OrderItemsQuery,
@@ -89,34 +90,34 @@ export function getOrderItems(
   });
 }
 
-export function mergeOrders(
-  values: NewOrder,
-  orderIds: Set<string>,
-  cascadeOptions: CascadeOptions,
-) {
-  return call(
-    app.api.orders.merge.post({
-      orderIds: [...orderIds],
-      newOrder: values,
-      cascadeOptions,
-    }),
-    { fallback: "Failed to merge orders" },
-  );
+export function getMergeDraft(
+  orderIds: readonly string[],
+): Promise<Result<OrderDraft, ApiFailure>> {
+  return call(app.api.orders["merge-draft"].post({ orderIds: [...orderIds] }), {
+    fallback: "Couldn't load the orders to merge.",
+    empty: "Couldn't load the orders to merge.",
+  });
 }
 
-export function splitOrders(
-  values: NewOrder,
-  collectionIds: ReadonlySet<string>,
-  cascadeOptions: CascadeOptions,
-) {
-  return call(
-    app.api.orders.split.post({
-      collectionIds: [...collectionIds],
-      newOrder: values,
-      cascadeOptions,
-    }),
-    { fallback: "Failed to split orders" },
-  );
+export function getNewOrderDraft(
+  collectionIds: readonly string[],
+): Promise<Result<OrderDraft, ApiFailure>> {
+  return call(app.api.orders["new-order-draft"].post({ collectionIds: [...collectionIds] }), {
+    fallback: "Couldn't load the selected items.",
+    empty: "Couldn't load the selected items.",
+  });
+}
+
+export function mergeOrders(values: NewOrder, orderIds: Set<string>) {
+  return call(app.api.orders.merge.post({ orderIds: [...orderIds], newOrder: values }), {
+    fallback: "Failed to merge orders",
+  });
+}
+
+export function splitOrders(values: NewOrder, collectionIds: ReadonlySet<string>) {
+  return call(app.api.orders.split.post({ collectionIds: [...collectionIds], newOrder: values }), {
+    fallback: "Failed to split orders",
+  });
 }
 
 export function editOrder({ orderId, ...edited }: EditedOrder, cascadeOptions: CascadeOptions) {

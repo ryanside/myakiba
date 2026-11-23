@@ -41,7 +41,7 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
@@ -59,11 +59,7 @@ interface CollectionColumnsParams {
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
   ) => Saving;
-  onAddCollectionItemsToNewOrder: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-  ) => Saving;
+  onAddCollectionItemsToNewOrder: (values: NewOrder, collectionIds: ReadonlySet<string>) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;

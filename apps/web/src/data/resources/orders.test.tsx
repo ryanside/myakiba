@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore } from "react";
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { OrderFill } from "@myakiba/contracts/orders/fill";
-import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
+import type { EditedOrder, NewOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
 import type { Saving } from "@/data/client";
 import { ApiServerError } from "@/lib/errors/api-server-error";
 import { Result } from "better-result";
@@ -32,6 +32,7 @@ const LOADED_ITEMS = [
 const server = {
   orders: [ALPHA, BRAVO, CHARLIE] as ServerOrder[],
   listReads: 0,
+  draftReads: 0,
   heldReads: null as Promise<void> | null,
   writes: [] as Write[],
 };
@@ -106,9 +107,19 @@ await mock.module("@/queries/orders", () => ({
   },
   getOrderItems: async () => Result.ok({ items: [], totalCount: 0 }),
   getOrderItemReleases: async () => Result.ok([]),
+  getMergeDraft: async (orderIds: readonly string[]) => {
+    server.draftReads++;
+    const sources = server.orders.filter((order) => orderIds.includes(order.orderId));
+    return Result.ok({ shop: "AmiAmi", notes: sources.map((order) => order.title).join("\n\n") });
+  },
+  getNewOrderDraft: async () => {
+    throw new Error("no New Order dialog in these tests");
+  },
   editOrder: held("edit order", editServerOrder),
   deleteOrders: held("delete orders", removeOrders),
-  mergeOrders: held("merge", removeOrders),
+  mergeOrders: held("merge", (_values: NewOrder, orderIds: ReadonlySet<string>) =>
+    removeOrders(orderIds),
+  ),
   splitOrders: held("split", () => {}),
   deleteOrderItem: held("delete item", () => {}),
   deleteOrderItems: held("delete items", () => {}),
@@ -138,6 +149,8 @@ await mock.module("@/hooks/use-filters", () => ({
 
 const { toast } = await import("@/components/ui/toast");
 const { useOrdersFilters, useOrdersMutations, useOrdersQuery } = await import("@/hooks/use-orders");
+const { useRead } = await import("@/data/client");
+const { orders: orderReads } = await import("@/data/resources/orders");
 
 const toastAdd = spyOn(toast, "add");
 const toastClose = spyOn(toast, "close");
@@ -146,6 +159,7 @@ afterEach(() => {
   cleanup();
   server.orders = [ALPHA, BRAVO, CHARLIE];
   server.listReads = 0;
+  server.draftReads = 0;
   server.heldReads = null;
   server.writes.length = 0;
   url.filters = {};
@@ -341,6 +355,45 @@ describe("an Order write on the orders page", () => {
       "error: Failed to update order. Please try again.",
       "success: Order deleted",
     ]);
+  });
+});
+
+describe("a merge from the Merge dialog", () => {
+  test("does not read the merge draft again once the merged Orders are gone", async () => {
+    const mergedIds = [ALPHA.orderId, BRAVO.orderId];
+    let actions: Actions | null = null;
+    function MergeDialog() {
+      useOrdersQuery();
+      const mutations = useOrdersMutations({ filters: {} });
+      const draft = useRead(orderReads.mergeDraft, {
+        dialogOpening: "opening-1",
+        orderIds: mergedIds,
+      });
+      useEffect(() => {
+        actions = mutations;
+      });
+      return <p aria-label="draft">{draft.data?.notes ?? ""}</p>;
+    }
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}
+      >
+        <MergeDialog />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getByLabelText("draft").textContent).toBe("Alpha\n\nBravo"));
+    await waitFor(() => expect(server.listReads).toBe(1));
+
+    const merging = (actions as Actions | null)?.handleMerge(
+      { title: "Merged" } as never,
+      new Set(mergedIds),
+    );
+    const listReadsBeforeMerge = server.listReads;
+    await answer(0, "finish");
+    const merged = await merging;
+    expect(merged?.status).toBe("ok");
+    await waitFor(() => expect(server.listReads).toBe(listReadsBeforeMerge + 1));
+    expect(server.draftReads).toBe(1);
   });
 });
 

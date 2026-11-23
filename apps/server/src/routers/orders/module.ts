@@ -24,7 +24,14 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { orderPaidItemCount, orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
+import { orderDraft } from "./order-draft";
+import {
+  itemIsPaid,
+  orderPaidItemCount,
+  orderSpend,
+  orderTotal,
+  orderUnpaidCosts,
+} from "@/lib/order-money";
 
 const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
@@ -369,6 +376,66 @@ export const Orders = {
     },
   ),
 
+  mergeDraft: query(
+    { action: "orders.merge_draft", failure: "Couldn't load the orders to merge." },
+    async (scope, input: { readonly orderIds: string[] }) => {
+      scope.log.set({ draft: { orderCount: input.orderIds.length } });
+      const sources = await scope.tx
+        .select({
+          shop: order.shop,
+          status: order.status,
+          paid: order.paid,
+          orderDate: order.orderDate,
+          releaseDate: order.releaseDate,
+          paymentDate: order.paymentDate,
+          shippingDate: order.shippingDate,
+          collectionDate: order.collectionDate,
+          shippingMethod: order.shippingMethod,
+          shippingFee: order.shippingFee,
+          taxes: order.taxes,
+          duties: order.duties,
+          tariffs: order.tariffs,
+          miscFees: order.miscFees,
+          notes: order.notes,
+        })
+        .from(order)
+        .where(and(eq(order.userId, scope.viewer.userId), inArray(order.id, input.orderIds)))
+        .orderBy(asc(order.createdAt), asc(order.id));
+      if (!foundAll(input.orderIds, sources.length)) return Result.err(new SomeOrdersNotFound());
+      return Result.ok(orderDraft(sources));
+    },
+  ),
+
+  newOrderDraft: query(
+    { action: "orders.new_order_draft", failure: "Couldn't load the selected items." },
+    async (scope, input: { readonly collectionIds: string[] }) => {
+      scope.log.set({ draft: { itemCount: input.collectionIds.length } });
+      const items = await scope.tx
+        .select({
+          shop: collection.shop,
+          status: collection.status,
+          paid: sql<boolean>`${itemIsPaid}`,
+          orderDate: collection.orderDate,
+          releaseDate: item_release.date,
+          paymentDate: collection.paymentDate,
+          shippingDate: collection.shippingDate,
+          collectionDate: collection.collectionDate,
+          shippingMethod: collection.shippingMethod,
+        })
+        .from(collection)
+        .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+        .where(
+          and(
+            eq(collection.userId, scope.viewer.userId),
+            inArray(collection.id, input.collectionIds),
+          ),
+        );
+      if (!foundAll(input.collectionIds, items.length)) return Result.err(new OrderItemsNotFound());
+      const noFees = { shippingFee: 0, taxes: 0, duties: 0, tariffs: 0, miscFees: 0, notes: "" };
+      return Result.ok(orderDraft(items.map((source) => ({ ...source, ...noFees }))));
+    },
+  ),
+
   merge: command(
     { action: "orders.merge", failure: "Failed to merge orders" },
     async (
@@ -376,7 +443,6 @@ export const Orders = {
       input: {
         readonly orderIds: string[];
         readonly newOrder: NewOrder;
-        readonly cascadeOptions: CascadeOptions;
       },
     ) => {
       const userId = scope.viewer.userId;
@@ -391,19 +457,9 @@ export const Orders = {
           "Inserting the merged order returned no row, so orders.merge has no order to move items into",
         );
 
-      const cascadeProperties =
-        input.cascadeOptions.length > 0
-          ? Object.fromEntries(
-              input.cascadeOptions.map((option) => [
-                option,
-                input.newOrder[option as keyof typeof input.newOrder],
-              ]),
-            )
-          : {};
-
       const moved = await scope.tx
         .update(collection)
-        .set({ orderId: inserted.id, ...cascadeProperties })
+        .set({ orderId: inserted.id })
         .where(and(eq(collection.userId, userId), inArray(collection.orderId, input.orderIds)))
         .returning({ id: collection.id });
       if (moved.length === 0) return Result.err(new OrderItemsNotFound());
@@ -432,7 +488,6 @@ export const Orders = {
       input: {
         readonly collectionIds: string[];
         readonly newOrder: NewOrder;
-        readonly cascadeOptions: CascadeOptions;
       },
     ) => {
       const userId = scope.viewer.userId;
@@ -446,19 +501,9 @@ export const Orders = {
           "Inserting the split order returned no row, so orders.split has no order to move items into",
         );
 
-      const cascadeProperties =
-        input.cascadeOptions.length > 0
-          ? Object.fromEntries(
-              input.cascadeOptions.map((option) => [
-                option,
-                input.newOrder[option as keyof typeof input.newOrder],
-              ]),
-            )
-          : {};
-
       const moved = await scope.tx
         .update(collection)
-        .set({ orderId: inserted.id, ...cascadeProperties })
+        .set({ orderId: inserted.id })
         .where(and(eq(collection.userId, userId), inArray(collection.id, input.collectionIds)))
         .returning({ id: collection.id });
       if (!foundAll(input.collectionIds, moved.length)) {
