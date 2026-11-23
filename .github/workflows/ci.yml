@@ -6,12 +6,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
-    outputs:
-      required_client_vars: ${{ steps.deploy-config.outputs.required_client_vars }}
     services:
       postgres:
         image: postgres:18.6
@@ -53,10 +55,7 @@ jobs:
         run: bash scripts/replay-ci.sh --self-test
 
       - name: Check deploy config
-        id: deploy-config
-        run: |
-          bun scripts/check-deploy-config.ts
-          echo "required_client_vars=$(bun scripts/check-deploy-config.ts --required-client-vars | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+        run: bun scripts/check-deploy-config.ts
 
       - name: Audit dependencies
         run: bun run audit
@@ -127,7 +126,6 @@ jobs:
 
   build-images:
     name: Build ${{ matrix.image }} image
-    needs: validate
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -178,20 +176,25 @@ jobs:
           tags: myakiba-db-push:ci
           cache-from: type=gha,scope=db-push
 
+      # The server smoke reads the required VITE_* names with bun.
+      - name: Set up Bun
+        if: matrix.image == 'server'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        if: matrix.image == 'server'
+        run: bun install --frozen-lockfile
+
       - name: Smoke-test images
         if: matrix.smoke != ''
-        env:
-          SMOKE_REQUIRED_CLIENT_VARS: ${{ needs.validate.outputs.required_client_vars }}
         run: bash scripts/image-smoke.sh ${{ matrix.smoke }}
 
       - name: Smoke-test the server image with Redis unreachable
         if: matrix.image == 'server'
-        env:
-          SMOKE_REQUIRED_CLIENT_VARS: ${{ needs.validate.outputs.required_client_vars }}
         run: bash scripts/image-smoke.sh --redis unreachable server=myakiba-server:ci
 
       - name: Smoke-test the server image with Postgres unreachable
         if: matrix.image == 'server'
-        env:
-          SMOKE_REQUIRED_CLIENT_VARS: ${{ needs.validate.outputs.required_client_vars }}
         run: bash scripts/image-smoke.sh --postgres unreachable server=myakiba-server:ci
