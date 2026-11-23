@@ -18,9 +18,10 @@ function suitesRun(job: Job) {
 }
 const suiteJobs = Object.keys(jobs).filter((id) => suitesRun(jobs[id] ?? {}).length > 0);
 
-test("CI runs every test suite exactly once", () => {
+test("CI runs every test suite exactly once, each in a job of its own", () => {
   const run = Object.values(jobs).flatMap(suitesRun);
   expect(run.toSorted()).toEqual([...suites].toSorted());
+  expect(suiteJobs).toHaveLength(suites.length);
 });
 
 test("the Validate check waits for the static checks and every suite, even one that was skipped", () => {
