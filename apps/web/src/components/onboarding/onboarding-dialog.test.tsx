@@ -178,6 +178,22 @@ test("Getting Started opens at the welcome step even with a step left in local s
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
 
+test("the last step closes onboarding and goes to the Add page", async () => {
+  const router = await openDashboard(true);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+  for (const title of ["Welcome to myakiba.", "Install the myakiba extension."]) {
+    await screen.findByRole("dialog", { name: title });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  }
+
+  const step = await screen.findByRole("dialog", { name: "Pick your first items." });
+  expect(step.textContent).not.toContain("CSV");
+  fireEvent.click(screen.getByRole("button", { name: "Get started" }));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
 async function continueToAddItems() {
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Install the myakiba extension." });

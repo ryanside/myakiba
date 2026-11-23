@@ -303,6 +303,22 @@ describe("pulling picks", () => {
     expect(uploads).toEqual([1]);
   });
 
+  test("uploads nothing for an unverified email and keeps the picks", async () => {
+    const extension = picked(fakePick(1), fakePick(2));
+    const { intake, shown, uploads } = tab({ extension });
+    shown.verified = false;
+
+    await intake.pull();
+
+    expect(uploads).toEqual([]);
+    expect(intake.rows().map((row) => row.state === "failed" && row.reason)).toEqual([
+      { kind: "unverified" },
+      { kind: "unverified" },
+    ]);
+    expect(extension.acknowledged).toEqual([]);
+    expect(extension.picks()).toHaveLength(2);
+  });
+
   test("saves the picks that waited for a verified email on the next pull", async () => {
     const extension = picked(fakePick(1));
     const { intake, shown, draft } = tab({ extension });
@@ -546,6 +562,20 @@ describe("a failed pick", () => {
     expect(extension.picks()).toEqual([again]);
   });
 
+  test("Discard that the extension never answers keeps the row and says the extension stopped", async () => {
+    const extension = picked(fakePick(1));
+    const { intake } = tab({
+      extension,
+      save: async () => Result.err({ kind: "unsaved" } as const),
+    });
+    await intake.pull();
+    extension.setInstalled(false);
+
+    const discarded = await intake.discard(id(1));
+
+    expect(discarded.isErr() && discarded.error).toEqual({ kind: "stopped" });
+    expect(intake.rows()).toHaveLength(1);
+  });
   test("Retry while Discard waits for the extension saves nothing, and the pick goes once the extension drops it", async () => {
     const extension = picked(fakePick(1));
     const sending = deferred<true>();

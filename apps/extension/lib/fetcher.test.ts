@@ -1389,6 +1389,23 @@ describe("the MFC tab", () => {
     expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
   });
 
+  test("a failed injection in a borrowed tab tries the item once more in its own tab", async () => {
+    const extension = fakeExtension({
+      pages: (request, _signal, tabId) => {
+        if (extension.calls.length === 1) {
+          return injectionFailed(tabId, "Cannot access contents of the page.");
+        }
+        return page(itemPage(request.mfcItemId));
+      },
+    });
+    const borrowed = extension.tabs.open(`${ORIGINS.mfc}/`);
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+
+    expect(extension.calls.map((call) => call.tabId)).toEqual([borrowed, 102]);
+    expect(run.results().map((result) => result.ok)).toEqual([true]);
+  });
+
   test("its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab", async () => {
     const extension = fakeExtension({
       pages: (request, _signal, tabId) => {
@@ -1826,6 +1843,33 @@ describe("an attempt that breaks", () => {
     } finally {
       error.mockRestore();
     }
+  });
+
+  test("a throttle write that fails while it records a challenge's pause fails only its item", async () => {
+    const extension = fakeExtension({
+      throttleState: refusingFirstPause(() =>
+        Result.err(
+          new SessionStorageUnavailable({
+            key: "throttle",
+            op: "set",
+            cause: new Error("QuotaExceededError"),
+          }),
+        ),
+      ),
+      pages: (request) =>
+        request.mfcItemId === 7
+          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" })
+          : page(itemPage(request.mfcItemId)),
+    });
+    const run = extension.run([7, 8]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "unexpected_page" },
+      { ok: true, html: itemPage(8), picture: null },
+    ]);
+    expect(asked(run.events, "needs_user")).toBe(false);
   });
 });
 

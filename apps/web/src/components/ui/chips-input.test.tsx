@@ -125,6 +125,15 @@ test("Backspace in an empty field removes the last chip, and not while text rema
   expect(saved()).toBe('["a"]');
 });
 
+test("each chip's remove button names its value", async () => {
+  render(<TagsForm initial={["a", "b"]} />);
+  const user = userEvent.setup();
+
+  await user.click(screen.getByRole("button", { name: "Remove tag a" }));
+
+  expect(saved()).toBe('["b"]');
+});
+
 test("Enter that confirms IME composition adds nothing and picks nothing", async () => {
   render(<TagsForm />);
   const user = userEvent.setup();

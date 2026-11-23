@@ -32,9 +32,11 @@ afterEach(cleanup);
 function renderButton({
   destination = COLLECTION,
   emailVerified = true,
+  loading = false,
 }: {
   readonly destination?: Destination;
   readonly emailVerified?: boolean;
+  readonly loading?: boolean;
 } = {}) {
   const calls = { committed: 0 };
   render(
@@ -45,7 +47,7 @@ function renderButton({
         count={ROWS.length}
         destination={destination}
         emailVerified={emailVerified}
-        loading={false}
+        loading={loading}
         onIssues={() => {}}
         onSending={() => {}}
         onFailed={() => {}}
@@ -99,3 +101,15 @@ test.each([
     expect(button.getAttribute("aria-label")).toBeNull();
   },
 );
+
+test("it is disabled until a choice with an effect, and while rows still load", () => {
+  renderButton({ destination: { ownership: null, wishlist: false, lists: [] } });
+  expect(
+    screen.getByRole("button", { name: "Choose where these go" }).hasAttribute("disabled"),
+  ).toBe(true);
+  cleanup();
+  renderButton({ loading: true });
+  expect(screen.getByRole("button", { name: "Add 1 to collection" }).hasAttribute("disabled")).toBe(
+    true,
+  );
+});
