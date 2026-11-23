@@ -14,7 +14,38 @@ import { ActiveDot } from "@/components/active-dot";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useOpenOnboarding } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
-import { NAV_GROUPS } from "./nav-groups";
+
+type NavItem = {
+  readonly title: string;
+  readonly url: string;
+  readonly pathnameMatch?: "prefix";
+};
+
+const NAV_GROUPS: readonly { readonly label: string; readonly items: readonly NavItem[] }[] = [
+  {
+    label: "Overview",
+    items: [
+      { title: "Dashboard", url: "/dashboard" },
+      { title: "Calendar", url: "/calendar" },
+      { title: "Analytics", url: "/analytics", pathnameMatch: "prefix" },
+      { title: "Expenses", url: "/expenses", pathnameMatch: "prefix" },
+    ],
+  },
+  {
+    label: "Library",
+    items: [
+      { title: "Collection", url: "/collection" },
+      { title: "Orders", url: "/orders", pathnameMatch: "prefix" },
+      { title: "Wishlist", url: "/wishlist" },
+      { title: "Lists", url: "/lists", pathnameMatch: "prefix" },
+      { title: "Item Database", url: "/items" },
+    ],
+  },
+  {
+    label: "Account",
+    items: [{ title: "Settings", url: "/settings" }],
+  },
+];
 
 const FOOTER_LINKS = [
   { title: "Changelog", url: "/changelog", external: false },
@@ -43,15 +74,12 @@ function useWarmDestinations(urls: readonly string[]) {
   }, [router, urls]);
 }
 
-const warmUrls = [
-  ...NAV_GROUPS.flatMap((group) => group.items.map((item) => item.url)),
-  "/settings",
-];
+const navMainUrls = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.url));
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const openOnboarding = useOpenOnboarding();
-  useWarmDestinations(warmUrls);
+  useWarmDestinations(navMainUrls);
 
   return (
     <Sidebar variant="sidebar" collapsible="offcanvas" {...props}>
