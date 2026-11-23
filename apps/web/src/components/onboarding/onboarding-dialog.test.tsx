@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, test } from "bun:test";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -10,21 +10,30 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 
-const updates: unknown[] = [];
+type UserUpdate = {
+  readonly username?: string;
+  readonly currency?: string;
+  readonly dateFormat?: string;
+  readonly hasSeenOnboarding?: boolean;
+};
+
+const updates: UserUpdate[] = [];
 const realFetch = globalThis.fetch;
 globalThis.fetch = Object.assign(
   async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     if (request.url.endsWith("/update-user")) {
-      updates.push(await request.json());
+      updates.push((await request.json()) as UserUpdate);
       return Response.json({ status: true });
     }
+    if (request.url.endsWith("/is-username-available")) return Response.json({ available: true });
     return Response.json(null);
   },
   { preconnect: realFetch.preconnect },
 );
 
 const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+const { generateUsername } = await import("@myakiba/contracts/shared/generated-username");
 
 function OpenOnboardingButton({ label }: { readonly label: string }) {
   const openOnboarding = useOpenOnboarding();
@@ -39,6 +48,7 @@ afterEach(() => {
   cleanup();
   localStorage.removeItem("myakiba:onboarding-v2");
   updates.length = 0;
+  delete (navigator as { language?: string }).language;
 });
 
 afterAll(() => {
@@ -47,7 +57,16 @@ afterAll(() => {
 
 type OnboardingStatus = { hasSeenOnboarding?: boolean };
 
-async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = false } = {}) {
+const GENERATED_USERNAME = generateUsername();
+
+function setBrowserLocale(language: string) {
+  Object.defineProperty(navigator, "language", { value: language, configurable: true });
+}
+
+async function openDashboard(
+  hasSeenOnboarding?: boolean,
+  { withAboutCopy = false, username = "collector" } = {},
+) {
   const onboarding: OnboardingStatus = {};
   if (hasSeenOnboarding !== undefined) onboarding.hasSeenOnboarding = hasSeenOnboarding;
   const root = createRootRoute({ component: Outlet });
@@ -56,12 +75,10 @@ async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = fals
     id: "(app)",
     beforeLoad: () => ({
       session: {
-        user: {
-          username: "collector",
-          currency: "USD",
-          dateFormat: "MM/DD/YYYY",
-          ...onboarding,
-        },
+        user: Object.assign(
+          { username, currency: "USD", dateFormat: "MM/DD/YYYY", ...onboarding },
+          ...updates,
+        ),
       },
     }),
     component: () => (
@@ -168,20 +185,15 @@ test("Getting Started opens at the welcome step even with a step left in local s
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
 
-test("the last step explains picking, then closes onboarding and goes to the Add page", async () => {
+test("the last step closes onboarding and goes to the Add page", async () => {
   const router = await openDashboard(true);
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
-  for (const title of [
-    "Welcome to myakiba.",
-    "Set your username, currency, and date format.",
-    "Install the myakiba extension.",
-  ]) {
+  for (const title of ["Welcome to myakiba.", "Install the myakiba extension."]) {
     await screen.findByRole("dialog", { name: title });
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   }
 
   const step = await screen.findByRole("dialog", { name: "Pick your first items." });
-  expect(step.textContent).toContain("Pick for myakiba");
   expect(step.textContent).not.toContain("CSV");
   fireEvent.click(screen.getByRole("button", { name: "Get started" }));
 
@@ -190,8 +202,6 @@ test("the last step explains picking, then closes onboarding and goes to the Add
 });
 
 async function continueToAddItems() {
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Install the myakiba extension." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
@@ -215,4 +225,164 @@ test("every onboarding footer button is the standard button height", async () =>
       "h-8",
     );
   }
+});
+
+function preferences() {
+  const step = screen.getByRole("dialog", { name: "Welcome to myakiba." });
+  return {
+    username: within(step).queryByRole("textbox", { name: "Username" }),
+    currency: within(step).getByRole("button", { name: "Currency" }).textContent,
+    dateFormat: within(step).getByRole("button", { pressed: true }).textContent,
+  };
+}
+
+test("an account that chose its username at sign-up is not asked for one", async () => {
+  await openDashboard(false);
+
+  expect(preferences().username).toBeNull();
+});
+
+test("an account with a generated username is asked to choose one, and saves it", async () => {
+  await openDashboard(false, { username: GENERATED_USERNAME });
+  const { username } = preferences();
+  expect(username).not.toBeNull();
+  expect((username as HTMLInputElement).value).toBe("");
+
+  fireEvent.change(username as HTMLInputElement, { target: { value: "collector" } });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  expect(updates).toEqual([{ username: "collector", hasSeenOnboarding: true }]);
+});
+
+test("a new account in a ja-JP browser starts with yen and year-first dates", async () => {
+  setBrowserLocale("ja-JP");
+  await openDashboard(false);
+
+  expect(preferences().currency).toContain("JPY");
+  expect(preferences().dateFormat).toBe("YYYY/MM/DD");
+
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await waitFor(() =>
+    expect(updates).toEqual([
+      { currency: "JPY", dateFormat: "YYYY/MM/DD", hasSeenOnboarding: true },
+    ]),
+  );
+});
+
+test("a new account in an en-GB browser starts with pounds and day-first dates", async () => {
+  setBrowserLocale("en-GB");
+  await openDashboard(false);
+
+  expect(preferences().currency).toContain("GBP");
+  expect(preferences().dateFormat).toBe("DD/MM/YYYY");
+});
+
+test("Getting Started shows an onboarded account its saved currency, whatever the locale", async () => {
+  setBrowserLocale("ja-JP");
+  await openDashboard(true);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+
+  expect(preferences().currency).toContain("USD");
+  expect(preferences().dateFormat).toBe("MM/DD/YYYY");
+});
+
+async function choosePreferences(currency: string, dateFormat: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Currency" }));
+  fireEvent.click(await screen.findByRole("option", { name: new RegExp(currency, "u") }));
+  fireEvent.click(screen.getByRole("button", { name: dateFormat }));
+}
+
+test.each([
+  ["EUR", "YYYY/MM/DD"],
+  ["USD", "MM/DD/YYYY"],
+])(
+  "%s and %s saved before a reload at the extension step come back, not the locale's guess",
+  async (currency, dateFormat) => {
+    setBrowserLocale("en-GB");
+    await openDashboard(false);
+    await choosePreferences(currency, dateFormat);
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+    const saved = updates.length;
+
+    cleanup();
+    await openDashboard(false);
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+
+    expect(preferences().currency).toContain(currency);
+    expect(preferences().dateFormat).toBe(dateFormat);
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+    expect(updates.slice(saved)).toEqual([]);
+  },
+);
+
+async function savePreferencesThenLeave() {
+  setBrowserLocale("en-GB");
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  cleanup();
+}
+
+test("a new account that saved preferences and left at the extension step reopens there in the same browser", async () => {
+  await savePreferencesThenLeave();
+  await openDashboard(false);
+
+  expect(
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." }),
+  ).toBeTruthy();
+});
+
+test("a new account that saved preferences and left at the extension step sees no onboarding in another browser", async () => {
+  await savePreferencesThenLeave();
+  localStorage.clear();
+  await openDashboard(false);
+  await act(() => Bun.sleep(500));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("a new account that saved preferences and reloads at Pick your first items sees no onboarding", async () => {
+  setBrowserLocale("en-GB");
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Pick your first items." });
+  cleanup();
+
+  await openDashboard(false);
+  await act(() => Bun.sleep(500));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("a generated-name account that pressed Continue empty can type a name and save it with one click", async () => {
+  await openDashboard(false, { username: GENERATED_USERNAME });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  expect(await screen.findByText("Username must be at least 3 characters")).toBeTruthy();
+
+  fireEvent.change(preferences().username as HTMLInputElement, { target: { value: "collector" } });
+
+  await waitFor(() =>
+    expect(screen.queryByText("Username must be at least 3 characters")).toBeNull(),
+  );
+  const next = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
+  await waitFor(() => expect(next.disabled).toBe(false));
+  fireEvent.click(next);
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  expect(updates).toEqual([{ username: "collector", hasSeenOnboarding: true }]);
+});
+
+test("a new account whose browser reports an empty language opens onboarding with its saved formats", async () => {
+  setBrowserLocale("");
+  await openDashboard(false);
+
+  expect(preferences().currency).toContain("USD");
+  expect(preferences().dateFormat).toBe("MM/DD/YYYY");
 });

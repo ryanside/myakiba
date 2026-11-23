@@ -76,21 +76,16 @@ export function onboardingDialog() {
   );
 }
 
-/** Getting Started opens at the welcome step, so this walks to the given step. */
-export async function openOnboardingStep(user: User, steps: number) {
+export async function openOnboardingStep(user: User, continues: number) {
   await click("Getting Started")(user);
-  for (const title of [
-    "Welcome to myakiba.",
-    "Set your username, currency, and date format.",
-    /myakiba extension/u,
-  ].slice(0, steps)) {
+  for (const title of ["Welcome to myakiba.", /myakiba extension/u].slice(0, continues)) {
     await screen.findByRole("dialog", { name: title });
     await click("Continue")(user);
   }
 }
 
 export async function openAddStep(user: User) {
-  await openOnboardingStep(user, 3);
+  await openOnboardingStep(user, 2);
   await screen.findByRole("dialog", { name: ADD_STEP_TITLE });
 }
 

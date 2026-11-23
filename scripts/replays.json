@@ -5393,6 +5393,39 @@
       ]
     },
     {
+      "fix": "0ab9e90fec0dac9628c22d51858a7545310f8bc2",
+      "bug": "Sign-in checked an existing password against sign-up's 8-character minimum, so a shorter password never reached the server and got a client refusal instead of the server's answer.",
+      "test": "apps/web/src/components/auth/email-auth.test.tsx",
+      "fixed": ["a sign-in sends a short password to the server and shows its answer"]
+    },
+    {
+      "fix": "985a08400573129ba8ec3ef9365ebd3ea4164b14",
+      "bug": "The sign-up form showed a Forgot password? link under its password field, copied from sign-in.",
+      "test": "apps/web/src/components/auth/email-auth.test.tsx",
+      "fixed": ["only sign-in offers Forgot password?"]
+    },
+    {
+      "fix": "f17b75d1f09432f1141ae526821e7a92afb52e81",
+      "bug": "Settings showed a Verified tick on the email row, though only a verified email can sign in with a password.",
+      "test": "apps/web/src/components/settings/account.test.tsx",
+      "fixed": ["a verified email shows no status and no resend"]
+    },
+    {
+      "fix": "dbfbb9ba7e50e89d398c024ea03e1a4077abbc8d",
+      "bug": "An Order's tab read 'Order <internal id> - myakiba', an Item's 'Item <MFC id> - myakiba' and every List's 'List - myakiba', because each route built its title in head from params, which never sees the record.",
+      "test": "apps/web/src/components/record-title.test.tsx",
+      "fixed": [
+        "an Order's tab names the kind while its read is pending, then the Order's title",
+        "a hover then a click shows the Order's title at once, from the one read the hover started",
+        "a reload, a move to another Order, the back button and leaving for Orders each show the page's own title",
+        "an Order's tab follows a rename made on its page",
+        "a missing Order and an Order with no title name only the kind",
+        "an Order rename whose write fails returns the tab to the Order's title",
+        "an Item's tab names the kind while pending, missing or failed, then the Item's whole title",
+        "a List's tab names the kind until its heading shows or when it fails, then follows the List's title through a rename"
+      ]
+    },
+    {
       "fix": "ea9132723fcc35815f21d019ef66dcaef9e418f0",
       "bug": "Merge and Split copied the form's values onto every moved item, and the forms opened blank with Cascade to Items set to every field, so an untouched merge wrote Ordered, unpaid, no Shop and no dates over each item and dropped the source Orders' fees.",
       "test": "apps/server/src/routers/orders/merge-split.test.ts",

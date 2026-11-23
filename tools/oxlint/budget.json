@@ -23,7 +23,7 @@
     "apps/web/src/components/orders/orders-data-grid.tsx": 2,
     "apps/web/src/components/orders/orders-quick-filters.tsx": 1,
     "apps/web/src/components/orders/orders-toolbar.tsx": 2,
-    "apps/web/src/components/sidebar/user-menu.tsx": 2,
+    "apps/web/src/components/sidebar/user-menu.tsx": 1,
     "apps/web/src/routes/(app)/analytics_.$sectionName.tsx": 2,
     "apps/web/src/routes/(app)/calendar.tsx": 1,
     "apps/web/src/routes/(app)/dashboard.tsx": 1,

@@ -47,7 +47,7 @@ const SURFACES = [
     open: async () => {
       const user = userEvent.setup();
       renderWithDialog(onboardingDialog());
-      await openOnboardingStep(user, 2);
+      await openOnboardingStep(user, 1);
       return screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
     },
   },

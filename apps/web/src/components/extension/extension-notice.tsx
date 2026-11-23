@@ -50,6 +50,10 @@ export const PICK: Task = {
 
 export const RUNS_IN = `on a computer in Chrome, Edge or another Chromium browser, or in Firefox ${EXTENSION_MIN_BROWSER_VERSION} or later`;
 
+export function pickHowTo(landing: "here" | "on the Add page"): string {
+  return `Click Pick for myakiba on any MyFigureCollection item and it lands ${landing}.`;
+}
+
 export function installLink(listing: ExtensionListing): NonNullable<ExtensionNoticeCopy["link"]> {
   return { label: `Install from ${STORE_NAMES[listing.store]}`, href: listing.url };
 }

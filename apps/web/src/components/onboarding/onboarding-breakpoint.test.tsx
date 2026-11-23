@@ -9,6 +9,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { answerAuth, resetAuthAnswers } from "../../../test/better-auth";
 import { signedInSession } from "../../../test/session";
 import { stubFetch } from "../../../test/app-route";
 
@@ -25,11 +26,13 @@ function resizeWindow(width: number) {
 
 afterEach(() => {
   cleanup();
+  resetAuthAnswers();
   window.happyDOM.setInnerWidth(1024);
 });
 
 async function openAppShellAsNewAccount() {
   stubFetch(() => Response.json(null));
+  answerAuth(() => Response.json({ status: true }));
   const session = signedInSession({ user: { hasSeenOnboarding: false } });
   const root = createRootRoute({ component: Outlet });
   const app = createRoute({
@@ -59,8 +62,6 @@ async function openAppShellAsNewAccount() {
 
 async function continueToAddItems() {
   await screen.findByRole("dialog", { name: "Welcome to myakiba." });
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Install the myakiba extension." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));

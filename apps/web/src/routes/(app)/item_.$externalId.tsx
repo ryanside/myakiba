@@ -5,6 +5,7 @@ import { ItemCollection } from "@/components/item/item-collection";
 import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
+import { RecordTitle } from "@/components/record-title";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
 import { preload, preloadPage, useRead } from "@/data/client";
 import { items, useRefreshItem } from "@/data/resources/item";
@@ -25,17 +26,6 @@ export const Route = createFileRoute("/(app)/item_/$externalId")({
       preload(queryClient, items.relatedCollection, params.externalId),
     ]),
   component: RouteComponent,
-  head: ({ params }) => ({
-    meta: [
-      {
-        name: "description",
-        content: `item ${params.externalId} details`,
-      },
-      {
-        title: `Item ${params.externalId} - myakiba`,
-      },
-    ],
-  }),
 });
 
 function RouteComponent(): ReactNode {
@@ -68,6 +58,7 @@ function RouteComponent(): ReactNode {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-y-4">
+        <RecordTitle kind="Item" />
         <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
           Error: {shownMessageOf(itemError)}
@@ -77,7 +68,12 @@ function RouteComponent(): ReactNode {
   }
 
   if (isNotFound) {
-    return <ItemNotFound externalId={externalId} />;
+    return (
+      <>
+        <RecordTitle kind="Item" />
+        <ItemNotFound externalId={externalId} />
+      </>
+    );
   }
 
   const item = data?.item;
@@ -86,6 +82,7 @@ function RouteComponent(): ReactNode {
 
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
+      <RecordTitle kind="Item" title={item?.title} />
       {isPending ? <span className="sr-only">Loading item details</span> : null}
       <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
 

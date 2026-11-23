@@ -11,13 +11,13 @@ import * as schema from "@myakiba/db/schema/auth";
 import { admin, captcha, username, openAPI } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
-import { createId } from "@paralleldrive/cuid2";
 import { redis } from "@myakiba/redis/client";
 import { incrementWithTtl } from "@myakiba/redis/counter";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 import { z } from "zod";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
+import { generateUsername } from "@myakiba/contracts/shared/generated-username";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 
 import { accessSessionStore } from "./session-store";
@@ -87,16 +87,8 @@ export const auth = betterAuth({
     user: {
       create: {
         async before(user) {
-          if (!user.username) {
-            const generatedUsername = `user${createId()}`;
-            return {
-              data: {
-                ...user,
-                username: generatedUsername,
-              },
-            };
-          }
-          return { data: user };
+          if (user.username) return { data: user };
+          return { data: { ...user, username: generateUsername() } };
         },
       },
     },

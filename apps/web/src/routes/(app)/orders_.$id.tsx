@@ -7,6 +7,7 @@ import { OrderHero } from "@/components/orders/order-hero";
 import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
 import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
+import { RecordTitle } from "@/components/record-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { preload, preloadPage, useRead } from "@/data/client";
 import { orderItemsInput, orders } from "@/data/resources/orders";
@@ -25,12 +26,6 @@ export const Route = createFileRoute("/(app)/orders_/$id")({
       preload(queryClient, orders.items, orderItemsInput(params.id)),
     ]),
   component: RouteComponent,
-  head: ({ params }) => ({
-    meta: [
-      { name: "description", content: `order ${params.id} details` },
-      { title: `Order ${params.id} - myakiba` },
-    ],
-  }),
 });
 
 function RouteComponent(): ReactNode {
@@ -107,6 +102,7 @@ function RouteComponent(): ReactNode {
   if (isError) {
     return (
       <div className="flex flex-col gap-3">
+        <RecordTitle kind="Order" />
         <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
           {shownMessageOf(orderError, ORDER_LOAD_FAILED)}
@@ -117,6 +113,7 @@ function RouteComponent(): ReactNode {
 
   return (
     <div className="flex flex-col gap-8 min-h-full mx-auto max-w-352" aria-busy={isPending}>
+      <RecordTitle kind="Order" title={order?.title} />
       <span role="status" className="sr-only">
         {isPending ? "Loading order details" : ""}
       </span>

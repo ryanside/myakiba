@@ -24,10 +24,10 @@ The web bundle has `VITE_SERVER_URL=<url>` baked in at build time. Rebuild after
 Seed a signed-up, email-verified user. Defaults are `verify@example.com` and `verify-password-1`.
 
 ```bash
-$H seed-user <run> [email] [password]
+$H seed-user <run> [email] [password] [--generated-username]
 ```
 
-Seeding signs up through the real `/api/auth/sign-up/email` route with Cloudflare's always-pass Turnstile test keys. It then sets `email_verified` in Postgres, because Resend runs with a fake key and no mail arrives. Seeding is setup. The sign-in itself is driven through the UI (see `features/sign-in.md`). Turnstile needs internet access to `challenges.cloudflare.com`.
+Seeding signs up through the real `/api/auth/sign-up/email` route with Cloudflare's always-pass Turnstile test keys. Like the sign-up form, it sends a username, the email's part before `@`. With `--generated-username` it sends none, so the server names the account `user<id>` as it does a Google sign-up. It then sets `email_verified` in Postgres, because Resend runs with a fake key and no mail arrives. Seeding is setup. The sign-in itself is driven through the UI (see `features/sign-in.md`). Turnstile needs internet access to `challenges.cloudflare.com`.
 
 Seed three Items into that user's Item Database. `features/README.md` lists them.
 
@@ -75,7 +75,7 @@ It removes only the run's labeled containers and network, its two images, and it
 ## Gotchas
 
 - `preview_snapshot` can time out on every page, even `https://example.com`, while click, type, wait and evaluate still work. The T3 preview host is wedged, not the app. Ask the operator to show the browser pane, then retry. Until then, read state with `preview_evaluate` and say in the report that no screenshot was captured.
-- A new user sees a `Welcome to myakiba.` onboarding dialog over the dashboard on first sign-in. The account stores whether it was seen in `user.has_seen_onboarding`: sign-up writes `false`, and closing or finishing the dialog writes `true`. A freshly seeded user therefore sees it once per run. Skip it with `$H psql <run> "update \"user\" set has_seen_onboarding = true"` before sign-in, or walk it per `features/sign-in.md`.
-- `seed-user` with an email that already exists still answers 200. Better Auth hides whether an account exists. The password stays the original one.
+- A new user sees a `Welcome to myakiba.` onboarding dialog over the dashboard on first sign-in. Its first step starts currency and date format from the browser's locale, and asks for a username only when the account holds a generated name. The account stores whether it was seen in `user.has_seen_onboarding`: sign-up writes `false`, and that step's `Continue`, closing or finishing the dialog writes `true`. A freshly seeded user therefore sees it once per run. Skip it with `$H psql <run> "update \"user\" set has_seen_onboarding = true"` before sign-in, or walk it per `features/sign-in.md`.
+- `seed-user` is safe to repeat. On success it prints the account's current username, and for an email that already exists it exits 0 as well. An existing account keeps its original password, so sign in with that one. Without `--generated-username`, the username is the email's part before `@`, keeping letters, digits, `.` and `_`; it must have at least 3 characters and not belong to another account, or the seed fails. With `--generated-username` no username is sent and the server picks one, so that rule does not apply.
 - `CORS_ORIGIN`, `BETTER_AUTH_URL` and the baked `VITE_SERVER_URL` all use `localhost`. Open the exact `url` that `up` printed, not `127.0.0.1:<port>`.
 - Visiting `/login` while signed in redirects to `/dashboard`. Sign out first, or open an `incognito` profile tab, to drive sign-in again.
