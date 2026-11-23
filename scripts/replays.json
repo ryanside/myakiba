@@ -5802,6 +5802,14 @@
       "fixed": [
         "a db-push with nothing to convert takes no lock on collection, so it does not wait behind a reader"
       ]
+    },
+    {
+      "fix": "b66d5017584f56c1fd1db9a458b0f5ee840995db",
+      "bug": "A Collection Item's Paid was a lookup on its Order for every row a reader summed, so the Dashboard and Expenses collection ran 1.7 and 2.3 times main's median on an account of 2,000 Collection Items.",
+      "test": "apps/server/src/lib/order-money.test.ts",
+      "fixed": [
+        "a Collection Item's Paid reads its joined Order, never a lookup on order for each row"
+      ]
     }
   ],
   "lint": [
