@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
-import { PUSH_TIMEOUT, dbPush } from "../../test/push";
+import { PUSH_TIMEOUT, dbPush, pushSchema } from "../../test/push";
 
 const databases = testDatabases();
 
@@ -181,6 +181,58 @@ test(
     expect(again.output).toContain('Paid-on-Order migration: {"status":"readded-column-dropped"}');
     expect(await orderPaid(sql)).toEqual([{ id: "paid-order", paid: true }]);
     expect([...(await collectionPaidColumn(sql))]).toEqual([]);
+  },
+  PUSH_TIMEOUT * 2,
+);
+
+test(
+  "a db-push with nothing to convert takes no lock on collection, so it does not wait behind a reader",
+  async () => {
+    const { sql, url } = await databases.create();
+    const first = await dbPush(url);
+    expect(first.exitCode).toBe(0);
+
+    const release = Promise.withResolvers<null>();
+    const reading = Promise.withResolvers<null>();
+    const reader = sql.begin(async (tx) => {
+      await tx`SELECT count(*) FROM collection`;
+      reading.resolve(null);
+      await release.promise;
+    });
+    await reading.promise;
+    const second = dbPush(url);
+    const waited = await Promise.race([
+      second.then(() => "finished" as const),
+      Bun.sleep(PUSH_TIMEOUT / 2).then(() => "waited behind the reader" as const),
+    ]);
+    release.resolve(null);
+    await reader;
+    const pushed = await second;
+
+    expect({ waited, exitCode: pushed.exitCode }).toEqual({ waited: "finished", exitCode: 0 });
+    expect(pushed.output).toContain('Paid-on-Order migration: {"status":"already-migrated"}');
+  },
+  PUSH_TIMEOUT * 2,
+);
+
+test(
+  "drizzle-kit push alone leaves the mark on order.paid, so it outlives a push that does not write it",
+  async () => {
+    const { sql, url } = await databases.create();
+    const pushed = await dbPush(url);
+    expect(pushed.exitCode).toBe(0);
+    const mark = () =>
+      sql`SELECT col_description('public.order'::regclass, attnum) AS comment FROM pg_attribute
+        WHERE attrelid = 'public.order'::regclass AND attname = 'paid'`;
+    const before = [...(await mark())];
+
+    const drizzleOnly = await pushSchema(url);
+    expect(drizzleOnly.applied).toBe(true);
+
+    expect({ before, after: [...(await mark())] }).toEqual({
+      before: [{ comment: "Covers every Order Item and all Order Fees." }],
+      after: [{ comment: "Covers every Order Item and all Order Fees." }],
+    });
   },
   PUSH_TIMEOUT * 2,
 );

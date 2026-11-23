@@ -457,6 +457,18 @@ describe("Paid is apart from the Acquisition Status", () => {
   });
 });
 
+describe("the Orders page's Unpaid Costs and Order Spend ranges", () => {
+  test("a maximum keeps only the Orders at or under it, judged by each Order's own Paid", async () => {
+    const owingLittle = await get<OrdersList>(paidApart, "/orders?limit=10&unpaidCostsMax=1000");
+    const spentLittle = await get<OrdersList>(paidApart, "/orders?limit=10&orderSpendMax=1000");
+
+    expect({ owingLittle: titles(owingLittle), spentLittle: titles(spentLittle) }).toEqual({
+      owingLittle: ["Paid up front"],
+      spentLittle: ["Pay on delivery"],
+    });
+  });
+});
+
 describe("an Owned item in an Unpaid Order beside an Owned item outside any Order", () => {
   test("the item in the Unpaid Order counts as Unpaid Costs, and only the item outside any Order is Collection Spend", async () => {
     const collectionPage = await get<CollectionList>(ownedUnpaid, "/collection?limit=10");

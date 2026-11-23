@@ -418,6 +418,48 @@ describe("a fill on the orders page", () => {
     });
   });
 
+  test("an Order fill of Paid names only the Orders in its toast, since Paid is the Order's alone", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const filling = orders.act((actions) =>
+      actions.handleFillOrders(new Set([ALPHA.orderId, "od-unloaded"]), {
+        field: "paid",
+        value: true,
+      }),
+    );
+    await answer(0, "finish");
+
+    expect(await filling).toBe("ok");
+    expect(toastTitles()).toEqual([
+      "loading: Filling orders...",
+      "success: Filled Paid on 2 orders",
+    ]);
+  });
+
+  test("an Order fill of one Order names the Order, and its items only for a field that cascades", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const paid = orders.act((actions) =>
+      actions.handleFillOrders(new Set([ALPHA.orderId]), { field: "paid", value: false }),
+    );
+    await answer(0, "finish");
+    expect(await paid).toBe("ok");
+    const shop = orders.act((actions) =>
+      actions.handleFillOrders(new Set([ALPHA.orderId]), FILL_SHOP),
+    );
+    await answer(1, "finish");
+    expect(await shop).toBe("ok");
+
+    expect(toastTitles()).toEqual([
+      "loading: Filling orders...",
+      "success: Filled Paid on 1 order",
+      "loading: Filling orders...",
+      "success: Filled Shop on 1 order and its items",
+    ]);
+  });
+
   test("a failed Order fill shows the server's sentence and clears the pending marks", async () => {
     const orders = renderOrdersPage({ shop: ["AmiAmi"] });
     await loaded();

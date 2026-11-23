@@ -325,7 +325,7 @@ test("Orders offer the eight fields they cascade, and say the fill sets their it
   ]);
 });
 
-test("an Orders fill of Paid starts checked and sets only the Orders", async () => {
+test("an Orders fill of Paid starts checked, says nothing beside the checkbox, and sets only the Orders", async () => {
   const sent = renderOrdersMenu({ orders: 2, items: 0 });
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Fill" }));
@@ -334,7 +334,7 @@ test("an Orders fill of Paid starts checked and sets only the Orders", async () 
 
   const paid = await screen.findByRole("checkbox", { name: "Paid" });
   expect(paid.getAttribute("aria-checked")).toBe("true");
-  expect(screen.getByText("Replaces Paid on every selected order.")).toBeDefined();
+  expect(screen.queryByText(/Replaces Paid/u) === null).toBe(true);
   await user.click(paid);
   await user.click(screen.getByRole("button", { name: "Fill 2 selected" }));
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Fill all" })).toBeNull());
