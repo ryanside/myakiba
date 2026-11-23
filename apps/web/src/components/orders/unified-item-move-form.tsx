@@ -36,6 +36,7 @@ import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
 import type { MergedOrder, NewOrder } from "@myakiba/contracts/orders/schema";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { Spinner } from "@/components/ui/spinner";
 import { orders } from "@/data/resources/orders";
 import { Textarea } from "../ui/textarea";
@@ -699,7 +700,7 @@ function NewOrderForm({
                     name={field.name}
                     value={field.state.value ?? ""}
                     onBlur={field.handleBlur}
-                    maxLength={1000}
+                    maxLength={WRITE_LIMITS.notes}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="Add any notes..."
                     rows={3}
