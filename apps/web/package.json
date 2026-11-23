@@ -9,7 +9,7 @@
     "serve": "vite preview",
     "start": "vite",
     "check-types": "tsc --noEmit",
-    "test": "bun test --isolate --env-file=test.env",
+    "test": "bun test --parallel --env-file=test.env",
     "e2e": "cd e2e && bun test",
     "e2e:build": "vite build --config e2e/sentence/vite.config.ts",
     "e2e:build:focus-rings": "vite build --config e2e/focus-rings/vite.config.ts",
