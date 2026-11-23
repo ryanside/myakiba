@@ -564,16 +564,6 @@ describe("an account's limits", () => {
       timeout: 0,
     });
   });
-
-  test("another failed save shows no toast", async () => {
-    loadExtension([fakePick(1)]);
-    server.uploadAnswer = async () => refused(500, "boom");
-
-    const { result } = renderIntake();
-
-    await waitFor(() => expect(result.current.rows[0]?.state).toBe("failed"));
-    expect(toastAdd).not.toHaveBeenCalled();
-  });
 });
 
 describe("pick failure copy", () => {

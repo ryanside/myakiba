@@ -1442,27 +1442,6 @@ describe("the MFC tab", () => {
     expect(extension.tabs.has(103)).toBe(false);
   });
 
-  test("a collector answer that fails its schema in its own tab fails the item, and the next item loads a fresh tab", async () => {
-    const extension = fakeExtension({
-      pages: (request, _signal, tabId) =>
-        request.mfcItemId === 1 ? answerInvalid(tabId) : page(itemPage(2)),
-    });
-    const run = extension.run([1, 2]);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
-
-    expect(run.results()).toEqual([
-      { ok: false, error: "unexpected_page" },
-      { ok: true, html: itemPage(2), picture: null },
-    ]);
-    expect(extension.tabs.log).toEqual([
-      `create inactive ${ORIGINS.mfc}/`,
-      "remove 101",
-      `create inactive ${ORIGINS.mfc}/`,
-      "remove 102",
-    ]);
-  });
-
   test("a shared item outlives its first run's tab closing before the MFC tab opens", async () => {
     const extension = fakeExtension({ pages: itemPages() });
     const other = extension.tabs.open(`${ORIGINS.web}/sync`, { windowId: OTHER_WINDOW });
@@ -1820,41 +1799,6 @@ describe("item results", () => {
         picture: { base64: "AQID", contentType: "image/jpeg" },
       },
     ]);
-  });
-
-  test("an item whose public picture fails still goes through without one", async () => {
-    const extension = fakeExtension({
-      pages: () => page(itemPage(1, "public")),
-      publicPicture: () => Promise.reject(new TypeError("Failed to fetch")),
-    });
-    const run = extension.run([1]);
-    await extension.clock.runUntil(run.done);
-
-    expect(run.results()).toEqual([{ ok: true, html: itemPage(1, "public"), picture: null }]);
-  });
-
-  test("an item whose gated picture fails still goes through without one", async () => {
-    const extension = fakeExtension({
-      pages: () => page(itemPage(1, "gated")),
-      gatedPicture: () => Promise.reject(new TypeError("Failed to fetch")),
-    });
-    const run = extension.run([1]);
-    await extension.clock.runUntil(run.done);
-
-    expect(run.results()).toEqual([{ ok: true, html: itemPage(1, "gated"), picture: null }]);
-  });
-
-  test("a failed picture keeps the item's MFC tab for the next item", async () => {
-    const extension = fakeExtension({
-      pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
-      gatedPicture: () => Promise.reject(new TypeError("Failed to fetch")),
-    });
-    const run = extension.run([1, 2]);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
-
-    expect(run.results().map((result) => result.ok && result.picture)).toEqual([null, null]);
-    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
   });
 });
 

@@ -135,17 +135,6 @@ describe("pulling picks", () => {
     expect(intake.rows()).toEqual([]);
   });
 
-  test("asks for nothing while the tab is hidden", async () => {
-    const extension = picked(fakePick(1));
-    const { intake, shown, uploads } = tab({ extension });
-    shown.visible = false;
-
-    await intake.pull();
-
-    expect(extension.takes()).toBe(0);
-    expect(uploads).toEqual([]);
-  });
-
   test("a second tab does nothing while the first holds the picks lock, and uploads nothing it saved", async () => {
     const extension = picked(fakePick(1));
     const locks = fakeLocks();

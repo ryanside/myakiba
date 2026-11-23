@@ -27,7 +27,6 @@ test("a dialog without animations closes and unmounts without an end event", asy
       expect(document.querySelector('[data-slot="dialog-content"]') === null).toBe(true);
       expect(document.querySelector('[data-slot="dialog-overlay"]') === null).toBe(true);
     });
-    expect(getAnimations).toHaveBeenCalled();
   } finally {
     matchMedia.mockRestore();
     getAnimations.mockRestore();

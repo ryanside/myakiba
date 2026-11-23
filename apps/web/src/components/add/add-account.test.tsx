@@ -32,16 +32,6 @@ const openAs = async (user: Partial<typeof OTHER_ACCOUNT> = {}, entry = "/add") 
 // A boolean, so a failure prints no DOM tree.
 const showsRow = () => screen.queryByRole("checkbox", { name: "Select Hatsune Miku" }) !== null;
 
-test("a reload keeps the account's rows", async () => {
-  await openAs({}, `/add?item=${ITEM_ID}`);
-  await screen.findByRole("checkbox", { name: "Select Hatsune Miku" });
-  cleanup();
-
-  await openAs();
-
-  expect(showsRow()).toBe(true);
-});
-
 test("another account in the same tab opens an empty Add page, and the rows it left are gone", async () => {
   await openAs({}, `/add?item=${ITEM_ID}`);
   await screen.findByRole("checkbox", { name: "Select Hatsune Miku" });

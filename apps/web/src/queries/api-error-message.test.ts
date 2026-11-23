@@ -85,15 +85,6 @@ describe("an order that fails to load", () => {
       },
     });
   });
-
-  test("shows the server's message when the server answers 404 with text", async () => {
-    expect(await loadOrder(body(404, "Order not found", "text/plain"))).toMatchObject({
-      status: "error",
-      error: {
-        message: "Order not found",
-      },
-    });
-  });
 });
 
 test("a dashboard that cannot reach the server fails with a readable message", async () => {

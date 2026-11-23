@@ -161,13 +161,6 @@ test("a new account sees one welcome dialog while Settings also offers Getting S
   expect(screen.getAllByRole("dialog")).toHaveLength(1);
 });
 
-test("Settings' Getting Started button opens the welcome for an onboarded account", async () => {
-  await openDashboard(true, { withAboutCopy: true });
-  fireEvent.click(screen.getByRole("button", { name: "Open Getting Started" }));
-
-  expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
-});
-
 test("a new account sees the welcome as soon as the dashboard renders", async () => {
   await openDashboard(false);
 

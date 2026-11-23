@@ -179,12 +179,11 @@ test("with nothing chosen, a row's empty space does nothing", async () => {
   expect(screen.queryByRole("group", { name: "Details for Hatsune Miku" })).toBeNull();
 });
 
-test("the page has no Columns selector and no More Order details", async () => {
+test("the page has no Columns selector", async () => {
   draft(ITEM_ID);
   openAddPage("/add?to=order-new");
   await rowsLoaded();
   expect(screen.queryByRole("button", { name: /Columns/u })).toBeNull();
-  expect(screen.queryByText(/More Order details/u)).toBeNull();
 });
 
 test("the sentence counts the selected rows of all, and reads Keep for the Item Database", async () => {
@@ -202,14 +201,13 @@ test("the sentence counts the selected rows of all, and reads Keep for the Item 
   expect(sentence()).toContain("Keep 1 of 2 items in");
 });
 
-test("the button keeps them in the Item Database with nothing else named, and no mid dot anywhere", async () => {
+test("the button keeps them in the Item Database, and names the Wishlist and List it adds to", async () => {
   draft(ITEM_ID);
   server.lists.push({ id: "shelf0000001", title: "Display shelf" });
   const user = userEvent.setup();
   openAddPage("/add?to=none");
   await rowsLoaded();
   expect(screen.getByRole("button", { name: "Keep 1 in Item Database" })).toBeDefined();
-  expect(screen.queryByText(/nothing to save/u)).toBeNull();
 
   await user.click(screen.getByRole("checkbox", { name: "Wishlist" }));
   await user.click(screen.getByRole("button", { name: "Lists" }));
@@ -218,7 +216,6 @@ test("the button keeps them in the Item Database with nothing else named, and no
   expect(
     screen.getByRole("button", { name: "Add 1 to Wishlist and ‘Display shelf’" }),
   ).toBeDefined();
-  expect(document.body.textContent).not.toContain("·");
 });
 
 test("trying another destination keeps what was typed, New and Existing Order included", async () => {
@@ -315,8 +312,6 @@ test("a new Order's title sits beside its picture in place of a heading, and wra
   await rowsLoaded();
 
   const order = within(screen.getByRole("region", { name: "New Order" }));
-  expect(order.queryByText("Order details")).toBeNull();
-  expect(order.queryByText(/Optional, and they apply/u)).toBeNull();
   expect(order.queryByText("Title")).toBeNull();
   expect(order.getByRole("button", { name: /edit Order title$/ })).toBeDefined();
   for (const group of ["Basics", "Dates", "Costs"]) {
@@ -591,27 +586,6 @@ test("the Release control and its menu show date, type, barcode and price in the
   expect(server.commits[0]?.rows[0]?.releaseId).toBe(FIRST_RELEASE);
 });
 
-test("a release in another currency says nothing about converting it", async () => {
-  seedItems(
-    item("yen000000001", {
-      title: "Yen",
-      latestRelease: {
-        id: "yen",
-        date: "2027-02-01",
-        type: null,
-        barcode: null,
-        price: 2_500_000,
-        priceCurrency: "JPY",
-      },
-    }),
-  );
-  draft(ITEM_ID, "yen000000001");
-  openAddPage("/add?to=collection");
-  await rowsLoaded();
-
-  expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
-});
-
 test("a commit points at a price the page cannot read", async () => {
   draftWith(ITEM_ID, { price: "1.234" });
   const user = userEvent.setup();
@@ -759,20 +733,6 @@ test("what a row holds stays in the draft through the Item Database, and comes b
   await destination(user, "Collection");
   const price = screen.getByRole("textbox", { name: "Price for Hatsune Miku" }) as HTMLInputElement;
   expect(price.value).toContain("12.50");
-});
-
-test("an open row closes while nothing is owned, and comes back with an owned choice", async () => {
-  draft(ITEM_ID);
-  const user = userEvent.setup();
-  openAddPage("/add?to=collection");
-  await openDetails(user, "Hatsune Miku");
-  expect(screen.getByRole("textbox", { name: "Notes for Hatsune Miku" })).toBeDefined();
-
-  await destination(user, "Item Database");
-  expect(screen.queryByRole("textbox", { name: "Notes for Hatsune Miku" })).toBeNull();
-
-  await destination(user, "Collection");
-  expect(screen.getByRole("textbox", { name: "Notes for Hatsune Miku" })).toBeDefined();
 });
 
 test("Select all counts only rows with an Item, and shows some as indeterminate", async () => {

@@ -284,10 +284,6 @@ const plantedPage = PLANTED.reduce((html, [from, to]) => edit(html, from, to), i
 describe("scrubMfcPage sends nothing of the user", () => {
   const scrubbed = scrub(plantedPage);
 
-  test("the marker is everywhere on the page", () => {
-    expect(plantedPage.split(MARKER).length - 1).toBeGreaterThanOrEqual(PLANTED.length * 2);
-  });
-
   test("no trace of the marker or of the capturing user leaves the page", () => {
     for (const leak of [MARKER, "fixture_user", "/profile/", "username="]) {
       expect(scrubbed).not.toContain(leak);

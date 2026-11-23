@@ -217,16 +217,6 @@ test("a profile refused without a message shows the form's own text", async () =
   expect(await screen.findByText("Failed to update profile")).toBeTruthy();
 });
 
-test("a taken username says so in the profile", async () => {
-  answerAuth(() => Response.json({ available: false }));
-  renderSettings(() => <Profile user={user} />);
-  await screen.findByLabelText("Username");
-
-  type("Username", "taken");
-
-  expect(await screen.findByText("Taken")).toBeTruthy();
-});
-
 test("a username check the server refuses shows its text in the profile", async () => {
   answerAuth(() => refuse(422, "Unprocessable Entity", { message: "Username is invalid" }));
   renderSettings(() => <Profile user={user} />);

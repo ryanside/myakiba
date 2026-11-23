@@ -97,21 +97,15 @@ describe("placeToggle", () => {
   });
 
   test("moves nothing when it is already in place", () => {
-    const { document } = pageAt(ITEM_98777);
-    const host = hostIn(document);
-    placeToggle(document, host);
-    let moved = 0;
-    const append = host.parentElement?.append.bind(host.parentElement);
-    if (host.parentElement) {
-      host.parentElement.append = (...nodes) => {
-        moved += 1;
-        append?.(...nodes);
-      };
-    }
+    const page = pageAt(ITEM_98777);
+    const host = hostIn(page.document);
+    placeToggle(page.document, host);
+    const observer = new page.window.MutationObserver(() => {});
+    observer.observe(page.document.body, { childList: true, subtree: true });
 
-    placeToggle(document, host);
+    placeToggle(page.document, host);
 
-    expect(moved).toBe(0);
+    expect(observer.takeRecords().map((record) => record.type)).toEqual([]);
   });
 });
 
