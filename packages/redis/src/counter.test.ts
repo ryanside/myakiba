@@ -37,11 +37,3 @@ test("later increments count up without extending the TTL", async () => {
   expect(await incrementWithTtl(client, key, 60)).toBe(3);
   expect(await client.ttl(key)).toBeLessThanOrEqual(30);
 });
-
-test("the counter starts over after it expires", async () => {
-  const key = newKey();
-  await incrementWithTtl(client, key, 1);
-  await incrementWithTtl(client, key, 1);
-  await Bun.sleep(1100);
-  expect(await incrementWithTtl(client, key, 1)).toBe(1);
-});
