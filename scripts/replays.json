@@ -5438,7 +5438,9 @@
         "a merge starts from its source Orders > the draft leaves the Shop blank when the sources differ and Paid off when one source is unpaid",
         "a merge starts from its source Orders > the draft keeps every note in full past the notes limit, and merging it writes nothing",
         "a merge starts from its source Orders > merging with the draft keeps the source fees and every item's own values"
-      ]
+      ],
+      "testAt": "7e5b80874daeabdc681fe1628bd0737afbef5031",
+      "reason": "A later commit in this PR moves the draft reads from GET to POST and adds New Order tests that also pass at this fix, so this fix replays against the test file as it stood at 7e5b80874."
     },
     {
       "fix": "ea9132723fcc35815f21d019ef66dcaef9e418f0",
@@ -5519,7 +5521,9 @@
         "a New Order starts from the selected items > an item with every field blank gives a blank draft, and Paid stays off when one item is unpaid",
         "a New Order starts from the selected items > an id the viewer does not hold answers 404",
         "a New Order starts from the selected items > moving items to a New Order made from the draft keeps every item's own values"
-      ]
+      ],
+      "testAt": "7e5b80874daeabdc681fe1628bd0737afbef5031",
+      "reason": "A later commit in this PR moves the draft reads from GET to POST and adds New Order tests that also pass at this fix, so this fix replays against the test file as it stood at 7e5b80874."
     },
     {
       "fix": "e2840f8dfe309923f3506b6ba9ee8dbf0e08782f",
@@ -5527,7 +5531,9 @@
       "test": "apps/server/src/routers/owner-isolation.test.ts",
       "fixed": [
         "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the New Order draft of her Order Item"
-      ]
+      ],
+      "testAt": "7e5b80874daeabdc681fe1628bd0737afbef5031",
+      "reason": "A later commit in this PR moves the draft reads from GET to POST and adds New Order tests that also pass at this fix, so this fix replays against the test file as it stood at 7e5b80874."
     },
     {
       "fix": "e2840f8dfe309923f3506b6ba9ee8dbf0e08782f",
@@ -5537,7 +5543,48 @@
         "moving items to a New Order > opens on the values read for the selected items and sends them unchanged",
         "moving items to a New Order > says why it cannot open when the items do not load, with no way to submit",
         "moving items to a New Order > reads the items again on every opening"
+      ],
+      "testAt": "7e5b80874daeabdc681fe1628bd0737afbef5031",
+      "reason": "A later commit in this PR moves the draft reads from GET to POST and adds New Order tests that also pass at this fix, so this fix replays against the test file as it stood at 7e5b80874."
+    },
+    {
+      "fix": "bef99b28acaab9c3cc40889c4d6707413b8e5a96",
+      "bug": "The draft reads carried their ids in the URL, so on a production build a New Order draft of 382 or more selected items answered 431 before the app saw it and the New Order could not be made; the reads now take a body of up to 1,000 ids, as the writes do.",
+      "test": "apps/server/src/routers/orders/merge-split.test.ts",
+      "fixed": [
+        "a merge starts from its source Orders > the draft takes the shared Shop, the earliest Order Date, the latest other dates, the least advanced status and the summed fees",
+        "a merge starts from its source Orders > the draft reads 1,000 Orders, as many as a merge takes",
+        "a merge starts from its source Orders > the draft leaves the Shop blank when the sources differ and Paid off when one source is unpaid",
+        "a merge starts from its source Orders > the draft keeps every note in full past the notes limit, and merging it writes nothing",
+        "a merge starts from its source Orders > merging with the draft keeps the source fees and every item's own values",
+        "a New Order starts from the selected items > one item gives its own values and no fees",
+        "a New Order starts from the selected items > items take the shared Shop, the least advanced status, the earliest Order Date and the latest other dates, as Merge does",
+        "a New Order starts from the selected items > an item with every field blank gives a blank draft, and Paid stays off when one item is unpaid",
+        "a New Order starts from the selected items > the draft reads 1,000 items, as many as a move takes",
+        "a New Order starts from the selected items > an id the viewer does not hold answers 404",
+        "a New Order starts from the selected items > moving items to a New Order made from the draft keeps every item's own values"
       ]
+    },
+    {
+      "fix": "bef99b28acaab9c3cc40889c4d6707413b8e5a96",
+      "bug": "The draft reads carried their ids in the URL, so on a production build a New Order draft of 382 or more selected items answered 431 before the app saw it and the New Order could not be made; the reads now take a body of up to 1,000 ids, as the writes do.",
+      "test": "apps/server/src/routers/owner-isolation.test.ts",
+      "fixed": [
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the New Order draft of her Order Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the merge draft of her Order"
+      ]
+    },
+    {
+      "fix": "bef99b28acaab9c3cc40889c4d6707413b8e5a96",
+      "bug": "The draft reads carried their ids in the URL, so on a production build a New Order draft of 382 or more selected items answered 431 before the app saw it and the New Order could not be made; the reads now take a body of up to 1,000 ids, as the writes do.",
+      "test": "apps/web/src/queries/orders.test.ts",
+      "fixed": ["the draft reads carry their ids in the body, so a selection of any size fits"]
+    },
+    {
+      "fix": "6d999470d49afd76c9e14eabca1213fae069f9eb",
+      "bug": "The New Order form cut Notes at 1,000 characters while Merge, Edit Order and the server take 10,000.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": ["moving items to a New Order > takes 10,000 characters of Notes and saves them"]
     }
   ],
   "lint": [
