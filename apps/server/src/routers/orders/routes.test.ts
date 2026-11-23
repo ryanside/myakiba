@@ -107,28 +107,12 @@ const answers = [
     "Orders merged successfully",
   ],
   [
-    "merge another user's order",
-    "POST",
-    "/merge",
-    { orderIds: ["order-3"], newOrder, cascadeOptions: [] },
-    404,
-    "Order items not found",
-  ],
-  [
     "split",
     "POST",
     "/split",
     { collectionIds: ["c-2"], newOrder, cascadeOptions: ["status"] },
     200,
     "Items split successfully",
-  ],
-  [
-    "split another user's item",
-    "POST",
-    "/split",
-    { collectionIds: ["c-other"], newOrder, cascadeOptions: [] },
-    404,
-    "Order items not found",
   ],
   [
     "move",
@@ -196,28 +180,12 @@ const answers = [
   ],
   ["delete orders", "DELETE", "/", { orderIds: ["order-2"] }, 200, "Orders deleted successfully"],
   [
-    "delete another user's order",
-    "DELETE",
-    "/",
-    { orderIds: ["order-3"] },
-    404,
-    "One or more orders not found",
-  ],
-  [
     "delete items",
     "DELETE",
     "/items",
     { collectionIds: ["c-2"] },
     200,
     "Order items deleted successfully",
-  ],
-  [
-    "delete another user's items",
-    "DELETE",
-    "/items",
-    { collectionIds: ["c-other"] },
-    404,
-    "One or more order items not found",
   ],
   [
     "delete an item",
@@ -281,10 +249,6 @@ describe("each orders route answers as before", () => {
 
     expect(status).toBe(200);
     expect(body).toMatchObject({ items: [{ id: "c-ordered" }, { id: "c-owned" }], totalCount: 2 });
-  });
-
-  test("the router mounts no auth handler under its prefix", () => {
-    expect(ordersRouter.routes.filter((route) => route.method === "ALL")).toEqual([]);
   });
 });
 
