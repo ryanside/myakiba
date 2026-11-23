@@ -17,7 +17,7 @@ export function orderDraft(sources: readonly OrderDraft[]): OrderDraft {
       "",
     ),
     status: ORDER_STATUSES[stage] ?? "Ordered",
-    paid: sources.every((source) => source.paid),
+    paid: sources.length > 0 && sources.every((source) => source.paid),
     orderDate: dates(sources.map((source) => source.orderDate)).at(0) ?? null,
     releaseDate: dates(sources.map((source) => source.releaseDate)).at(-1) ?? null,
     paymentDate: dates(sources.map((source) => source.paymentDate)).at(-1) ?? null,
