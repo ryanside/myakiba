@@ -87,15 +87,16 @@ export const orders = {
     staleTime: 30_000,
   }),
   mergeDraft: rootedRead("orderMergeDraft", {
-    key: ({ opening, orderIds }: MergeDraftRead) => ["orderMergeDraft", opening, orderIds] as const,
+    key: ({ dialogOpening, orderIds }: MergeDraftRead) =>
+      ["orderMergeDraft", dialogOpening, orderIds] as const,
     load: ({ orderIds }) => getMergeDraft(orderIds),
     retry: false,
     staleTime: Infinity,
     gcTime: 0,
   }),
   newOrderDraft: rootedRead("orderNewDraft", {
-    key: ({ opening, collectionIds }: NewOrderDraftRead) =>
-      ["orderNewDraft", opening, collectionIds] as const,
+    key: ({ dialogOpening, collectionIds }: NewOrderDraftRead) =>
+      ["orderNewDraft", dialogOpening, collectionIds] as const,
     load: ({ collectionIds }) => getNewOrderDraft(collectionIds),
     retry: false,
     staleTime: Infinity,
@@ -103,10 +104,11 @@ export const orders = {
   }),
 };
 
-/** One opening of the Merge dialog reads its own draft, so no opening sees another's read. */
-type MergeDraftRead = { readonly opening: string; readonly orderIds: readonly string[] };
-/** One opening of a New Order destination reads its own draft of the selected items. */
-type NewOrderDraftRead = { readonly opening: string; readonly collectionIds: readonly string[] };
+type MergeDraftRead = { readonly dialogOpening: string; readonly orderIds: readonly string[] };
+type NewOrderDraftRead = {
+  readonly dialogOpening: string;
+  readonly collectionIds: readonly string[];
+};
 
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
 type OnList = { readonly list: OrderFilters };

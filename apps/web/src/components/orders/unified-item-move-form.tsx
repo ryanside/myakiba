@@ -376,9 +376,9 @@ type NewOrderDestinationProps = {
 };
 
 function NewOrderDestination(props: NewOrderDestinationProps) {
-  const opening = useMemo(() => crypto.randomUUID(), []);
+  const dialogOpening = useMemo(() => crypto.randomUUID(), []);
   const collectionIds = [...props.collectionIds].toSorted();
-  const draft = useRead(orders.newOrderDraft, { opening, collectionIds });
+  const draft = useRead(orders.newOrderDraft, { dialogOpening, collectionIds });
   if (draft.isSuccess) {
     return (
       <NewOrderForm

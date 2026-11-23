@@ -365,7 +365,10 @@ describe("a merge from the Merge dialog", () => {
     function MergeDialog() {
       useOrdersQuery();
       const mutations = useOrdersMutations({ filters: {} });
-      const draft = useRead(orderReads.mergeDraft, { opening: "opening-1", orderIds: mergedIds });
+      const draft = useRead(orderReads.mergeDraft, {
+        dialogOpening: "opening-1",
+        orderIds: mergedIds,
+      });
       useEffect(() => {
         actions = mutations;
       });

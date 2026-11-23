@@ -111,9 +111,9 @@ const mergedNotesFit = ({ value }: { readonly value: { readonly notes: string } 
 function MergeOrderFormContent(
   props: DeferredMergeOrderFormProps & { readonly close: () => void },
 ) {
-  const opening = useMemo(() => crypto.randomUUID(), []);
+  const dialogOpening = useMemo(() => crypto.randomUUID(), []);
   const orderIds = [...props.orderIds].toSorted();
-  const draft = useRead(orders.mergeDraft, { opening, orderIds });
+  const draft = useRead(orders.mergeDraft, { dialogOpening, orderIds });
   if (draft.isSuccess) {
     return (
       <OrderFormContent
