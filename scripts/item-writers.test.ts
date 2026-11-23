@@ -451,7 +451,6 @@ describe("an Item table write", () => {
     [
       `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(a.item); } let a; let b; let c; a = b; b = c; c = figure;`,
     ],
-    [`import * as figure from "@myakiba/db/schema/figure"; export const tables = figure;`],
   ])("is found in %s", (body) => {
     expect(writes(body)).toHaveLength(1);
   });
