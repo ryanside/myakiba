@@ -4,8 +4,12 @@ import { lstat, mkdir, open, rm } from "node:fs/promises";
 import path from "node:path";
 
 const identity = Symbol("full test run");
+/** A suite is one named part of the full test run. */
+export const suites = ["web", "packages", "tooling"] as const;
+export type Suite = (typeof suites)[number];
 export interface TestRun {
   readonly reportFile: string;
+  readonly suites: readonly Suite[];
   readonly [identity]: true;
 }
 type Namespace = { directory: string; dev: number; ino: number };
@@ -18,6 +22,13 @@ type State = {
 const active = new WeakMap<TestRun, State>();
 const runFirst =
   "No active full test run. Run bun run test to generate and verify current reports.";
+
+/** The root runs the tooling tests, the web app runs its own, and every other package runs in packages. */
+export async function suiteOf(root: string, directory: string): Promise<Suite> {
+  if (directory === root) return "tooling";
+  const { name }: { name?: string } = await Bun.file(path.join(directory, "package.json")).json();
+  return name === "web" ? "web" : "packages";
+}
 
 async function realDirectory(directory: string) {
   const details = await lstat(directory);
@@ -48,7 +59,10 @@ async function removeCreated(created: Namespace[]) {
 }
 
 /** A run trusts only reports inside directories it freshly created, through its private handle. */
-export async function beginTestRun(root: string): Promise<TestRun> {
+export async function beginTestRun(
+  root: string,
+  selected: readonly Suite[] = suites,
+): Promise<TestRun> {
   const { workspaces }: { workspaces: { packages: string[] } } = await Bun.file(
     path.join(root, "package.json"),
   ).json();
@@ -66,6 +80,7 @@ export async function beginTestRun(root: string): Promise<TestRun> {
   const created: Namespace[] = [];
   try {
     for (const directory of directories) {
+      if (!selected.includes(await suiteOf(root, directory))) continue;
       await rm(path.join(directory, "test-results.xml"), { force: true });
       const parent = path.join(directory, ".test-results");
       try {
@@ -89,7 +104,11 @@ export async function beginTestRun(root: string): Promise<TestRun> {
     }
     throw error;
   }
-  const run: TestRun = Object.freeze({ reportFile, [identity]: true as const });
+  const run: TestRun = Object.freeze({
+    reportFile,
+    suites: Object.freeze([...selected]),
+    [identity]: true as const,
+  });
   active.set(run, { root, reports, created, consumed: false });
   return run;
 }
@@ -103,10 +122,9 @@ async function readReport(report: string) {
     if (error instanceof Error && "code" in error) {
       if (error.code === "ELOOP") throw new Error(invalid, { cause: error });
       if (error.code === "ENOENT")
-        throw new Error(
-          `Missing current-run Bun JUnit report: ${report}. Run bun run test without filters.`,
-          { cause: error },
-        );
+        throw new Error(`Missing current-run Bun JUnit report: ${report}. Run bun run test.`, {
+          cause: error,
+        });
     }
     throw error;
   }

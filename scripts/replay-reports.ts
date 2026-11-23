@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { TestRun } from "./test-run";
-import { consumeTestRun } from "./test-run";
+import { consumeTestRun, suiteOf } from "./test-run";
 
 type Coverage = { test: string; fixed: string[] };
 
@@ -82,9 +82,13 @@ export async function checkReplayCoverage(root: string, run: TestRun) {
       head?: { test: string; fixed: string[]; reason: string }[];
     }[];
   } = await Bun.file(path.join(root, "scripts/replays.json")).json();
-  const current = replays
+  const pinned = replays
     .filter((entry) => entry.testAt)
     .flatMap((entry) => entry.head ?? [{ test: entry.test, fixed: entry.atHead ?? entry.fixed }]);
+  const current: Coverage[] = [];
+  for (const entry of pinned)
+    if (run.suites.includes(await suiteOf(root, await packageDirectory(root, entry.test))))
+      current.push(entry);
   const { missing, reports } = await missingPassedTests(root, current, run);
   if (missing.length > 0)
     throw new Error(`Missing passed replay coverage in Bun JUnit reports:\n${missing.join("\n")}`);
