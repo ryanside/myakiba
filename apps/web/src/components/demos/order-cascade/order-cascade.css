@@ -313,10 +313,15 @@
 
 .mk-order-cascade .mk-order-cascade-sub-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 95px 132px 56px;
+  grid-template-columns: 32px minmax(0, 1fr) 95px 132px 56px 56px;
   align-items: center;
   padding: 6px 0;
   white-space: nowrap;
+}
+
+/* An item has no Paid, so its menu skips the Paid column and its status stays under the Order's */
+.mk-order-cascade .mk-order-cascade-sub-row > .mk-order-cascade-cell-more {
+  grid-column: -2;
 }
 
 .mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-sub-row {
