@@ -7,7 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import { SavedFillMenu } from "@/components/fill/saved-fill-menu";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
@@ -48,7 +48,6 @@ export function CollectionActionBar({
   ) => Saving;
   readonly onAddCollectionItemsToNewOrder: (
     values: NewOrder,
-    cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
   ) => Saving;
   readonly onFillCollectionItems: (collectionIds: ReadonlySet<string>, fill: ItemFill) => Saving;

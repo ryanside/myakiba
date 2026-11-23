@@ -10,7 +10,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -62,7 +62,6 @@ export function CollectionItemControls({
   ) => Saving;
   readonly onAddCollectionItemsToNewOrder: (
     values: NewOrder,
-    cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
   ) => Saving;
   readonly onToggleSelection: () => void;

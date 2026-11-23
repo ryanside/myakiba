@@ -136,15 +136,11 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   );
 
   const handleMerge = useCallback(
-    async (
-      values: NewOrder,
-      cascadeOptions: CascadeOptions,
-      orderIds: ReadonlySet<string>,
-    ): Saving => {
+    async (values: NewOrder, orderIds: ReadonlySet<string>): Saving => {
       const mutableOrderIds = new Set(orderIds);
 
       if (!filtersActive) {
-        return mergeOrdersMutation.run({ values, orderIds: mutableOrderIds, cascadeOptions, list });
+        return mergeOrdersMutation.run({ values, orderIds: mutableOrderIds, list });
       }
 
       const ids = [...mutableOrderIds];
@@ -155,12 +151,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       });
       setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
-      const saved = await mergeOrdersMutation.run({
-        values,
-        orderIds: mutableOrderIds,
-        cascadeOptions,
-        list,
-      });
+      const saved = await mergeOrdersMutation.run({ values, orderIds: mutableOrderIds, list });
       toast.close(loadingToastId);
       setPendingOrderIdList((previous) => removePendingIds(previous, ids));
       return saved;
@@ -169,19 +160,11 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   );
 
   const handleSplit = useCallback(
-    async (
-      values: NewOrder,
-      cascadeOptions: CascadeOptions,
-      collectionIds: ReadonlySet<string>,
-    ): Saving => {
+    async (values: NewOrder, collectionIds: ReadonlySet<string>): Saving => {
       const mutableCollectionIds = new Set(collectionIds);
 
       if (!filtersActive) {
-        return splitOrdersMutation.run({
-          values,
-          collectionIds: mutableCollectionIds,
-          cascadeOptions,
-        });
+        return splitOrdersMutation.run({ values, collectionIds: mutableCollectionIds });
       }
 
       const ids = [...mutableCollectionIds];
@@ -192,11 +175,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       });
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
-      const saved = await splitOrdersMutation.run({
-        values,
-        collectionIds: mutableCollectionIds,
-        cascadeOptions,
-      });
+      const saved = await splitOrdersMutation.run({ values, collectionIds: mutableCollectionIds });
       toast.close(loadingToastId);
       setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
       return saved;

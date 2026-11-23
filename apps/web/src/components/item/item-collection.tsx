@@ -5,7 +5,7 @@ import { CollectionItemCard } from "@/components/item/collection-item-card";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { Saving } from "@/data/client";
 
@@ -37,11 +37,7 @@ export function ItemCollection({
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
   ) => Saving;
-  readonly onMoveToNewOrder: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-  ) => Saving;
+  readonly onMoveToNewOrder: (values: NewOrder, collectionIds: ReadonlySet<string>) => Saving;
   readonly isCollectionOrderPending: (collectionId: string) => boolean;
 }): ReactNode {
   const { currency, locale, dateFormat } = useUserPreferences();

@@ -4,9 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { OrderDraft } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { Result } from "better-result";
 import type { Saving } from "@/data/client";
+import { ApiNotFound } from "@/lib/errors/api-not-found";
+import { ApiServerError } from "@/lib/errors/api-server-error";
 import { WriteFailed } from "@/lib/errors/write-failed";
 
 type Answered = Awaited<Saving>;
@@ -16,6 +19,52 @@ const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order", 
 await mock.module("@/queries/search", () => ({
   ...realSearch,
   searchOrders: async () => Result.ok(targets),
+}));
+
+const mergeDraft: OrderDraft = {
+  shop: "AmiAmi",
+  status: "Shipped",
+  paid: true,
+  orderDate: "2026-01-05",
+  releaseDate: "2026-04-01",
+  paymentDate: "2026-01-20",
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "EMS",
+  shippingFee: 2000,
+  taxes: 300,
+  duties: 0,
+  tariffs: 0,
+  miscFees: 0,
+  notes: "Box 1",
+};
+type DraftAnswer = Awaited<ReturnType<(typeof realOrders)["getMergeDraft"]>>;
+let answerDraft = async (_orderIds: readonly string[]): Promise<DraftAnswer> =>
+  Result.ok(mergeDraft);
+const realOrders = await import("@/queries/orders");
+const itemsDraft: OrderDraft = {
+  shop: "AmiAmi",
+  status: "Shipped",
+  paid: true,
+  orderDate: "2026-01-05",
+  releaseDate: null,
+  paymentDate: "2026-01-20",
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "EMS",
+  shippingFee: 0,
+  taxes: 0,
+  duties: 0,
+  tariffs: 0,
+  miscFees: 0,
+  notes: "",
+};
+let answerItemsDraft = async (_collectionIds: readonly string[]): Promise<DraftAnswer> =>
+  Result.ok(itemsDraft);
+await mock.module("@/queries/orders", () => ({
+  ...realOrders,
+  getMergeDraft: (orderIds: readonly string[]) => answerDraft(orderIds),
+  getNewOrderDraft: (collectionIds: readonly string[]) => answerItemsDraft(collectionIds),
 }));
 
 const { OrderForm } = await import("./order-form");
@@ -159,7 +208,9 @@ const SUBMIT_PATHS: SubmitPath[] = [
         currency="USD"
       />
     ),
-    submit: clickSubmit("Merge"),
+    submit: async (user) => {
+      await user.click(await screen.findByRole("button", { name: "Merge" }));
+    },
     clearsSelection: true,
   },
   {
@@ -198,7 +249,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
     ),
     submit: async (user) => {
       await user.click(screen.getByRole("radio", { name: "New Order" }));
-      await user.click(screen.getByRole("button", { name: "Move to New Order" }));
+      await user.click(await screen.findByRole("button", { name: "Move to New Order" }));
     },
     clearsSelection: true,
   },
@@ -313,9 +364,10 @@ describe.each(FOOTER_PATHS)("$name footer", (path) => {
       if (path.name === "move to a new order") {
         fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
       }
+      const cancel = await screen.findByRole("button", { name: "Cancel" });
       const dialog = screen.getByRole("dialog");
       expect(dialog.querySelectorAll('[data-slot$="footer"] button button').length).toBe(0);
-      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      fireEvent.click(cancel);
       await waitFor(() => expect(formIsOpen()).toBe(false));
     } finally {
       cleanup();
@@ -392,6 +444,560 @@ describe("the edit-order sheet", () => {
         await user.click(screen.getByRole("checkbox", { name: "Paid" }));
       });
       expect(call?.[1]).toEqual(["paid"]);
+    }),
+  );
+});
+
+describe("the merge dialog", () => {
+  function openMerge(send: (...args: unknown[]) => Saving) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="merge"
+          renderTrigger={trigger}
+          orderIds={ids}
+          callbackFn={send}
+          clearSelections={() => {}}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    return queryClient;
+  }
+
+  test(
+    "opens on the values derived from the source Orders and sends them unchanged",
+    untilBodyDone(async () => {
+      const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+      const queryClient = openMerge(send);
+      const merge = await screen.findByRole("button", { name: "Merge" });
+
+      expect({
+        shop: (screen.getByLabelText("Shop") as HTMLInputElement).value,
+        shipping: (screen.getByLabelText("Shipping") as HTMLInputElement).value,
+        options: screen.queryByText("Options") === null,
+      }).toEqual({ shop: "AmiAmi", shipping: "$20.00", options: true });
+
+      await userEvent.setup().click(merge);
+      await waitFor(() => expect(send.mock.calls.length).toBe(1));
+      expect(send.mock.calls[0]).toEqual([{ ...mergeDraft, title: "New Merged Order" }, ids]);
+      queryClient.clear();
+    }),
+  );
+
+  test(
+    "holds the merge on Notes while the merged Orders' notes pass the limit, until they are shortened",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      const longNotes = `${"a".repeat(6000)}\n\n${"b".repeat(6000)}`;
+      answerDraft = async () => Result.ok({ ...mergeDraft, notes: longNotes });
+      try {
+        const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+        const queryClient = openMerge(send);
+        const merge = await screen.findByRole("button", { name: "Merge" });
+        const notes = screen.getByPlaceholderText("Add any notes...") as HTMLTextAreaElement;
+
+        expect({
+          notes: notes.value.length,
+          alert:
+            screen.queryByText(
+              "The merged Orders' notes together pass the 10,000-character limit. Shorten them to merge.",
+            ) !== null,
+          disabled: merge.hasAttribute("disabled"),
+        }).toEqual({ notes: longNotes.length, alert: true, disabled: true });
+
+        fireEvent.change(notes, { target: { value: "Box 1 and Box 2" } });
+        await waitFor(() => expect(merge.hasAttribute("disabled")).toBe(false));
+        expect(screen.queryByRole("alert") === null).toBe(true);
+        await userEvent.setup().click(merge);
+        await waitFor(() => expect(send.mock.calls.length).toBe(1));
+        expect(send.mock.calls[0]).toEqual([
+          { ...mergeDraft, notes: "Box 1 and Box 2", title: "New Merged Order" },
+          ids,
+        ]);
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "says why it cannot open when the source Orders do not load",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      answerDraft = async () =>
+        Result.err(
+          new ApiNotFound({
+            body: "One or more orders not found",
+            message: "One or more orders not found",
+          }),
+        );
+      try {
+        const queryClient = openMerge(mock(async (): Saving => Result.ok()));
+        await waitFor(() =>
+          expect(screen.queryByText("One or more orders not found") !== null).toBe(true),
+        );
+        expect(screen.queryByRole("button", { name: "Merge" }) === null).toBe(true);
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+});
+
+test("moving items to a new order offers no Cascade to Items choice", () => {
+  const queryClient = new QueryClient();
+  render(
+    <QueryClientProvider client={queryClient}>
+      <UnifiedItemMoveForm
+        renderTrigger={trigger}
+        selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
+        onMoveToExisting={async () => Result.ok()}
+        onMoveToNew={async () => Result.ok()}
+        currency="USD"
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Open" }));
+  fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
+  expect(screen.queryByText("Options") === null).toBe(true);
+  cleanup();
+  queryClient.clear();
+});
+
+describe("the merge dialog's Notes", () => {
+  const notesLimit =
+    "The merged Orders' notes together pass the 10,000-character limit. Shorten them to merge.";
+
+  function openWithNotes(notes: string) {
+    answerDraft = async () => Result.ok({ ...mergeDraft, notes });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="merge"
+          renderTrigger={trigger}
+          orderIds={ids}
+          callbackFn={mock(async (): Saving => Result.ok())}
+          clearSelections={() => {}}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    return queryClient;
+  }
+  const mergeDisabled = () =>
+    screen.getByRole("button", { name: "Merge" }).hasAttribute("disabled");
+
+  test(
+    "keeps Merge held and says why after the Notes section is collapsed",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const queryClient = openWithNotes(`${"a".repeat(6000)}\n\n${"b".repeat(6000)}`);
+        await screen.findByRole("button", { name: "Merge" });
+        fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+        await waitFor(() => expect(screen.queryByPlaceholderText("Add any notes...")).toBeNull());
+        await settle();
+
+        expect({
+          disabled: mergeDisabled(),
+          reason: screen.queryByText(notesLimit) !== null,
+        }).toEqual({ disabled: true, reason: true });
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "keeps Merge held and its reason tied to it after a blur on another field and a collapse",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const queryClient = openWithNotes(`${"a".repeat(6000)}\n\n${"b".repeat(6000)}`);
+        await screen.findByRole("button", { name: "Merge" });
+        const title = screen.getByLabelText("Title");
+        fireEvent.focus(title);
+        fireEvent.blur(title);
+        fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+        await waitFor(() => expect(screen.queryByPlaceholderText("Add any notes...")).toBeNull());
+        await settle();
+
+        const merge = screen.getByRole("button", { name: "Merge" });
+        const describedBy = merge.getAttribute("aria-describedby") ?? "";
+        expect({
+          disabled: merge.hasAttribute("disabled"),
+          reason: screen.queryByText(notesLimit) !== null,
+          describedByReason: document.querySelector(`[id="${describedBy}"]`)?.textContent ?? null,
+        }).toEqual({ disabled: true, reason: true, describedByReason: notesLimit });
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "takes a paste past 1,000 characters, as the server does",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const queryClient = openWithNotes("n".repeat(1500));
+        await screen.findByRole("button", { name: "Merge" });
+        const user = userEvent.setup();
+        await user.click(screen.getByRole("button", { name: "Notes" }));
+        const notes = screen.getByPlaceholderText("Add any notes...") as HTMLTextAreaElement;
+        await user.click(notes);
+        await user.paste("p".repeat(600));
+
+        expect(notes.value.length).toBe(2100);
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+});
+
+describe("the merge dialog reads its Orders fresh on every open", () => {
+  const otherIds = new Set(["c", "d"]);
+
+  function renderMerge(send: (...args: unknown[]) => Saving) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (orderIds: ReadonlySet<string>) => (
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="merge"
+          renderTrigger={trigger}
+          orderIds={orderIds}
+          callbackFn={send}
+          clearSelections={() => {}}
+          currency="USD"
+        />
+      </QueryClientProvider>
+    );
+    const rendered = render(view(ids));
+    return {
+      queryClient,
+      open: () => fireEvent.click(screen.getByRole("button", { name: "Open" })),
+      cancel: async () => {
+        fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+        await waitFor(() => expect(formIsOpen()).toBe(false));
+      },
+      select: (orderIds: ReadonlySet<string>) => rendered.rerender(view(orderIds)),
+    };
+  }
+  const shippingShown = () => (screen.getByLabelText("Shipping") as HTMLInputElement).value;
+  const mergeShown = () => screen.queryByRole("button", { name: "Merge" }) !== null;
+
+  test(
+    "waits for the new draft after a source Order changed, then shows its fees",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        await merge.cancel();
+
+        let release = () => {};
+        const changed = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        answerDraft = async () => {
+          await changed;
+          return Result.ok({ ...mergeDraft, shippingFee: 2500 });
+        };
+        merge.open();
+        await settle();
+        expect({
+          merge: mergeShown(),
+          loading: screen.queryByRole("status", { name: "Loading" }) !== null,
+        }).toEqual({ merge: false, loading: true });
+
+        await act(async () => release());
+        await screen.findByRole("button", { name: "Merge" });
+        expect(shippingShown()).toBe("$25.00");
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "shows the error and no Merge when the reopened draft fails, though an earlier one loaded",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        await merge.cancel();
+
+        answerDraft = async () =>
+          Result.err(
+            new ApiNotFound({
+              body: "One or more orders not found",
+              message: "One or more orders not found",
+            }),
+          );
+        merge.open();
+        await waitFor(() =>
+          expect(screen.queryByText("One or more orders not found") !== null).toBe(true),
+        );
+        expect(mergeShown()).toBe(false);
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "a reopen while the first read is still pending waits for its own read",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      const answers: ((fee: number) => void)[] = [];
+      answerDraft = () =>
+        new Promise<DraftAnswer>((resolve) => {
+          answers.push((fee) => resolve(Result.ok({ ...mergeDraft, shippingFee: fee })));
+        });
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await waitFor(() => expect(answers.length).toBe(1));
+        fireEvent.click(screen.getByRole("button", { name: "Close" }));
+        await waitFor(() => expect(formIsOpen()).toBe(false));
+        merge.open();
+        await settle();
+        const reads = answers.length;
+
+        await act(async () => answers[0]?.(2000));
+        await settle();
+        const mergeAfterOldAnswer = mergeShown();
+        await act(async () => answers[1]?.(2500));
+        await screen.findByRole("button", { name: "Merge" });
+
+        expect({ reads, mergeAfterOldAnswer, shipping: shippingShown() }).toEqual({
+          reads: 2,
+          mergeAfterOldAnswer: false,
+          shipping: "$25.00",
+        });
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "a reopen in the same tick as the close reads the Orders again",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      let reads = 0;
+      answerDraft = async () => {
+        reads++;
+        return Result.ok({ ...mergeDraft, shippingFee: reads === 1 ? 2000 : 2500 });
+      };
+      try {
+        const merge = renderMerge(mock(async (): Saving => Result.ok()));
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        merge.open();
+        await waitFor(() => expect(reads).toBe(2));
+        await waitFor(() => expect(shippingShown()).toBe("$25.00"));
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "sends the values and ids of the Orders selected now when the selection changes while open",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      answerDraft = async (orderIds) =>
+        Result.ok(orderIds.includes("c") ? { ...mergeDraft, shop: "HLJ" } : mergeDraft);
+      try {
+        const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+        const merge = renderMerge(send);
+        merge.select(otherIds);
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        await merge.cancel();
+
+        merge.select(ids);
+        merge.open();
+        await screen.findByRole("button", { name: "Merge" });
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Combined" } });
+        merge.select(otherIds);
+        await waitFor(() =>
+          expect((screen.getByLabelText("Shop") as HTMLInputElement).value).toBe("HLJ"),
+        );
+
+        await userEvent.setup().click(await screen.findByRole("button", { name: "Merge" }));
+        await waitFor(() => expect(send.mock.calls.length).toBe(1));
+        const [values, sentIds] = send.mock.calls[0] ?? [];
+        expect({
+          shop: (values as { shop: string }).shop,
+          ids: [...(sentIds as Set<string>)],
+        }).toEqual({
+          shop: "HLJ",
+          ids: ["c", "d"],
+        });
+        merge.queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+});
+
+describe("moving items to a New Order", () => {
+  function renderMove(send: (...args: unknown[]) => Saving) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UnifiedItemMoveForm
+          renderTrigger={trigger}
+          selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
+          onMoveToExisting={async () => Result.ok()}
+          onMoveToNew={send}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    return {
+      queryClient,
+      openNew: () => {
+        fireEvent.click(screen.getByRole("button", { name: "Open" }));
+        fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
+      },
+    };
+  }
+  const shown = () => ({
+    shop: (screen.getByLabelText("Shop") as HTMLInputElement).value,
+    status: (screen.getByRole("dialog").textContent ?? "").includes("Shipped"),
+    paid: screen.getByRole("checkbox", { name: "Paid" }).getAttribute("aria-checked"),
+  });
+
+  test(
+    "opens on the values read for the selected items and sends them unchanged",
+    untilBodyDone(async () => {
+      const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+      const move = renderMove(send);
+      move.openNew();
+      const submit = await screen.findByRole("button", { name: "Move to New Order" });
+
+      expect(shown()).toEqual({ shop: "AmiAmi", status: true, paid: "true" });
+      await userEvent.setup().click(submit);
+      await waitFor(() => expect(send.mock.calls.length).toBe(1));
+      expect(send.mock.calls[0]).toEqual([{ ...itemsDraft, title: "New Order" }, ids]);
+      move.queryClient.clear();
+    }),
+  );
+
+  test(
+    "says why it cannot open when the items do not load, with no way to submit",
+    untilBodyDone(async () => {
+      const previous = answerItemsDraft;
+      answerItemsDraft = async () =>
+        Result.err(
+          new ApiNotFound({ body: "Order items not found", message: "Order items not found" }),
+        );
+      try {
+        const move = renderMove(mock(async (): Saving => Result.ok()));
+        move.openNew();
+        await waitFor(() =>
+          expect(screen.queryByText("Order items not found") !== null).toBe(true),
+        );
+        expect(screen.queryByRole("button", { name: "Move to New Order" }) === null).toBe(true);
+        move.queryClient.clear();
+      } finally {
+        answerItemsDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "shows the server's failure with no way to submit when the items cannot be read",
+    untilBodyDone(async () => {
+      const previous = answerItemsDraft;
+      answerItemsDraft = async () =>
+        Result.err(
+          new ApiServerError({
+            status: 500,
+            body: "Internal Server Error",
+            message: "Couldn't load the selected items.",
+          }),
+        );
+      try {
+        const move = renderMove(mock(async (): Saving => Result.ok()));
+        move.openNew();
+        await waitFor(() =>
+          expect(screen.queryByText("Couldn't load the selected items.") !== null).toBe(true),
+        );
+        expect(screen.queryByRole("button", { name: "Move to New Order" }) === null).toBe(true);
+        move.queryClient.clear();
+      } finally {
+        answerItemsDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "takes 10,000 characters of Notes and saves them",
+    untilBodyDone(async () => {
+      const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+      const move = renderMove(send);
+      move.openNew();
+      const submit = await screen.findByRole("button", { name: "Move to New Order" });
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Notes" }));
+      await user.click(screen.getByPlaceholderText("Add any notes..."));
+      await user.paste("n".repeat(10_000));
+      await user.click(submit);
+
+      await waitFor(() => expect(send.mock.calls.length).toBe(1));
+      const [values] = send.mock.calls[0] ?? [];
+      expect((values as { notes: string }).notes.length).toBe(10_000);
+      move.queryClient.clear();
+    }),
+  );
+
+  test(
+    "reads the items again on every opening",
+    untilBodyDone(async () => {
+      const previous = answerItemsDraft;
+      let reads = 0;
+      answerItemsDraft = async () => {
+        reads++;
+        return Result.ok({ ...itemsDraft, shop: reads === 1 ? "AmiAmi" : "HLJ" });
+      };
+      try {
+        const move = renderMove(mock(async (): Saving => Result.ok()));
+        move.openNew();
+        await screen.findByRole("button", { name: "Move to New Order" });
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        await waitFor(() => expect(formIsOpen()).toBe(false));
+        move.openNew();
+        await screen.findByRole("button", { name: "Move to New Order" });
+
+        expect({ reads, shop: shown().shop }).toEqual({ reads: 2, shop: "HLJ" });
+        move.queryClient.clear();
+      } finally {
+        answerItemsDraft = previous;
+      }
     }),
   );
 });

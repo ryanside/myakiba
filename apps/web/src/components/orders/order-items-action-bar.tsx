@@ -1,7 +1,7 @@
 import { Cancel01Icon, Delete01Icon, MoveIcon, PaintBucketIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
-import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { SavedFillMenu } from "@/components/fill/saved-fill-menu";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
@@ -46,11 +46,7 @@ export function OrderItemsActionBar({
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
   ) => Saving;
-  readonly onMoveToNew: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-  ) => Saving;
+  readonly onMoveToNew: (values: NewOrder, collectionIds: ReadonlySet<string>) => Saving;
   readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onFillItems: (collectionIds: ReadonlySet<string>, fill: ItemFill) => Saving;
 }): React.JSX.Element {

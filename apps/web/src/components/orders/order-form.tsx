@@ -46,12 +46,14 @@ import * as z from "zod";
 import type { EditedOrder, NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
-import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
+import { useRead } from "@/data/client";
+import { orders } from "@/data/resources/orders";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "../ui/textarea";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaidField } from "@/components/orders/payment";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -61,133 +63,103 @@ import { formSubmitHandler } from "@/lib/form-submit";
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
   orderIds: ReadonlySet<string>;
-  collectionIds?: ReadonlySet<string>;
   type: "merge";
-  callbackFn: (
-    value: NewOrder,
-    cascadeOptions: CascadeOptions,
-    orderIds: ReadonlySet<string>,
-  ) => Saving;
-  clearSelections: () => void;
-  currency: Currency;
-};
-
-type SplitOrderFormProps = {
-  renderTrigger: React.ReactElement;
-  orderIds: ReadonlySet<string>;
-  collectionIds: ReadonlySet<string>;
-  type: "split";
-  callbackFn: (
-    value: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: ReadonlySet<string>,
-    orderIds: ReadonlySet<string>,
-  ) => Saving;
+  callbackFn: (value: NewOrder, orderIds: ReadonlySet<string>) => Saving;
   clearSelections: () => void;
   currency: Currency;
 };
 
 type EditOrderFormProps = {
   renderTrigger: React.ReactElement;
-  orderIds?: ReadonlySet<string>;
-  collectionIds?: ReadonlySet<string>;
   type: "edit-order";
   callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
   orderData: Order;
-  clearSelections?: () => void;
   currency: Currency;
 };
 
-type OrderFormProps = MergeOrderFormProps | SplitOrderFormProps | EditOrderFormProps;
+type OrderFormProps = MergeOrderFormProps | EditOrderFormProps;
 type DeferredMergeOrderFormProps = Omit<MergeOrderFormProps, "renderTrigger">;
-type DeferredSplitOrderFormProps = Omit<SplitOrderFormProps, "renderTrigger">;
 type DeferredEditOrderFormProps = Omit<EditOrderFormProps, "renderTrigger">;
 
 export function OrderForm(props: OrderFormProps) {
-  const { renderTrigger, type } = props;
   const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
 
-  if (type === "edit-order") {
+  if (props.type === "edit-order") {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger render={renderTrigger} />
-        {open ? <OrderFormContent {...props} close={() => setOpen(false)} /> : null}
+        <SheetTrigger render={props.renderTrigger} />
+        {open ? <OrderFormContent {...props} initial={props.orderData} close={close} /> : null}
       </Sheet>
     );
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={renderTrigger} />
-      {open ? <OrderFormContent {...props} close={() => setOpen(false)} /> : null}
+      <DialogTrigger render={props.renderTrigger} />
+      {open ? <MergeOrderFormContent {...props} close={close} /> : null}
     </Dialog>
   );
 }
 
+const MERGED_ORDER_TITLE = "New Merged Order";
+const NOTES_PAST_LIMIT = `The merged Orders' notes together pass the ${WRITE_LIMITS.notes.toLocaleString("en-US")}-character limit. Shorten them to merge.`;
+const notesTooLong = (notes: string) => notes.length > WRITE_LIMITS.notes;
+const mergedNotesFit = ({ value }: { readonly value: { readonly notes: string } }) =>
+  notesTooLong(value.notes) ? NOTES_PAST_LIMIT : undefined;
+
+function MergeOrderFormContent(
+  props: DeferredMergeOrderFormProps & { readonly close: () => void },
+) {
+  const dialogOpening = useMemo(() => crypto.randomUUID(), []);
+  const orderIds = [...props.orderIds].toSorted();
+  const draft = useRead(orders.mergeDraft, { dialogOpening, orderIds });
+  if (draft.isSuccess) {
+    return (
+      <OrderFormContent
+        key={orderIds.join(",")}
+        {...props}
+        orderIds={new Set(orderIds)}
+        initial={{ ...draft.data, title: MERGED_ORDER_TITLE }}
+      />
+    );
+  }
+
+  return (
+    <DialogContent className="sm:max-w-lg!">
+      <DialogHeader>
+        <DialogTitle>Merge Orders</DialogTitle>
+        <DialogDescription>{draft.isError ? draft.error.message : <Spinner />}</DialogDescription>
+      </DialogHeader>
+    </DialogContent>
+  );
+}
+
 function OrderFormContent(
-  props: (
-    | DeferredMergeOrderFormProps
-    | DeferredSplitOrderFormProps
-    | DeferredEditOrderFormProps
-  ) & {
+  props: (DeferredMergeOrderFormProps | DeferredEditOrderFormProps) & {
+    readonly initial: NewOrder;
     readonly close: () => void;
   },
 ) {
-  const { type, currency, close } = props;
-
-  const {
-    cascadeOptions,
-    handleSelectAll,
-    handleSelectNone,
-    handleCascadeOptionChange,
-    cascadeDisplayText,
-    cascadeOptionsList,
-  } = useCascadeOptions();
-
-  const getSelectedCount = (): number | undefined => {
-    if (type === "merge") return (props as DeferredMergeOrderFormProps).orderIds.size;
-    if (type === "split") return (props as DeferredSplitOrderFormProps).collectionIds.size;
-  };
-  const selectedCount = getSelectedCount();
+  const { type, currency, initial, close } = props;
   const orderData =
     type === "edit-order" ? (props as DeferredEditOrderFormProps).orderData : undefined;
 
   const { status: buttonStatus, run } = useButtonStatus();
+  const notesReasonId = useId();
   const form = useForm({
-    defaultValues: orderData
-      ? {
-          ...orderData,
-          shippingFee: minorUnitsToMajorString(orderData.shippingFee ?? 0),
-          taxes: minorUnitsToMajorString(orderData.taxes ?? 0),
-          duties: minorUnitsToMajorString(orderData.duties ?? 0),
-          tariffs: minorUnitsToMajorString(orderData.tariffs ?? 0),
-          miscFees: minorUnitsToMajorString(orderData.miscFees ?? 0),
-        }
-      : {
-          status: "Ordered" as const,
-          paid: false,
-          title: (() => {
-            if (type === "merge") return "New Merged Order";
-            if (type === "split") return "New Split Order";
-            return "Edit Order";
-          })(),
-          shop: "",
-          orderDate: "",
-          releaseDate: "",
-          paymentDate: "",
-          shippingDate: "",
-          collectionDate: "",
-          shippingMethod: "n/a" as const,
-          shippingFee: "0.00",
-          taxes: "0.00",
-          duties: "0.00",
-          tariffs: "0.00",
-          miscFees: "0.00",
-          notes: "",
-        },
+    validators: type === "merge" ? { onSubmit: mergedNotesFit } : {},
+    defaultValues: {
+      ...initial,
+      shippingFee: minorUnitsToMajorString(initial.shippingFee),
+      taxes: minorUnitsToMajorString(initial.taxes),
+      duties: minorUnitsToMajorString(initial.duties),
+      tariffs: minorUnitsToMajorString(initial.tariffs),
+      miscFees: minorUnitsToMajorString(initial.miscFees),
+    },
     onSubmit: ({ value }) =>
       run(async (): Saving => {
-        const base = {
+        const base: NewOrder = {
           title: value.title,
           shop: value.shop,
           orderDate: value.orderDate || null,
@@ -215,17 +187,11 @@ function OrderFormContent(
           const saved = await callbackFn(transformedValue, changed);
           // A failed write already rolled back and said why, so the form stays open to retry.
           if (saved.isErr()) return saved;
-        } else if (type === "split") {
-          const { callbackFn, collectionIds, orderIds, clearSelections } =
-            props as DeferredSplitOrderFormProps;
-          const saved = await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
-          if (saved.isErr()) return saved;
-          clearSelections?.();
         } else {
           const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
-          const saved = await callbackFn(base as NewOrder, cascadeOptions, orderIds);
+          const saved = await callbackFn(base, orderIds);
           if (saved.isErr()) return saved;
-          clearSelections?.();
+          clearSelections();
         }
         close();
         return Result.ok();
@@ -512,23 +478,7 @@ function OrderFormContent(
         />
       </FormSection>
 
-      {type === "edit-order" ? null : (
-        <FormSection title="Options" defaultOpen={false}>
-          <div className="grid gap-1.5">
-            <Label>Cascade to Items</Label>
-            <CascadeOptionsDropdown
-              cascadeOptions={cascadeOptions}
-              cascadeDisplayText={cascadeDisplayText}
-              cascadeOptionsList={cascadeOptionsList}
-              handleSelectAll={handleSelectAll}
-              handleSelectNone={handleSelectNone}
-              handleCascadeOptionChange={handleCascadeOptionChange}
-            />
-          </div>
-        </FormSection>
-      )}
-
-      <FormSection title="Notes" defaultOpen={false}>
+      <FormSection title="Notes" defaultOpen={initial.notes.length > WRITE_LIMITS.notes}>
         <form.Field
           name="notes"
           children={(field) => (
@@ -538,7 +488,7 @@ function OrderFormContent(
                 name={field.name}
                 value={field.state.value ?? ""}
                 onBlur={field.handleBlur}
-                maxLength={1000}
+                maxLength={WRITE_LIMITS.notes}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="Add any notes..."
                 rows={3}
@@ -597,19 +547,30 @@ function OrderFormContent(
     <DialogContent className="sm:max-w-lg!">
       <form onSubmit={formSubmitHandler(form)}>
         <DialogHeader>
-          <DialogTitle>{type === "merge" ? "Merge Orders" : "Split Items"}</DialogTitle>
-          {selectedCount !== undefined && selectedCount > 0 && (
-            <DialogDescription>
-              {type === "merge"
-                ? `Merge the selected ${selectedCount} orders into a new order.`
-                : `Split the selected ${selectedCount} items into a new order.`}
-            </DialogDescription>
-          )}
+          <DialogTitle>Merge Orders</DialogTitle>
+          <DialogDescription>
+            Merge the selected {(props as DeferredMergeOrderFormProps).orderIds.size} orders into a
+            new order.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[70vh] py-4 scroll-fade-b">{formFields}</div>
 
         <DialogFooter>
+          <form.Subscribe
+            selector={(state) => notesTooLong(state.values.notes)}
+            children={(tooLong) =>
+              tooLong ? (
+                <p
+                  id={notesReasonId}
+                  role="alert"
+                  className="text-xs text-destructive sm:mr-auto sm:self-center"
+                >
+                  {NOTES_PAST_LIMIT}
+                </p>
+              ) : null
+            }
+          />
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
@@ -622,15 +583,18 @@ function OrderFormContent(
             )}
           />
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-            children={([canSubmit, isSubmitting]) => (
+            selector={(state) =>
+              [state.canSubmit, state.isSubmitting, notesTooLong(state.values.notes)] as const
+            }
+            children={([canSubmit, isSubmitting, tooLong]) => (
               <StatusButton
                 type="submit"
                 status={formSubmitStatus(buttonStatus, isSubmitting)}
-                disabled={!canSubmit}
+                disabled={!canSubmit || tooLong}
+                aria-describedby={tooLong ? notesReasonId : undefined}
                 variant="default"
               >
-                {type === "merge" ? "Merge" : "Split"}
+                Merge
               </StatusButton>
             )}
           />

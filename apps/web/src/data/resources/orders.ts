@@ -22,6 +22,8 @@ import {
   getOrder,
   getOrderItemReleases,
   getOrderItems,
+  getMergeDraft,
+  getNewOrderDraft,
   getOrders,
   mergeOrders,
   moveItem,
@@ -84,6 +86,28 @@ export const orders = {
     load: getOrderItemReleases,
     staleTime: 30_000,
   }),
+  mergeDraft: rootedRead("orderMergeDraft", {
+    key: ({ dialogOpening, orderIds }: MergeDraftRead) =>
+      ["orderMergeDraft", dialogOpening, orderIds] as const,
+    load: ({ orderIds }) => getMergeDraft(orderIds),
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  }),
+  newOrderDraft: rootedRead("orderNewDraft", {
+    key: ({ dialogOpening, collectionIds }: NewOrderDraftRead) =>
+      ["orderNewDraft", dialogOpening, collectionIds] as const,
+    load: ({ collectionIds }) => getNewOrderDraft(collectionIds),
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  }),
+};
+
+type MergeDraftRead = { readonly dialogOpening: string; readonly orderIds: readonly string[] };
+type NewOrderDraftRead = {
+  readonly dialogOpening: string;
+  readonly collectionIds: readonly string[];
 };
 
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
@@ -260,12 +284,10 @@ export const mergeOrdersCommand = defineCommand({
   persist: ({
     values,
     orderIds,
-    cascadeOptions,
   }: {
     readonly values: NewOrder;
     readonly orderIds: Set<string>;
-    readonly cascadeOptions: CascadeOptions;
-  } & OnList) => mergeOrders(values, orderIds, cascadeOptions),
+  } & OnList) => mergeOrders(values, orderIds),
   optimistic: async (queryClient, { orderIds, list }) => {
     if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
 
@@ -292,12 +314,10 @@ export const splitOrdersCommand = defineCommand({
   persist: ({
     values,
     collectionIds,
-    cascadeOptions,
   }: {
     readonly values: NewOrder;
     readonly collectionIds: Set<string>;
-    readonly cascadeOptions: CascadeOptions;
-  }) => splitOrders(values, collectionIds, cascadeOptions),
+  }) => splitOrders(values, collectionIds),
   successTitle: ({ collectionIds }) =>
     `Successfully moved ${collectionIds.size} items to a new order!`,
   failureToast: () => ({ title: "Failed to move items to a new order. Please try again." }),
