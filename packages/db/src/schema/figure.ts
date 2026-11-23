@@ -189,7 +189,6 @@ export const collection = pgTable(
     })
       .notNull()
       .default("Owned"),
-    paid: boolean("paid").notNull().default(false),
     count: integer("count").default(1).notNull(),
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "set null",

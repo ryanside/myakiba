@@ -10,7 +10,6 @@ import { itemImageSql } from "@/lib/item-image-url";
 import {
   orderIsPaid,
   orderIsUnpaid,
-  orderPayment,
   orderSpend,
   orderTotal,
   orderUnpaidCosts,
@@ -84,7 +83,6 @@ const ordersRead = prepared("orders_kanban", (tx) =>
       shop: order.shop,
       status: order.status,
       paid: order.paid,
-      payment: orderPayment,
       releaseDate: order.releaseDate,
       orderDate: order.orderDate,
       paymentDate: order.paymentDate,
@@ -276,7 +274,6 @@ const monthlyOrdersKanbanRead = prepared("monthly_orders_kanban", (tx) => {
       shop: order.shop,
       status: order.status,
       paid: order.paid,
-      payment: orderPayment,
       releaseDate: order.releaseDate,
       orderDate: order.orderDate,
       paymentDate: order.paymentDate,

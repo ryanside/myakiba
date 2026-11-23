@@ -313,7 +313,7 @@
 
 .mk-order-cascade .mk-order-cascade-sub-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 95px 132px 56px 56px;
+  grid-template-columns: 32px minmax(0, 1fr) 95px 132px 56px;
   align-items: center;
   padding: 6px 0;
   white-space: nowrap;
@@ -331,10 +331,6 @@
   .ss-stage[data-layout="compact"]
   .mk-order-cascade-sub-row
   > .mk-order-cascade-col-price,
-.mk-order-cascade
-  .ss-stage[data-layout="compact"]
-  .mk-order-cascade-sub-row
-  > .mk-order-cascade-col-paid,
 .mk-order-cascade
   .ss-stage[data-layout="compact"]
   .mk-order-cascade-sub-row

@@ -35,7 +35,7 @@ export const FILL_FIELD = {
   tags: { label: "Tags", editor: "tags" },
   notes: { label: "Notes", editor: "notes" },
 } as const satisfies {
-  readonly [Field in ItemFill["field"]]: {
+  readonly [Field in ItemFill["field"] | OrderFill["field"]]: {
     readonly label: string;
     readonly editor: FillEditorKind;
   };
@@ -47,16 +47,23 @@ const isFillField = (key: string): key is FillFieldId => key in FILL_FIELD;
 
 const FILL_FIELDS: readonly FillFieldId[] = Object.keys(FILL_FIELD).filter(isFillField);
 
-type CollectionFillField = Exclude<FillFieldId, "status">;
+type CollectionFillField = Exclude<ItemFill["field"], "status">;
 
-/** The Collection page lists only Owned items, so a status fill would make them vanish. */
+/**
+ * The Collection page lists only Owned items, so a status fill would make them vanish. Paid is
+ * the Order's alone.
+ */
 export const COLLECTION_FILL_FIELDS: readonly CollectionFillField[] = FILL_FIELDS.filter(
-  (field): field is CollectionFillField => field !== "status",
+  (field): field is CollectionFillField => field !== "status" && field !== "paid",
 );
 
-export const ORDER_ITEM_FILL_FIELDS: readonly FillFieldId[] = ["status", ...COLLECTION_FILL_FIELDS];
+export const ORDER_ITEM_FILL_FIELDS: readonly ItemFill["field"][] = [
+  "status",
+  ...COLLECTION_FILL_FIELDS,
+];
 
-/** An Order fills only the fields it cascades to its items. */
-export const ORDER_FILL_FIELDS: readonly OrderFill["field"][] = ORDER_ITEM_FILL_FIELDS.filter(
-  (field): field is OrderFill["field"] => ORDER_CASCADE_OPTIONS.some((option) => option === field),
+/** An Order fills its Paid and the fields it cascades to its items. */
+export const ORDER_FILL_FIELDS: readonly OrderFill["field"][] = FILL_FIELDS.filter(
+  (field): field is OrderFill["field"] =>
+    field === "paid" || ORDER_CASCADE_OPTIONS.some((option) => option === field),
 );

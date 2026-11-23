@@ -53,7 +53,9 @@ const SEED: FillDraft = {
 
 const WHOLE_NUMBER = /^\d+$/u;
 
-function readFill(field: FillFieldId, draft: FillDraft): Result<ItemFill, string> {
+type Fill = ItemFill | OrderFill;
+
+function readFill(field: FillFieldId, draft: FillDraft): Result<Fill, string> {
   switch (field) {
     case "status":
       return Result.ok({ field, value: draft.status });
@@ -93,7 +95,7 @@ function readFill(field: FillFieldId, draft: FillDraft): Result<ItemFill, string
   }
 }
 
-function clears(fill: ItemFill): boolean {
+function clears(fill: Fill): boolean {
   switch (fill.field) {
     case "shop":
     case "notes":
@@ -110,14 +112,16 @@ function clears(fill: ItemFill): boolean {
   }
 }
 
-const isOrderFill = (fill: ItemFill): fill is OrderFill =>
+const isOrderFill = (fill: Fill): fill is OrderFill =>
   ORDER_FILL_FIELDS.some((field) => field === fill.field);
+
+const isItemFill = (fill: Fill): fill is ItemFill => fill.field !== "paid";
 
 function groupOf(rows: SavedRows): FillGroup<FillFieldId> {
   const { target, ids } = rows;
   const { fields, heading, noun } = TARGET[target];
-  const where =
-    target === "orders"
+  const where = (field: FillFieldId) =>
+    target === "orders" && field !== "paid"
       ? "every selected order and every item in those orders"
       : `every selected ${noun.one}`;
   return {
@@ -135,14 +139,19 @@ function groupOf(rows: SavedRows): FillGroup<FillFieldId> {
       if (field === "tags") return `Adds to the tags each ${noun.one} already has.`;
       const { label } = FILL_FIELD[field];
       const fill = readFill(field, draft);
-      return `${fill.isOk() && clears(fill.value) ? "Clears" : "Replaces"} ${label} on ${where}.`;
+      return `${fill.isOk() && clears(fill.value) ? "Clears" : "Replaces"} ${label} on ${where(field)}.`;
     },
     prepare: (field, draft) =>
       readFill(field, draft).andThen((fill) => {
-        if (rows.target !== "orders") return Result.ok({ run: () => rows.onFill(ids, fill) });
+        const refused = `An ${noun.one} has no ${FILL_FIELD[field].label} to fill.`;
+        if (rows.target !== "orders") {
+          return isItemFill(fill)
+            ? Result.ok({ run: () => rows.onFill(ids, fill) })
+            : Result.err(refused);
+        }
         return isOrderFill(fill)
           ? Result.ok({ run: () => rows.onFill(ids, fill) })
-          : Result.err(`An order has no ${FILL_FIELD[field].label} to fill.`);
+          : Result.err(refused);
       }),
     pricePlaceholder: "Enter a price",
   };

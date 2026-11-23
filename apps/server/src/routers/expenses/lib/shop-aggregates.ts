@@ -15,7 +15,6 @@ import {
   createOrderItemSpendByOrder,
   getShippingMethodTotals,
   orderSpendSums,
-  orderSpendWhere,
   paidOrderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
@@ -159,7 +158,7 @@ async function getOrdersShopRows(
       })
       .from(order)
       .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-      .where(orderSpendWhere(userId, scopedFilters, "total", orderItems))
+      .where(paidOrderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
   const scopedShops = tx.$with("scoped_shops").as(
@@ -403,11 +402,7 @@ async function loadTopOrders(
     .from(order)
     .leftJoin(orderItems, eq(order.id, orderItems.orderId))
     .leftJoin(collection, eq(order.id, collection.orderId))
-    .where(
-      scope === "shipping"
-        ? paidOrderWhere(userId, filters, "total")
-        : orderSpendWhere(userId, filters, "total", orderItems),
-    )
+    .where(paidOrderWhere(userId, filters, "total"))
     .groupBy(
       order.id,
       order.title,

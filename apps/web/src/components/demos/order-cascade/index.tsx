@@ -277,7 +277,6 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                             <StatusValue status={s.items[i] ?? "Ordered"} />
                           </span>
                         </span>
-                        <Paid paid />
                         <span className={cls("cell-more")}>
                           <More />
                         </span>

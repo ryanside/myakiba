@@ -46,7 +46,7 @@ Preconditions:
 
 - Money is stored in minor units. `100` typed in USD is `10000` in `collection.price`.
 - A new Order's title defaults to its first row's Item title.
-- A row added to the Collection is `Owned` and paid. A row added to an Order takes the Order's status and Paid.
+- A row added to the Collection is `Owned` and counts as paid. A row added to an Order takes the Order's status and counts as the Order's Paid.
 - The page drops an `item` preset whose id does not match `^[a-z0-9]{8,64}$` and opens empty. `seed-items` uses ids that match. After it reads the preset, the page removes `item=` from the URL.
 - The empty page says to install the extension and links `Install from the Chrome Web Store`. That text is expected here.
 - From source: the `Wishlist` checkbox and the `Lists` button in the sentence put the same rows on the Wishlist and on Lists in the same commit. The `Item Database` destination keeps the rows in the Item Database only, with the button `Keep 1 in Item Database`.

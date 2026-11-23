@@ -24,13 +24,7 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import {
-  paidItemCount,
-  orderPayment,
-  orderSpend,
-  orderTotal,
-  orderUnpaidCosts,
-} from "@/lib/order-money";
+import { orderPaidItemCount, orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
 
 const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
@@ -140,7 +134,6 @@ export const Orders = {
         collectionDate: order.collectionDate,
         status: order.status,
         paid: order.paid,
-        payment: orderPayment,
         total: orderTotal,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
@@ -198,7 +191,7 @@ export const Orders = {
                 : sql`${orderSpend} <= ${input.orderSpendMax}`,
               input.paidItemsMin === undefined
                 ? undefined
-                : sql`${paidItemCount} >= ${input.paidItemsMin}`,
+                : sql`${orderPaidItemCount} >= ${input.paidItemsMin}`,
             ),
           )
           .$dynamic();
@@ -265,7 +258,6 @@ export const Orders = {
           shippingMethod: order.shippingMethod,
           status: order.status,
           paid: order.paid,
-          payment: orderPayment,
           total: orderTotal,
           shippingFee: order.shippingFee,
           taxes: order.taxes,
@@ -305,7 +297,6 @@ export const Orders = {
         itemExternalId: item.externalId,
         releaseId: collection.releaseId,
         status: collection.status,
-        paid: collection.paid,
         itemTitle: item.title,
         itemImage: itemImageSql().as("item_image"),
         itemCategory: item.category,
@@ -348,7 +339,6 @@ export const Orders = {
           count: collection.count,
           price: collection.price,
           status: collection.status,
-          paid: collection.paid,
           createdAt: collection.createdAt,
         },
         tiebreak: [collection.createdAt, collection.id],
@@ -584,6 +574,7 @@ export const Orders = {
 
   /**
    * Writes one field to every listed Order and cascades it to their items, or writes nothing.
+   * Paid is the Order's alone, so a Paid fill writes only the Orders.
    * It locks the Orders, then their items, each in id order, the order Collection.fill locks
    * items in, so overlapping fills wait instead of deadlocking.
    */
@@ -601,6 +592,13 @@ export const Orders = {
         .for("no key update");
       if (!foundAll(input.orderIds, lockedOrders.length)) {
         return Result.err(new SomeOrdersNotFound());
+      }
+      if (input.fill.field === "paid") {
+        await scope.tx
+          .update(order)
+          .set({ paid: input.fill.value, updatedAt: new Date() })
+          .where(selected);
+        return Result.ok("Orders filled successfully" as const);
       }
       await scope.tx
         .select({ id: collection.id })

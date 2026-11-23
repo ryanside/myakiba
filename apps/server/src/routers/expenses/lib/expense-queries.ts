@@ -1,10 +1,9 @@
 import type { Category, ShippingMethod } from "@myakiba/contracts/shared/types";
 import type { ReadTx } from "@myakiba/db/tx";
 import { collection, item, order } from "@myakiba/db/schema/figure";
-import { and, count, desc, eq, gte, inArray, isNotNull, lte, or, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, lte, sql, sum } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 import {
-  itemIsPaid,
   orderFees,
   orderIsPaid,
   paidItemCount,
@@ -218,18 +217,6 @@ export function paidOrderWhere(
   return and(matchingOrderWhere(userId, filters, mode), orderIsPaid);
 }
 
-export function orderSpendWhere(
-  userId: string,
-  filters: ExpenseFilters,
-  mode: "total" | "series",
-  orderItems: ReturnType<typeof createOrderItemSpendByOrder>,
-): ReturnType<typeof and> {
-  return and(
-    matchingOrderWhere(userId, filters, mode),
-    or(orderIsPaid, isNotNull(orderItems.orderId)),
-  );
-}
-
 export function createOrderItemSpendByOrder(tx: ReadTx, userId: string, filters: ExpenseFilters) {
   return tx
     .select({
@@ -242,7 +229,7 @@ export function createOrderItemSpendByOrder(tx: ReadTx, userId: string, filters:
     .from(collection)
     .innerJoin(order, eq(collection.orderId, order.id))
     .where(
-      and(eq(collection.userId, userId), matchingOrderWhere(userId, filters, "total"), itemIsPaid),
+      and(eq(collection.userId, userId), matchingOrderWhere(userId, filters, "total"), orderIsPaid),
     )
     .groupBy(collection.orderId)
     .as("order_items");
@@ -335,7 +322,7 @@ export function getOrderAggregates(
       .select({ bucket: orderBucket, ...spend, orderCount: paidOrderCount })
       .from(order)
       .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-      .where(orderSpendWhere(userId, filters, "series", orderItems))
+      .where(paidOrderWhere(userId, filters, "series"))
       .groupBy(orderBucket)
       .orderBy(orderBucket);
   }
@@ -344,7 +331,7 @@ export function getOrderAggregates(
     .select({ ...spend, paidOrderCount })
     .from(order)
     .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-    .where(orderSpendWhere(userId, filters, "total", orderItems));
+    .where(paidOrderWhere(userId, filters, "total"));
 }
 
 export async function getUnpaidCosts(

@@ -48,7 +48,6 @@ export const OrderItemSelectionContext = createContext<{
 function editedOrder({
   createdAt: _createdAt,
   updatedAt: _updatedAt,
-  payment: _payment,
   total: _total,
   itemCount: _itemCount,
   images: _images,
@@ -587,7 +586,7 @@ export function createOrdersColumns({
       cell: setPaid("paid", (order, { disabled, onSubmit }) => (
         <PaidCheckbox
           label={`${order.title} paid`}
-          payment={order.payment}
+          paid={order.paid}
           disabled={disabled}
           onPaidChange={(paid) => onSubmit(paid)}
         />

@@ -12,7 +12,6 @@ const fillOf = <const Field extends keyof typeof COLLECTION_FIELD>(field: Field)
  */
 export const ITEM_FILL = {
   status: fillOf("status"),
-  paid: fillOf("paid"),
   price: fillOf("price"),
   count: fillOf("count"),
   condition: fillOf("condition"),

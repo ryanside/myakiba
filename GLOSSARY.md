@@ -59,7 +59,7 @@ An Order and each Collection Item have their own Acquisition Status, which says 
 _Avoid_: Ownership status, Collected status
 
 **Paid**:
-A yes or no on an Order and on each Collection Item, apart from its Acquisition Status, so a Shipped Order can be unpaid and an Ordered one paid up front. An Order's Paid covers its Order Fees, and each Order Item's Paid covers its own price. An Order is Partly paid when some of those are paid and some are not; an Order with no Order Items follows its own Paid. A Payment Date does not make anything Paid, and marking something Paid does not set a Payment Date.
+A yes or no on an Order, apart from its Acquisition Status, so a Shipped Order can be unpaid and an Ordered one paid up front. It covers every Order Item in the Order and all of its Order Fees, so every Order is Paid or Unpaid. A Collection Item has no Paid of its own: an Order Item counts as its Order's Paid, and a Collection Item outside an Order always counts as paid. A Payment Date does not make anything Paid, and marking an Order Paid does not set a Payment Date.
 _Avoid_: Paid status
 
 **Collection Date**:
@@ -70,7 +70,7 @@ The number of Collection Items, not the number of copies saved inside them. Coll
 _Avoid_: Item count, count when the unit is unclear
 
 **Fill all**:
-Writing one value to one field of every selected row at once: the Add Page's rows, saved Collection Items on the Collection page, or Orders and Order Items on the Orders page and an Order's page, including selected ones on pages not shown. Tags are added to each row's own tags; every other field is replaced, and a blank Shop or Notes or an empty date clears it. An Order fills only its Cascade to Items fields and always cascades: the value is written to the Orders and to every item in them. A fill of saved rows changes all of them or none.
+Writing one value to one field of every selected row at once: the Add Page's rows, saved Collection Items on the Collection page, or Orders and Order Items on the Orders page and an Order's page, including selected ones on pages not shown. Tags are added to each row's own tags; every other field is replaced, and a blank Shop or Notes or an empty date clears it. An Order fills its Paid, which is written to the Orders alone, and its Cascade to Items fields, which always cascade: the value is written to the Orders and to every item in them. A fill of saved rows changes all of them or none.
 _Avoid_: Bulk edit, batch update
 
 ### Orders
@@ -89,17 +89,17 @@ The saved price of each attached Order Item, added once regardless of its copy c
 An Order with a status of Ordered or Shipped. An Owned Order is no longer active.
 
 **Paid Order**:
-An Order whose own Paid is yes. A Payment Date by itself does not make an Order a Paid Order, and its Order Items can still be unpaid.
+An Order whose Paid is yes. Its whole Order Total is Spend. A Payment Date by itself does not make an Order a Paid Order.
 
 **Unpaid Order**:
-An Order whose own Paid is no, whatever its Acquisition Status. Its Order Fees count as Unpaid Costs, not Spend. Each of its Order Items counts by its own Paid, so a paid Order Item on an Unpaid Order is Spend.
+An Order whose Paid is no, whatever its Acquisition Status. Its whole Order Total counts as Unpaid Costs, not Spend.
 
 **Order Release Date**:
 The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:
-Copying an Order's Acquisition Status, Paid, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays; a date changed on a Dashboard order card is not copied. Merging or splitting Orders and moving Order Items to a new Order copy the details chosen there to every moved Order Item, and an Order fill, which the Paid checkbox on an Order sends, copies to every Order Item.
+Copying an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays; a date changed on a Dashboard order card is not copied. Merging or splitting Orders and moving Order Items to a new Order copy the details chosen there to every moved Order Item, and an Order fill copies to every Order Item. Paid is not copied, since an Order Item has no Paid of its own.
 _Avoid_: Cascade when the copied details and affected Order Items are unclear
 
 **Shop**:
@@ -142,14 +142,14 @@ Money that an Expense Scope counts as spent, which is money paid. Unpaid Costs a
 _Avoid_: Cost, Spending, Total Spent when referring to this exact number
 
 **Collection Spend**:
-The saved price of each Owned and paid Collection Item, added once regardless of its copy count. This includes both Collection Items outside Orders and Order Items. An Owned Order Item that is still unpaid counts as Unpaid Costs, not Collection Spend.
+The saved price of each Owned Collection Item that counts as paid, added once regardless of its copy count: every one outside an Order, and every Order Item of a Paid Order. An Owned Order Item of an Unpaid Order counts as Unpaid Costs, not Collection Spend, until it is removed from that Order.
 _Avoid_: Collection Item Spend
 
 **Order Spend**:
-Order Item Spend plus Fee Spend for Paid Orders. An Order's Spend and Unpaid Costs together make its Order Total.
+The Order Total of each Paid Order: its Order Item Spend plus its Fee Spend. An Order's Spend and Unpaid Costs together make its Order Total.
 
 **Order Item Spend**:
-The part of Order Spend that comes from Order Item prices: the saved price of each paid Order Item, added once regardless of its copy count, whatever its Order's Paid.
+The part of Order Spend that comes from Order Item prices: the saved price of each Order Item of a Paid Order, added once regardless of its copy count.
 
 **Fee Spend**:
 The part of Order Spend that comes from Order Fees.
@@ -158,7 +158,7 @@ The part of Order Spend that comes from Order Fees.
 The part of Fee Spend that comes from Shipping Fees on Paid Orders. Paid Orders with free shipping still count when myakiba calculates the number of Orders and any average based on that number.
 
 **Unpaid Costs**:
-The Order Fees on Unpaid Orders, plus the saved price of every unpaid Order Item, on any Order. They are what is still owed, so a date range does not narrow them, and they do not count as Order Spend or Shipping Spend.
+The Order Total of each Unpaid Order: its Order Fees and the saved price of each of its Order Items. They are what is still owed, so a date range does not narrow them, and they do not count as Order Spend or Shipping Spend.
 _Avoid_: Unpaid commitments, Unpaid
 
 **Scoped Shop Spend**:
@@ -175,7 +175,7 @@ Spend with no Realized Expense Date. It appears in all-time totals and breakdown
 Order Spend divided by the number of Paid Orders.
 
 **Average Collection Item Spend**:
-Collection Spend divided by the number of Owned and paid Collection Items, the ones whose prices it adds.
+Collection Spend divided by the number of Collection Items whose prices it adds.
 
 **Average Order Item Spend**:
 Order Item Spend divided by the number of Order Items it counts.
@@ -206,15 +206,15 @@ Saving a Pick: myakiba reads the picked page and adds its Item to your Item Data
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-On the Add Page, creating one Owned, paid Collection Item per selected row. Items not yet owned go through Create order or Add to order.
+On the Add Page, creating one Owned Collection Item per selected row. Items not yet owned go through Create order or Add to order.
 _Avoid_: Sync Collection
 
 **Create order**:
-On the Add Page, creating an Order whose Order Items copy its status, Paid, Shop, dates and Shipping Method.
+On the Add Page, creating an Order whose Order Items copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order, Add to order when creating a new Order
 
 **Add to order**:
-On the Add Page, adding Order Items to an existing Order; they copy its status, Paid, Shop, dates and Shipping Method.
+On the Add Page, adding Order Items to an existing Order; they copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order Items
 
 **Item Refresh**:

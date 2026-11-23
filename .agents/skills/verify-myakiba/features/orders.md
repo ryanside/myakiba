@@ -7,7 +7,7 @@ A user creates an Order holding one or more Items, follows it from Ordered to Ow
 - `order-create` creates an Order from the toolbar's `Add` link, which opens the Add page with `New Order` preset.
 - `order-add-item` adds an Item to an existing Order from the Order page's items grid.
 - `order-status` changes an Order's status in the orders table, which also updates its items.
-- `order-paid` marks an Order paid from the orders table or the dashboard board, which also marks its items paid.
+- `order-paid` marks an Order paid from the orders table or the dashboard board. Paid covers the Order's items and fees; items have no Paid of their own.
 - `order-fill` writes one field to every selected Order and its items.
 - `order-merge` merges two or more selected Orders into a new one.
 - `order-split` moves selected items from an Order to a new Order.
@@ -30,7 +30,7 @@ Preconditions:
 - **Open the Order.** Read the Order's id with the SQL under Gotchas and `preview_navigate` to `<url>/orders/<id>`. The row's two `View Verify Figure Beta` links lead there too. The page shows `Items (1)`, a `Cost breakdown` of `Items $100.00`, `Shipping $10.00` and `Total $110.00`, and the buttons `Add to List`, `Edit` and `More order actions`.
 - **Add an Item.** Follow **Existing Order** in `add.md`. The heading becomes `Items (2)`.
 - **Change status.** On `/orders`, click `role=main >> role=combobox[name='Status']` and then `role=option[name='Shipped']`. The options are `Ordered`, `Shipped` and `Owned`. The toast reads `Order updated`, `$H logs <run>` has `PUT /api/orders/<id>`, and both `"order".status` and its `collection` rows read `Shipped`.
-- **Mark paid.** Click `role=checkbox[name='Verify Figure Beta paid']`. `$H psql <run> "select o.paid, c.paid from \"order\" o join collection c on c.order_id = o.id"` returns `t|t` for each item, `order spend` reads `$110.00` and `unpaid costs` reads `$0.00`.
+- **Mark paid.** Click `role=checkbox[name='Verify Figure Beta paid']`. `$H psql <run> "select paid from \"order\""` returns `t`, `order spend` reads `$110.00` and `unpaid costs` reads `$0.00`.
 - **Select Orders.** Create a second Order from `900001`. Click `role=main >> role=checkbox[name='Select all']`. The page reads `2 of 2 row(s) selected`, and a toolbar shows `Merge`, `Move Item`, `Fill`, `Add selected orders to List`, `Delete Orders`, `Delete Items` and `Clear selection`.
 - **Fill.** Click `role=toolbar >> role=button[name='Fill']`. The dialog `Fill all` lists `Status`, `Paid`, `Shop`, four dates and `Shipping Method`. Click `Shop`, type `Verify Shop` into `role=dialog[name='Fill all'] >> role=combobox[name='Shop']`, and click `role=button[name='Fill 2 selected']`. The toast reads `Filled Shop on 2 orders and their items`, the selection stays, `$H logs <run>` has `PUT /api/orders/fill`, and `shop` reads `Verify Shop` on both Orders and on their `collection` rows.
 - **Merge.** Click `role=toolbar >> role=button[name='Merge']`. The dialog `Merge Orders` opens with the title `New Merged Order`. Click `role=dialog[name='Merge Orders'] >> role=button[name='Merge']`. `$H logs <run>` has `POST /api/orders/merge`, and one Order titled `New Merged Order` holds all three items.
@@ -43,7 +43,7 @@ Preconditions:
 
 - The useful SQL is `$H psql <run> "select o.id, o.title, o.status, o.paid, count(c.id) from \"order\" o left join collection c on c.order_id = o.id group by o.id"`. `order` is a reserved word, so quote the table as `"order"`.
 - Paid is a checkbox, not a status. `order spend` counts paid money and `unpaid costs` counts the rest.
-- Merge writes the dialog's Status, Paid and Shop to the new Order and its items. A shop filled before the merge is blank after it unless the dialog names it.
+- Merge writes the dialog's Status and Shop to the new Order and its items, and its Paid to the new Order. A shop filled before the merge is blank after it unless the dialog names it.
 - `Move Items` opens on `Existing Order`. Choose `New Order` to split. Its title defaults to `New Order`.
 - On `/orders`, `Move Item` and `Delete Items` are disabled while only Orders are selected. Select items on the Order page instead.
 - Deleting an Order deletes its items that are not `Owned`. The dialog says `Owned` items stay. From source: that part was not driven.

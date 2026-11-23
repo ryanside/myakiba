@@ -2,30 +2,29 @@ import { eq, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { collection, order } from "@myakiba/db/schema/figure";
 import type { ReadTx } from "@myakiba/db/tx";
-import type { OrderPayment } from "@myakiba/contracts/shared/types";
-
-const itemIsUnpaid = sql`NOT ${collection.paid}`;
-export const itemIsPaid = sql`${collection.paid}`;
-
-export const paidItemPrice = sql<number>`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`;
 
 export const orderIsUnpaid = sql`NOT ${order.paid}`;
 export const orderIsPaid = sql`${order.paid}`;
+
+/** A Collection Item outside an Order counts as paid; an Order Item counts as its Order's Paid. */
+export const itemIsPaid = sql`(${collection.orderId} IS NULL OR EXISTS (
+  SELECT 1 FROM ${order} WHERE ${order.id} = ${collection.orderId} AND ${order.paid}
+))`;
+
+export const paidItemPrice = sql<number>`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`;
+
+export const paidItemCount = sql<number>`COUNT(${collection.id}) FILTER (WHERE ${itemIsPaid})`;
 
 export const orderFees = sql<number>`(${order.shippingFee} + ${order.taxes} + ${order.duties} + ${order.tariffs} + ${order.miscFees})`;
 
 export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${orderFees}`.mapWith(
   Number,
 );
-export const orderSpend = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsPaid}), 0) + CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END`;
-export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderIsUnpaid} THEN ${orderFees} ELSE 0 END`;
+export const orderSpend = sql<number>`CASE WHEN ${orderIsPaid} THEN ${orderTotal} ELSE 0 END`;
+export const orderUnpaidCosts = sql<number>`CASE WHEN ${orderIsUnpaid} THEN ${orderTotal} ELSE 0 END`;
 
-export const paidItemCount = sql<number>`COUNT(${collection.id}) FILTER (WHERE ${itemIsPaid})`;
-
-export const orderPayment = sql<OrderPayment>`CASE
-  WHEN ${order.paid} AND BOOL_AND(${collection.paid}) IS NOT FALSE THEN 'paid'
-  WHEN NOT ${order.paid} AND BOOL_OR(${collection.paid}) IS NOT TRUE THEN 'unpaid'
-  ELSE 'partly' END`;
+/** The Order Items of a Paid Order, in a query grouped by Order. */
+export const orderPaidItemCount = sql<number>`CASE WHEN ${orderIsPaid} THEN COUNT(${collection.id}) ELSE 0 END`;
 
 export function selectUnpaidCosts(tx: ReadTx, where: SQL | undefined) {
   const byOrder = tx
