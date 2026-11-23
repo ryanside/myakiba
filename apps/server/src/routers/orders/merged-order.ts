@@ -9,7 +9,7 @@ const dates = (values: readonly (string | null)[]) =>
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 
-export function mergedOrder(sources: readonly MergedOrder[]): MergedOrder {
+export function orderDraft(sources: readonly MergedOrder[]): MergedOrder {
   const stage = Math.min(...sources.map((source) => ORDER_STATUSES.indexOf(source.status)));
   return {
     shop: shared(

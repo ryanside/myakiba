@@ -26,4 +26,8 @@ export const mergeDraftQuerySchema = z.object({
   orderIds: commaSeparatedStringArraySchema.pipe(idListSchema),
 });
 
+export const newOrderDraftQuerySchema = z.object({
+  collectionIds: commaSeparatedStringArraySchema.pipe(idListSchema),
+});
+
 export type OrdersQuery = z.infer<typeof ordersQuerySchema>;

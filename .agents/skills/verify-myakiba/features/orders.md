@@ -43,7 +43,7 @@ Preconditions:
 
 - The useful SQL is `$H psql <run> "select o.id, o.title, o.status, o.paid, count(c.id) from \"order\" o left join collection c on c.order_id = o.id group by o.id"`. `order` is a reserved word, so quote the table as `"order"`.
 - Paid is a checkbox, not a status. `order spend` counts paid money and `unpaid costs` counts the rest.
-- Merge and `Move to New Order` change only the moved items' Order. Every item keeps its own Status, Paid, Shop, dates and shipping method. The `Merge Orders` dialog opens on what the source Orders share: their Shop when it is the same, the earliest Order Date, the latest other dates, Paid only when all are paid, and every fee summed.
+- Merge and `Move to New Order` change only the moved items' Order. Every item keeps its own Status, Paid, Shop, dates and shipping method. The `Merge Orders` dialog opens on what the source Orders share: their Shop when it is the same, the earliest Order Date, the latest other dates, Paid only when all are paid, and every fee summed. `Move to New Order` opens on what the selected items share, by the same rules, with every fee at zero.
 - `Move Items` opens on `Existing Order`. Choose `New Order` to split. Its title defaults to `New Order`.
 - On `/orders`, `Move Item` and `Delete Items` are disabled while only Orders are selected. Select items on the Order page instead.
 - Deleting an Order deletes its items that are not `Owned`. The dialog says `Owned` items stay. From source: that part was not driven.

@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ShopInput } from "@/components/vocabulary-fields";
 import { Label } from "@/components/ui/label";
@@ -34,10 +34,13 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
-import type { NewOrder } from "@myakiba/contracts/orders/schema";
+import type { MergedOrder, NewOrder } from "@myakiba/contracts/orders/schema";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { Spinner } from "@/components/ui/spinner";
+import { orders } from "@/data/resources/orders";
 import { Textarea } from "../ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useRootedInfiniteRead } from "@/data/client";
+import { useRead, useRootedInfiniteRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,7 +53,7 @@ import {
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaidField } from "@/components/orders/payment";
 import type { Saving } from "@/data/client";
@@ -153,54 +156,6 @@ function UnifiedItemMoveFormContent({
         closesOnSuccess,
       );
       // A failed move already rolled back and said why, so the dialog stays open to retry.
-      if (moved.isErr()) return;
-      clearSelections?.();
-      close();
-    },
-  });
-
-  const newOrderForm = useForm({
-    defaultValues: {
-      status: "Ordered" as OrderStatus,
-      paid: false,
-      title: "New Order",
-      shop: "",
-      orderDate: "",
-      releaseDate: "",
-      paymentDate: "",
-      shippingDate: "",
-      collectionDate: "",
-      shippingMethod: "n/a" as ShippingMethod,
-      shippingFee: "0.00",
-      taxes: "0.00",
-      duties: "0.00",
-      tariffs: "0.00",
-      miscFees: "0.00",
-      notes: "",
-    },
-    onSubmit: async ({ value }) => {
-      const transformedValue: NewOrder = {
-        title: value.title,
-        shop: value.shop,
-        orderDate: value.orderDate || null,
-        releaseDate: value.releaseDate || null,
-        paymentDate: value.paymentDate || null,
-        shippingDate: value.shippingDate || null,
-        collectionDate: value.collectionDate || null,
-        status: value.status,
-        paid: value.paid,
-        shippingMethod: value.shippingMethod,
-        shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
-        taxes: acceptedMoneyToMinorUnits(value.taxes),
-        duties: acceptedMoneyToMinorUnits(value.duties),
-        tariffs: acceptedMoneyToMinorUnits(value.tariffs),
-        miscFees: acceptedMoneyToMinorUnits(value.miscFees),
-        notes: value.notes,
-      };
-      const moved = await run(
-        () => onMoveToNew(transformedValue, selectedItems.collectionIds),
-        closesOnSuccess,
-      );
       if (moved.isErr()) return;
       clearSelections?.();
       close();
@@ -397,303 +352,390 @@ function UnifiedItemMoveFormContent({
             </DialogFooter>
           </form>
         ) : (
-          <form onSubmit={formSubmitHandler(newOrderForm)}>
-            <div className="overflow-y-auto w-full max-h-[60vh] py-2 scroll-fade-b">
-              <div className="flex flex-col gap-3 px-4">
-                <FormSection title="Basics">
-                  <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
-                      name="title"
-                      validators={{ onChange: z.string().nonempty("Title is required") }}
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Title</Label>
-                          <Input
-                            id={field.name}
-                            name={field.name}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            type="text"
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Enter order title"
-                          />
-                          {!field.state.meta.isValid && (
-                            <p role="alert" className="text-xs text-destructive">
-                              {field.state.meta.errors.join(", ")}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    />
-                    <newOrderForm.Field
-                      name="shop"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Shop</Label>
-                          <ShopInput
-                            id={field.name}
-                            name={field.name}
-                            value={field.state.value ?? ""}
-                            onBlur={field.handleBlur}
-                            onValueChange={field.handleChange}
-                            placeholder="Enter shop name"
-                          />
-                        </div>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
-                      name="status"
-                      validators={{ onChange: z.enum(ORDER_STATUSES, "Status is required") }}
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Status</Label>
-                          <Select
-                            value={field.state.value}
-                            onValueChange={(value) =>
-                              field.handleChange(value as typeof field.state.value)
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select status">
-                                {field.state.value && (
-                                  <span className="flex items-center gap-2">
-                                    <span
-                                      className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
-                                    />
-                                    {field.state.value}
-                                  </span>
-                                )}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ORDER_STATUSES.map((status) => (
-                                <SelectItem key={status} value={status}>
-                                  <span className="flex items-center gap-2">
-                                    <span
-                                      className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
-                                    />
-                                    {status}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {field.state.meta.errors.length > 0 && (
-                            <p role="alert" className="text-xs text-destructive">
-                              {String(field.state.meta.errors[0])}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    />
-                    <newOrderForm.Field
-                      name="paid"
-                      children={(field) => (
-                        <PaidField
-                          id={field.name}
-                          paid={field.state.value}
-                          onPaidChange={field.handleChange}
-                        />
-                      )}
-                    />
-                  </div>
-                  <newOrderForm.Field
-                    name="shippingMethod"
-                    validators={{
-                      onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
-                    }}
-                    children={(field) => (
-                      <div className="grid gap-1.5">
-                        <Label htmlFor={field.name}>Shipping Method</Label>
-                        <Select
-                          value={field.state.value ?? ""}
-                          onValueChange={(value) =>
-                            field.handleChange(value as typeof field.state.value)
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SHIPPING_METHODS.map((method) => (
-                              <SelectItem key={method} value={method}>
-                                {method}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  />
-                </FormSection>
-
-                <FormSection title="Timeline">
-                  <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
-                      name="orderDate"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Order Date</Label>
-                          <DatePicker
-                            id={field.name}
-                            name={field.name}
-                            value={field.state.value ?? null}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value ?? "")}
-                            placeholder="Select date"
-                          />
-                        </div>
-                      )}
-                    />
-                    <newOrderForm.Field
-                      name="paymentDate"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Payment Date</Label>
-                          <DatePicker
-                            id={field.name}
-                            name={field.name}
-                            value={field.state.value ?? null}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value ?? "")}
-                            placeholder="Select date"
-                          />
-                        </div>
-                      )}
-                    />
-                    <newOrderForm.Field
-                      name="shippingDate"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Shipping Date</Label>
-                          <DatePicker
-                            id={field.name}
-                            name={field.name}
-                            value={field.state.value ?? null}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value ?? "")}
-                            placeholder="Select date"
-                          />
-                        </div>
-                      )}
-                    />
-                    <newOrderForm.Field
-                      name="collectionDate"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Collection Date</Label>
-                          <DatePicker
-                            id={field.name}
-                            name={field.name}
-                            value={field.state.value ?? null}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value ?? "")}
-                            placeholder="Select date"
-                          />
-                        </div>
-                      )}
-                    />
-                  </div>
-                </FormSection>
-
-                <FormSection title="Fees & Charges">
-                  <div className="grid grid-cols-2 gap-3">
-                    <MoneyField
-                      form={newOrderForm}
-                      name="shippingFee"
-                      currency={currency}
-                      placeholder="0.00"
-                      label="Shipping"
-                    />
-
-                    <MoneyField
-                      form={newOrderForm}
-                      name="taxes"
-                      currency={currency}
-                      placeholder="0.00"
-                      label="Taxes"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <MoneyField
-                      form={newOrderForm}
-                      name="duties"
-                      currency={currency}
-                      placeholder="0.00"
-                      label="Duties"
-                    />
-
-                    <MoneyField
-                      form={newOrderForm}
-                      name="tariffs"
-                      currency={currency}
-                      placeholder="0.00"
-                      label="Tariffs"
-                    />
-                  </div>
-
-                  <MoneyField
-                    form={newOrderForm}
-                    name="miscFees"
-                    currency={currency}
-                    placeholder="0.00"
-                    label="Miscellaneous"
-                  />
-                </FormSection>
-
-                <FormSection title="Notes" defaultOpen={false}>
-                  <newOrderForm.Field
-                    name="notes"
-                    children={(field) => (
-                      <div className="grid gap-1.5">
-                        <Textarea
-                          id={field.name}
-                          name={field.name}
-                          value={field.state.value ?? ""}
-                          onBlur={field.handleBlur}
-                          maxLength={1000}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="Add any notes..."
-                          rows={3}
-                        />
-                      </div>
-                    )}
-                  />
-                </FormSection>
-              </div>
-            </div>
-            <DialogFooter className="px-4! mx-0">
-              <newOrderForm.Subscribe
-                selector={(state) => [state.isSubmitting]}
-                children={([isSubmitting]) => (
-                  <DialogClose
-                    disabled={isSubmitting}
-                    render={<Button variant="outline" type="button" />}
-                  >
-                    Cancel
-                  </DialogClose>
-                )}
-              />
-              <newOrderForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-                children={([canSubmit, isSubmitting]) => (
-                  <StatusButton
-                    type="submit"
-                    status={formSubmitStatus(buttonStatus, isSubmitting)}
-                    disabled={!canSubmit}
-                    variant="default"
-                  >
-                    {newSubmitLabel}
-                  </StatusButton>
-                )}
-              />
-            </DialogFooter>
-          </form>
+          <NewOrderDestination
+            collectionIds={selectedItems.collectionIds}
+            onMoveToNew={onMoveToNew}
+            clearSelections={clearSelections}
+            close={close}
+            currency={currency}
+            submitLabel={newSubmitLabel}
+          />
         )}
       </div>
     </DialogContent>
+  );
+}
+
+type NewOrderDestinationProps = {
+  readonly collectionIds: ReadonlySet<string>;
+  readonly onMoveToNew: UnifiedItemMoveFormProps["onMoveToNew"];
+  readonly clearSelections?: () => void;
+  readonly close: () => void;
+  readonly currency: Currency;
+  readonly submitLabel: string;
+};
+
+function NewOrderDestination(props: NewOrderDestinationProps) {
+  const opening = useMemo(() => crypto.randomUUID(), []);
+  const collectionIds = [...props.collectionIds].toSorted();
+  const draft = useRead(orders.newOrderDraft, { opening, collectionIds });
+  if (draft.isSuccess) {
+    return (
+      <NewOrderForm
+        key={collectionIds.join(",")}
+        {...props}
+        collectionIds={new Set(collectionIds)}
+        initial={draft.data}
+      />
+    );
+  }
+
+  return (
+    <div className="flex justify-center px-4 py-6 text-sm text-muted-foreground">
+      {draft.isError ? draft.error.message : <Spinner />}
+    </div>
+  );
+}
+
+function NewOrderForm({
+  initial,
+  collectionIds,
+  onMoveToNew,
+  clearSelections,
+  close,
+  currency,
+  submitLabel,
+}: NewOrderDestinationProps & { readonly initial: MergedOrder }) {
+  const { status: buttonStatus, run } = useButtonStatus();
+  const newOrderForm = useForm({
+    defaultValues: {
+      ...initial,
+      title: "New Order",
+      shippingFee: minorUnitsToMajorString(initial.shippingFee),
+      taxes: minorUnitsToMajorString(initial.taxes),
+      duties: minorUnitsToMajorString(initial.duties),
+      tariffs: minorUnitsToMajorString(initial.tariffs),
+      miscFees: minorUnitsToMajorString(initial.miscFees),
+    },
+    onSubmit: async ({ value }) => {
+      const transformedValue: NewOrder = {
+        title: value.title,
+        shop: value.shop,
+        orderDate: value.orderDate || null,
+        releaseDate: value.releaseDate || null,
+        paymentDate: value.paymentDate || null,
+        shippingDate: value.shippingDate || null,
+        collectionDate: value.collectionDate || null,
+        status: value.status,
+        paid: value.paid,
+        shippingMethod: value.shippingMethod,
+        shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
+        taxes: acceptedMoneyToMinorUnits(value.taxes),
+        duties: acceptedMoneyToMinorUnits(value.duties),
+        tariffs: acceptedMoneyToMinorUnits(value.tariffs),
+        miscFees: acceptedMoneyToMinorUnits(value.miscFees),
+        notes: value.notes,
+      };
+      const moved = await run(() => onMoveToNew(transformedValue, collectionIds), closesOnSuccess);
+      if (moved.isErr()) return;
+      clearSelections?.();
+      close();
+    },
+  });
+
+  return (
+    <form onSubmit={formSubmitHandler(newOrderForm)}>
+      <div className="overflow-y-auto w-full max-h-[60vh] py-2 scroll-fade-b">
+        <div className="flex flex-col gap-3 px-4">
+          <FormSection title="Basics">
+            <div className="grid grid-cols-2 gap-3">
+              <newOrderForm.Field
+                name="title"
+                validators={{ onChange: z.string().nonempty("Title is required") }}
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Title</Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      type="text"
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Enter order title"
+                    />
+                    {!field.state.meta.isValid && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
+              <newOrderForm.Field
+                name="shop"
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Shop</Label>
+                    <ShopInput
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value ?? ""}
+                      onBlur={field.handleBlur}
+                      onValueChange={field.handleChange}
+                      placeholder="Enter shop name"
+                    />
+                  </div>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <newOrderForm.Field
+                name="status"
+                validators={{ onChange: z.enum(ORDER_STATUSES, "Status is required") }}
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Status</Label>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(value) =>
+                        field.handleChange(value as typeof field.state.value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status">
+                          {field.state.value && (
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
+                              />
+                              {field.state.value}
+                            </span>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ORDER_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
+                              />
+                              {status}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {field.state.meta.errors.length > 0 && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {String(field.state.meta.errors[0])}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
+              <newOrderForm.Field
+                name="paid"
+                children={(field) => (
+                  <PaidField
+                    id={field.name}
+                    paid={field.state.value}
+                    onPaidChange={field.handleChange}
+                  />
+                )}
+              />
+            </div>
+            <newOrderForm.Field
+              name="shippingMethod"
+              validators={{
+                onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
+              }}
+              children={(field) => (
+                <div className="grid gap-1.5">
+                  <Label htmlFor={field.name}>Shipping Method</Label>
+                  <Select
+                    value={field.state.value ?? ""}
+                    onValueChange={(value) => field.handleChange(value as typeof field.state.value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SHIPPING_METHODS.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {method}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            />
+          </FormSection>
+
+          <FormSection title="Timeline">
+            <div className="grid grid-cols-2 gap-3">
+              <newOrderForm.Field
+                name="orderDate"
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Order Date</Label>
+                    <DatePicker
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value ?? null}
+                      onBlur={field.handleBlur}
+                      onChange={(value) => field.handleChange(value ?? "")}
+                      placeholder="Select date"
+                    />
+                  </div>
+                )}
+              />
+              <newOrderForm.Field
+                name="paymentDate"
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Payment Date</Label>
+                    <DatePicker
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value ?? null}
+                      onBlur={field.handleBlur}
+                      onChange={(value) => field.handleChange(value ?? "")}
+                      placeholder="Select date"
+                    />
+                  </div>
+                )}
+              />
+              <newOrderForm.Field
+                name="shippingDate"
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Shipping Date</Label>
+                    <DatePicker
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value ?? null}
+                      onBlur={field.handleBlur}
+                      onChange={(value) => field.handleChange(value ?? "")}
+                      placeholder="Select date"
+                    />
+                  </div>
+                )}
+              />
+              <newOrderForm.Field
+                name="collectionDate"
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Collection Date</Label>
+                    <DatePicker
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value ?? null}
+                      onBlur={field.handleBlur}
+                      onChange={(value) => field.handleChange(value ?? "")}
+                      placeholder="Select date"
+                    />
+                  </div>
+                )}
+              />
+            </div>
+          </FormSection>
+
+          <FormSection title="Fees & Charges">
+            <div className="grid grid-cols-2 gap-3">
+              <MoneyField
+                form={newOrderForm}
+                name="shippingFee"
+                currency={currency}
+                placeholder="0.00"
+                label="Shipping"
+              />
+
+              <MoneyField
+                form={newOrderForm}
+                name="taxes"
+                currency={currency}
+                placeholder="0.00"
+                label="Taxes"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <MoneyField
+                form={newOrderForm}
+                name="duties"
+                currency={currency}
+                placeholder="0.00"
+                label="Duties"
+              />
+
+              <MoneyField
+                form={newOrderForm}
+                name="tariffs"
+                currency={currency}
+                placeholder="0.00"
+                label="Tariffs"
+              />
+            </div>
+
+            <MoneyField
+              form={newOrderForm}
+              name="miscFees"
+              currency={currency}
+              placeholder="0.00"
+              label="Miscellaneous"
+            />
+          </FormSection>
+
+          <FormSection title="Notes" defaultOpen={false}>
+            <newOrderForm.Field
+              name="notes"
+              children={(field) => (
+                <div className="grid gap-1.5">
+                  <Textarea
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value ?? ""}
+                    onBlur={field.handleBlur}
+                    maxLength={1000}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Add any notes..."
+                    rows={3}
+                  />
+                </div>
+              )}
+            />
+          </FormSection>
+        </div>
+      </div>
+      <DialogFooter className="px-4! mx-0">
+        <newOrderForm.Subscribe
+          selector={(state) => [state.isSubmitting]}
+          children={([isSubmitting]) => (
+            <DialogClose
+              disabled={isSubmitting}
+              render={<Button variant="outline" type="button" />}
+            >
+              Cancel
+            </DialogClose>
+          )}
+        />
+        <newOrderForm.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting] as const}
+          children={([canSubmit, isSubmitting]) => (
+            <StatusButton
+              type="submit"
+              status={formSubmitStatus(buttonStatus, isSubmitting)}
+              disabled={!canSubmit}
+              variant="default"
+            >
+              {submitLabel}
+            </StatusButton>
+          )}
+        />
+      </DialogFooter>
+    </form>
   );
 }

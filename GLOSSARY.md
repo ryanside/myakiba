@@ -95,7 +95,7 @@ An Order whose own Paid is yes. A Payment Date by itself does not make an Order 
 An Order whose own Paid is no, whatever its Acquisition Status. Its Order Fees count as Unpaid Costs, not Spend. Each of its Order Items counts by its own Paid, so a paid Order Item on an Unpaid Order is Spend.
 
 **Order Merge**:
-Moving the Order Items of several Orders into one new Order and deleting those Orders. The new Order starts from them: their Shop when they all share it, the least advanced Acquisition Status, Paid only when every one is a Paid Order, the earliest Order Date, the latest Release, Payment, Shipping and Collection Dates, their Shipping Method when they all share it, every Order Fee summed, and their Notes. The user can change any of it before merging.
+Moving the Order Items of several Orders into one new Order and deleting those Orders. The new Order starts from them: their Shop when they all share it, the least advanced Acquisition Status, Paid only when every one is a Paid Order, the earliest Order Date, the latest Release, Payment, Shipping and Collection Dates, their Shipping Method when they all share it, every Order Fee summed, and their Notes. The user can change any of it before merging. Moving or assigning Collection Items to a new Order starts that Order from the items by the same rules, with no Order Fees and no Notes.
 _Avoid_: Combine
 
 **Order Release Date**:

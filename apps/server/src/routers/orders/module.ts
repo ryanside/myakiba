@@ -24,7 +24,7 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { mergedOrder } from "./merged-order";
+import { orderDraft } from "./merged-order";
 import {
   paidItemCount,
   orderPayment,
@@ -406,7 +406,37 @@ export const Orders = {
         .where(and(eq(order.userId, scope.viewer.userId), inArray(order.id, input.orderIds)))
         .orderBy(asc(order.createdAt), asc(order.id));
       if (!foundAll(input.orderIds, sources.length)) return Result.err(new SomeOrdersNotFound());
-      return Result.ok(mergedOrder(sources));
+      return Result.ok(orderDraft(sources));
+    },
+  ),
+
+  newOrderDraft: query(
+    { action: "orders.new_order_draft", failure: "Couldn't load the selected items." },
+    async (scope, input: { readonly collectionIds: string[] }) => {
+      scope.log.set({ split: { itemCount: input.collectionIds.length } });
+      const items = await scope.tx
+        .select({
+          shop: collection.shop,
+          status: collection.status,
+          paid: collection.paid,
+          orderDate: collection.orderDate,
+          releaseDate: item_release.date,
+          paymentDate: collection.paymentDate,
+          shippingDate: collection.shippingDate,
+          collectionDate: collection.collectionDate,
+          shippingMethod: collection.shippingMethod,
+        })
+        .from(collection)
+        .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+        .where(
+          and(
+            eq(collection.userId, scope.viewer.userId),
+            inArray(collection.id, input.collectionIds),
+          ),
+        );
+      if (!foundAll(input.collectionIds, items.length)) return Result.err(new OrderItemsNotFound());
+      const noFees = { shippingFee: 0, taxes: 0, duties: 0, tariffs: 0, miscFees: 0, notes: "" };
+      return Result.ok(orderDraft(items.map((source) => ({ ...source, ...noFees }))));
     },
   ),
 

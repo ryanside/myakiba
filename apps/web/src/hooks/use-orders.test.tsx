@@ -50,6 +50,9 @@ await mock.module("@/queries/orders", () => ({
   getMergeDraft: async () => {
     throw new Error("no merge dialog in these tests");
   },
+  getNewOrderDraft: async () => {
+    throw new Error("no New Order dialog in these tests");
+  },
   mergeOrders: write("merge"),
   splitOrders: write("split"),
   editOrder: write("edit order"),

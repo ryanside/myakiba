@@ -23,6 +23,7 @@ import {
   getOrderItemReleases,
   getOrderItems,
   getMergeDraft,
+  getNewOrderDraft,
   getOrders,
   mergeOrders,
   moveItem,
@@ -92,10 +93,20 @@ export const orders = {
     staleTime: Infinity,
     gcTime: 0,
   }),
+  newOrderDraft: rootedRead("orderNewDraft", {
+    key: ({ opening, collectionIds }: NewOrderDraftRead) =>
+      ["orderNewDraft", opening, collectionIds] as const,
+    load: ({ collectionIds }) => getNewOrderDraft(collectionIds),
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  }),
 };
 
 /** One opening of the Merge dialog reads its own draft, so no opening sees another's read. */
 type MergeDraftRead = { readonly opening: string; readonly orderIds: readonly string[] };
+/** One opening of a New Order destination reads its own draft of the selected items. */
+type NewOrderDraftRead = { readonly opening: string; readonly collectionIds: readonly string[] };
 
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
 type OnList = { readonly list: OrderFilters };

@@ -112,6 +112,9 @@ await mock.module("@/queries/orders", () => ({
     const sources = server.orders.filter((order) => orderIds.includes(order.orderId));
     return Result.ok({ shop: "AmiAmi", notes: sources.map((order) => order.title).join("\n\n") });
   },
+  getNewOrderDraft: async () => {
+    throw new Error("no New Order dialog in these tests");
+  },
   editOrder: held("edit order", editServerOrder),
   deleteOrders: held("delete orders", removeOrders),
   mergeOrders: held("merge", (_values: NewOrder, orderIds: ReadonlySet<string>) =>
