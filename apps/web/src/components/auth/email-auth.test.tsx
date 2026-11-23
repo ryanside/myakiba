@@ -47,18 +47,18 @@ function serve(answer: (request: AuthRequest) => Response) {
   );
 }
 
-function signIn() {
+function signIn(password = "correct horse") {
   render(
     <Toaster>
       <SignInForm redirectTo="/dashboard" />
     </Toaster>,
   );
   type("Email", "collector@example.com");
-  type("Password", "correct horse");
+  type("Password", password);
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 }
 
-function signUp() {
+function signUp(password = "correct horse") {
   render(
     <Toaster>
       <SignUpForm />
@@ -66,8 +66,14 @@ function signUp() {
   );
   type("Username", "collector");
   type("Email", "collector@example.com");
-  type("Password", "correct horse");
+  type("Password", password);
   fireEvent.click(screen.getByRole("button", { name: "Register" }));
+}
+
+function sentPasswords(requests: readonly AuthRequest[], path: string) {
+  return requests
+    .filter((request) => request.path === path)
+    .map(({ body }) => (body as { readonly password?: string }).password);
 }
 
 test("a sign-in goes to the page it was headed for", async () => {
@@ -109,6 +115,43 @@ test("a refused sign-in shows the server's text", async () => {
   signIn();
 
   expect(await screen.findByText("Invalid email or password")).toBeTruthy();
+});
+
+test("a sign-in sends a short password to the server and shows its answer", async () => {
+  const requests = serve(() =>
+    refuse(401, "Unauthorized", {
+      code: "INVALID_EMAIL_OR_PASSWORD",
+      message: "Invalid email or password",
+    }),
+  );
+
+  signIn("hunt2");
+
+  await waitFor(() => expect(sentPasswords(requests, "/sign-in/email")).toEqual(["hunt2"]));
+  expect(await screen.findByText("Invalid email or password")).toBeTruthy();
+});
+
+test("the sign-in fields tell a password manager what they hold", () => {
+  render(<SignInForm redirectTo="/dashboard" />);
+
+  const email = screen.getByLabelText("Email");
+  const password = screen.getByLabelText("Password");
+  expect([email.getAttribute("name"), email.getAttribute("type")]).toEqual(["email", "email"]);
+  expect(email.getAttribute("autocomplete")).toBe("email");
+  expect([password.getAttribute("name"), password.getAttribute("type")]).toEqual([
+    "password",
+    "password",
+  ]);
+  expect(password.getAttribute("autocomplete")).toBe("current-password");
+});
+
+test("only sign-in offers Forgot password?", () => {
+  render(<SignInForm redirectTo="/dashboard" />);
+  expect(screen.queryByText("Forgot password?") !== null).toBe(true);
+  cleanup();
+
+  render(<SignUpForm />);
+  expect(screen.queryByText("Forgot password?") === null).toBe(true);
 });
 
 test("a sign-in refused without a message shows the status text", async () => {
@@ -161,6 +204,15 @@ test("a sign-up refused without a message shows the status text", async () => {
   signUp();
 
   expect(await screen.findByText("Internal Server Error")).toBeTruthy();
+});
+
+test("a sign-up refuses a password under 8 characters before asking the server", async () => {
+  const requests = serve(() => Response.json({ available: true }));
+
+  signUp("hunt2");
+
+  expect(await screen.findByText("Password must be at least 8 characters")).toBeTruthy();
+  expect(sentPasswords(requests, "/sign-up/email")).toEqual([]);
 });
 
 test("the sign-up fields tell a password manager what they hold", () => {
