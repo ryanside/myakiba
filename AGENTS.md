@@ -11,6 +11,8 @@ Run these from the repo root. CI runs the same checks. Its Static checks job run
 - `bun run test` runs every package's tests and the tooling tests. `bun run test <suite>` runs one suite: `web` runs the web app's tests, `packages` every other package's, and `tooling` the tooling tests. The web and tooling suites need no `TEST_*` variables. Tests need `TEST_DATABASE_URL` and `TEST_REDIS_URL`; database tests create and drop their own database. `TEST_S3_URL` names an S3-compatible bucket, such as MinIO's, for `pictures:reconcile`'s tests; without it they skip outside CI and fail in CI.
 - `bun run knip` checks undeclared dependencies and dead files and exports against their budget.
 
+The pre-commit hook fixes the lint and format of staged files and runs the type check. The pre-push hook runs `bun run check` and `bun run knip` on the working tree. No hook runs the tests.
+
 ## Budgets and approvals
 
 The lint budget (`tools/oxlint/budget.json`) and the knip budget (`knip-budget.json`) list the hits that existed when each check started. Counts only go down. A new hit fails the check, so fix the code. When you fix a budgeted hit, lower or remove its entry in the same commit, because a count below its budget also fails.
