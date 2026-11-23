@@ -1,5 +1,5 @@
 import { afterEach, expect, mock, test } from "bun:test";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Result } from "better-result";
 import type { ReactNode } from "react";
@@ -40,7 +40,6 @@ const entry = (fields: Partial<ItemCollectionEntry>): ItemCollectionEntry => ({
   itemId: "item-alpha",
   orderId: "order-alpha",
   status: "Shipped",
-  paid: false,
   count: 1,
   releaseId: null,
   score: "0.0",
@@ -84,19 +83,22 @@ function card(collectionItem: ItemCollectionEntry) {
 const steps = () =>
   [...document.querySelectorAll('[data-slot="timeline-title"]')].map((title) => title.textContent);
 
-test("the steps are Ordered, Shipped and Owned, and an unpaid item says so apart from them", () => {
+test("the steps are Ordered, Shipped and Owned, with no Paid or Unpaid badge and no Payment line without a Payment Date", () => {
   card(entry({}));
 
   expect(steps()).toEqual(["Ordered", "Shipped", "Owned"]);
-  expect(screen.getByText("Unpaid")).toBeTruthy();
+  expect({
+    unpaid: screen.queryByText("Unpaid") === null,
+    paid: screen.queryByText("Paid") === null,
+    payment: screen.queryByText("Payment") === null,
+  }).toEqual({ unpaid: true, paid: true, payment: true });
 });
 
-test("a paid item shows Paid with its Payment Date beside the steps", () => {
-  card(entry({ paid: true, paymentDate: "2026-01-05" }));
+test("a Payment Date shows on its own beside the steps, with no Paid badge", () => {
+  card(entry({ paymentDate: "2026-01-05" }));
   const payment = screen.getByText("Payment").parentElement;
   if (!payment) throw new Error("no payment line");
 
   expect(steps()).toEqual(["Ordered", "Shipped", "Owned"]);
-  expect(within(payment).getByText("Paid")).toBeTruthy();
-  expect(within(payment).getByText("01/05/2026")).toBeTruthy();
+  expect(payment.textContent).toBe("Payment01/05/2026");
 });

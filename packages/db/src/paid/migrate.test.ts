@@ -32,22 +32,22 @@ INSERT INTO "user" (id, name, email, email_verified, username) VALUES
   ('u2', 'User Two', 'u2@example.com', true, 'user_two');
 `;
 
-const CONVERTED_ORDERS = [
-  { id: "order-ordered", status: "Ordered", paid: false },
+const AFTER_DB_PUSH_ORDERS = [
+  { id: "order-ordered", status: "Ordered", paid: true },
   { id: "order-ordered-dated", status: "Ordered", paid: false },
   { id: "order-owned", status: "Owned", paid: true },
-  { id: "order-paid", status: "Ordered", paid: true },
+  { id: "order-paid", status: "Ordered", paid: false },
   { id: "order-shipped", status: "Shipped", paid: true },
 ];
 
 const CONVERTED_COLLECTION = [
-  { id: "col-loose-owned", status: "Owned", paid: true },
-  { id: "col-loose-paid", status: "Ordered", paid: true },
-  { id: "col-ordered-dated", status: "Ordered", paid: false },
-  { id: "col-ordered-order-shipped", status: "Shipped", paid: true },
-  { id: "col-owned-order-owned", status: "Owned", paid: true },
-  { id: "col-paid-order-ordered", status: "Ordered", paid: false },
-  { id: "col-paid-order-paid", status: "Ordered", paid: true },
+  { id: "col-loose-owned", status: "Owned" },
+  { id: "col-loose-paid", status: "Ordered" },
+  { id: "col-ordered-dated", status: "Ordered" },
+  { id: "col-ordered-order-shipped", status: "Shipped" },
+  { id: "col-owned-order-owned", status: "Owned" },
+  { id: "col-paid-order-ordered", status: "Ordered" },
+  { id: "col-paid-order-paid", status: "Ordered" },
 ];
 
 const MIGRATED_REPORT =
@@ -55,7 +55,7 @@ const MIGRATED_REPORT =
 
 const paidState = async (sql: SQL) => ({
   orders: [...(await sql`SELECT id, status, paid FROM "order" ORDER BY id`)],
-  collection: [...(await sql`SELECT id, status, paid FROM collection ORDER BY id`)],
+  collection: [...(await sql`SELECT id, status FROM collection ORDER BY id`)],
 });
 
 const columnsBothMigrationsKeep = async (sql: SQL) => ({
@@ -87,7 +87,7 @@ async function baseSchemaDatabase() {
   const pushed = await dbPush(database.url);
   expect(pushed.exitCode).toBe(0);
   await database.sql`ALTER TABLE "order" DROP COLUMN paid`;
-  await database.sql`ALTER TABLE collection DROP COLUMN paid`;
+  await database.sql`ALTER TABLE collection DROP COLUMN IF EXISTS paid`;
   await database.sql.unsafe(USERS);
   await database.sql`
     INSERT INTO item (id, owner_id, external_id, source, title) VALUES
@@ -122,7 +122,7 @@ test(
     expect(first.output).toContain(MIGRATED_REPORT);
     expect(first.output).not.toContain('ADD COLUMN "paid"');
     expect(await paidState(sql)).toEqual({
-      orders: CONVERTED_ORDERS,
+      orders: AFTER_DB_PUSH_ORDERS,
       collection: CONVERTED_COLLECTION,
     });
     expect(await columnsBothMigrationsKeep(sql)).toEqual(before);
@@ -152,7 +152,7 @@ test(
     expect(first.output).toContain(MIGRATED_REPORT);
     expect(first.output).not.toContain('ADD COLUMN "paid"');
     expect(await paidState(sql)).toEqual({
-      orders: CONVERTED_ORDERS,
+      orders: AFTER_DB_PUSH_ORDERS,
       collection: CONVERTED_COLLECTION,
     });
     expect(await columnsBothMigrationsKeep(sql)).toEqual(before);

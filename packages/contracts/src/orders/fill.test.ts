@@ -5,14 +5,16 @@ import { fillOrdersBodySchema } from "./fill";
 import type { OrderFill } from "./fill";
 import type { CascadeOption } from "./schema";
 
-test("an Order fills exactly the Cascade to Items fields, with the values a Collection Item fill takes", () => {
-  expectTypeOf<OrderFill["field"]>().toEqualTypeOf<CascadeOption>();
-  expectTypeOf<OrderFill>().toEqualTypeOf<Extract<ItemFill, { field: CascadeOption }>>();
+test("an Order fills its Paid and exactly the Cascade to Items fields, with the values a Collection Item fill takes", () => {
+  expectTypeOf<OrderFill["field"]>().toEqualTypeOf<"paid" | CascadeOption>();
+  expectTypeOf<Exclude<OrderFill, { field: "paid" }>>().toEqualTypeOf<
+    Extract<ItemFill, { field: CascadeOption }>
+  >();
 });
 
 const FILLS = [
-  { field: "status", value: "Owned" },
   { field: "paid", value: false },
+  { field: "status", value: "Owned" },
   { field: "shop", value: "" },
   { field: "orderDate", value: "2026-01-05" },
   { field: "paymentDate", value: null },
@@ -21,8 +23,8 @@ const FILLS = [
   { field: "shippingMethod", value: "SAL" },
 ] as const satisfies readonly OrderFill[];
 
-test("every Cascade to Items field has an Order fill", () => {
-  expect(FILLS.map(({ field }) => field)).toEqual([...ORDER_CASCADE_OPTIONS]);
+test("Paid and every Cascade to Items field have an Order fill", () => {
+  expect(FILLS.map(({ field }) => field)).toEqual(["paid", ...ORDER_CASCADE_OPTIONS]);
 });
 
 test.each(FILLS)("a $field fill parses as sent", (fill) => {

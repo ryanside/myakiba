@@ -138,30 +138,15 @@ export const deleteCollectionItemsCommand = defineCommand({
       await queryClient.cancelQueries({ queryKey: listKey });
       previousList = queryClient.getQueryData<CollectionPage>(listKey);
 
-      queryClient.setQueryData<CollectionPage>(listKey, (old) => {
-        if (!old) return old;
-        let deletedValue = 0;
-        let deletedPaidItems = 0;
-        const retainedItems: CollectionItem[] = [];
-        for (const item of old.items) {
-          if (idSet.has(item.id)) {
-            if (item.paid) {
-              deletedValue += item.price;
-              deletedPaidItems += 1;
+      queryClient.setQueryData<CollectionPage>(listKey, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.filter((item) => !idSet.has(item.id)),
+              totalCount: old.totalCount - ids.length,
             }
-          } else {
-            retainedItems.push(item);
-          }
-        }
-
-        return {
-          ...old,
-          items: retainedItems,
-          totalCount: old.totalCount - ids.length,
-          totalValue: old.totalValue - deletedValue,
-          paidItemCount: old.paidItemCount - deletedPaidItems,
-        };
-      });
+          : old,
+      );
     }
 
     return Result.ok(() => {

@@ -16,7 +16,7 @@ import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import { StatusNeedsOrder } from "./errors/status-needs-order";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { itemIsPaid, paidItemPrice } from "@/lib/order-money";
+import { itemIsPaid, itemOrderJoin, paidItemPrice } from "@/lib/order-money";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
   row: T,
@@ -77,7 +77,6 @@ export const Collection = {
         itemCategory: item.category,
         itemScale: item.scale,
         status: collection.status,
-        paid: collection.paid,
         count: collection.count,
         score: collection.score,
         price: collection.price,
@@ -105,6 +104,7 @@ export const Collection = {
           .from(collection)
           .innerJoin(item, eq(collection.itemId, item.id))
           .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+          .leftJoin(...itemOrderJoin)
           .where(filters)
           .$dynamic();
 
@@ -165,7 +165,6 @@ export const Collection = {
           itemCategory: item.category,
           itemScale: item.scale,
           status: collection.status,
-          paid: collection.paid,
           count: collection.count,
           score: collection.score,
           price: collection.price,

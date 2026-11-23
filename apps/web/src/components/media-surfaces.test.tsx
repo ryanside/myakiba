@@ -108,7 +108,6 @@ const order = {
   collectionDate: null,
   status: "Ordered",
   paid: true,
-  payment: "paid",
   total: 12_000,
   shippingFee: 0,
   taxes: 0,
@@ -142,7 +141,6 @@ const calendarOrder = {
   itemCount: 2,
   status: "Ordered",
   paid: true,
-  payment: "paid",
   releaseDate: "2026-01-02",
   total: 12_000,
 } satisfies CalendarOrder;
@@ -164,7 +162,6 @@ const kanbanOrder = {
   title: "Miku order",
   status: "Ordered",
   paid: true,
-  payment: "paid",
   shop: "AmiAmi",
   total: 12_000,
   itemImages: [image],

@@ -1,5 +1,5 @@
 import type { BadgeVariant } from "@/components/reui/badge";
-import type { OrderPayment, OrderStatus } from "@myakiba/contracts/shared/types";
+import type { OrderStatus } from "@myakiba/contracts/shared/types";
 
 const STATUS_VARIANT_MAP = {
   Ordered: "info",
@@ -16,15 +16,3 @@ export const ORDER_STATUS_COLORS = {
   Shipped: "bg-violet-500",
   Owned: "bg-success",
 } satisfies Readonly<Record<OrderStatus, string>>;
-
-export const ORDER_PAYMENT_DISPLAY = {
-  paid: { label: "Paid", variant: "success-light" },
-  partly: { label: "Partly paid", variant: "info-light" },
-  unpaid: { label: "Unpaid", variant: "warning-light" },
-} as const satisfies Readonly<
-  Record<OrderPayment, { readonly label: string; readonly variant: BadgeVariant }>
->;
-
-export function paymentOf(paid: boolean): OrderPayment {
-  return paid ? "paid" : "unpaid";
-}

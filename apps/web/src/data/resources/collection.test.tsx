@@ -25,7 +25,7 @@ type ServerItem = {
   readonly id: string;
   readonly itemTitle: string;
   readonly price: number;
-  readonly paid: boolean;
+  readonly countsAsPaid: boolean;
 };
 type Write = {
   readonly name: string;
@@ -34,9 +34,9 @@ type Write = {
   fail: () => void;
 };
 
-const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000, paid: true };
-const RIN = { id: "co-rin", itemTitle: "Rin", price: 500, paid: true };
-const LEN = { id: "co-len", itemTitle: "Len", price: 200, paid: false };
+const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000, countsAsPaid: true };
+const RIN = { id: "co-rin", itemTitle: "Rin", price: 500, countsAsPaid: true };
+const LEN = { id: "co-len", itemTitle: "Len", price: 200, countsAsPaid: false };
 const ITEM_PAGE_KEY = ["item", 1006, "itemRelatedCollection"];
 
 const server = {
@@ -60,8 +60,11 @@ function holdListReads() {
 const listPage = (items: readonly ServerItem[]) => {
   const totals = {
     totalCount: items.length,
-    totalValue: items.reduce((sum, { price, paid }) => (paid ? sum + price : sum), 0),
-    paidItemCount: items.filter(({ paid }) => paid).length,
+    totalValue: items.reduce(
+      (sum, { price, countsAsPaid }) => (countsAsPaid ? sum + price : sum),
+      0,
+    ),
+    paidItemCount: items.filter(({ countsAsPaid }) => countsAsPaid).length,
     totalItemsThisMonth: 0,
   };
   return { items, ...totals };
@@ -241,10 +244,11 @@ async function answer(index: number, outcome: "finish" | "fail") {
 const toastTitles = () =>
   toastAdd.mock.calls.map(([options]) => `${options.type}: ${String(options.title)}`);
 
-const mikuAt = (price: number) => ({ ...MIKU, price }) as CollectionItemFormValues;
+const mikuAt = (price: number) =>
+  ({ id: MIKU.id, itemTitle: MIKU.itemTitle, price }) as CollectionItemFormValues;
 
 describe("a Collection Item write on the collection page", () => {
-  test("an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers", async () => {
+  test("an unfiltered delete hides the items before the server answers, and its totals follow the server's answer", async () => {
     const collection = renderCollectionPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -254,7 +258,7 @@ describe("a Collection Item write on the collection page", () => {
     );
     await waitFor(() =>
       expect(shown()).toEqual({
-        totals: "1 items worth 500",
+        totals: "1 items worth 1500",
         items: ["Rin 500"],
         itemPage: "",
       }),
@@ -269,7 +273,7 @@ describe("a Collection Item write on the collection page", () => {
     });
   });
 
-  test("an unfiltered delete lowers the paid item count before the server answers", async () => {
+  test("an unfiltered delete leaves the paid item count to the server's answer", async () => {
     const collection = renderCollectionPage({});
     await loaded();
     const paidItems = () => screen.getByLabelText("paid items").textContent;
@@ -278,7 +282,8 @@ describe("a Collection Item write on the collection page", () => {
     const deleting = collection.act((actions) =>
       actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
     );
-    await waitFor(() => expect(paidItems()).toBe("1"));
+    await waitFor(() => expect(screen.queryByText("Miku 1000") === null).toBe(true));
+    expect(paidItems()).toBe("2");
 
     await answer(0, "finish");
     expect(await deleting).toBe("ok");
@@ -294,7 +299,8 @@ describe("a Collection Item write on the collection page", () => {
     const deleting = collection.act((actions) =>
       actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
     );
-    await waitFor(() => expect(averageCost()).toBe("500"));
+    await waitFor(() => expect(screen.queryByText("Miku 1000") === null).toBe(true));
+    expect(averageCost()).toBe("750");
 
     await answer(0, "finish");
     expect(await deleting).toBe("ok");
@@ -409,7 +415,7 @@ const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Saving])[
   ["handleDeleteCollectionItems", (h) => h.handleDeleteCollectionItems(new Set([MIKU.id]))],
   [
     "handleFillCollectionItems",
-    (h) => h.handleFillCollectionItems(new Set([MIKU.id]), { field: "paid", value: true }),
+    (h) => h.handleFillCollectionItems(new Set([MIKU.id]), { field: "notes", value: "Boxed" }),
   ],
   [
     "handleAddCollectionItemsToOrder",

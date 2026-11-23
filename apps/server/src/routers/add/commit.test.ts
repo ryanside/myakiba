@@ -279,7 +279,7 @@ test("a Collection commit answers each row with its new Collection Item", async 
   expect(rows.map((row) => row.itemId)).toEqual(["item-1", "item-3"]);
 });
 
-test("a Collection commit writes Owned, paid rows with its Collection Date", async () => {
+test("a Collection commit writes Owned rows with its Collection Date", async () => {
   const sent = await commit(
     request({
       rows: bare("item-1", "item-2"),
@@ -289,11 +289,9 @@ test("a Collection commit writes Owned, paid rows with its Collection Date", asy
 
   expect(sent.status).toBe(200);
   const rows = await ownedRows();
-  expect(
-    rows.map(({ status, paid, collectionDate }) => ({ status, paid, collectionDate })),
-  ).toEqual([
-    { status: "Owned", paid: true, collectionDate: "2026-05-05" },
-    { status: "Owned", paid: true, collectionDate: "2026-05-05" },
+  expect(rows.map(({ status, collectionDate }) => ({ status, collectionDate }))).toEqual([
+    { status: "Owned", collectionDate: "2026-05-05" },
+    { status: "Owned", collectionDate: "2026-05-05" },
   ]);
 });
 
@@ -615,7 +613,6 @@ test("a new Order's items take its status, Paid, shop, dates and shipping and ad
   const terms = {
     orderId: created?.id,
     status: "Shipped",
-    paid: true,
     shop: "HLJ",
     orderDate: "2026-04-01",
     paymentDate: "2026-04-02",
@@ -643,7 +640,6 @@ test("an existing Order's new items inherit its terms and advance its release da
     {
       orderId: "order-existing",
       status: "Ordered",
-      paid: true,
       shop: "AmiAmi",
       orderDate: "2026-02-01",
       paymentDate: "2026-02-02",

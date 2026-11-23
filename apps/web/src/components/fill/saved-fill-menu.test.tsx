@@ -93,7 +93,6 @@ test("offers every Collection Item field but Status, and counts items", async ()
   await screen.findByText("Write one value to 2 selected items.");
   const offered = document.querySelectorAll("[data-fill-list] button");
   expect([...offered].map(({ textContent }) => textContent)).toEqual([
-    "Paid",
     "Price",
     "Count",
     "Condition",
@@ -189,28 +188,16 @@ test("blank notes and an unpicked date clear their field", async () => {
   ]);
 });
 
-test("Paid starts checked, and a score is sent as text", async () => {
+test("a score is sent as text", async () => {
   const sent = renderMenu();
   const user = userEvent.setup();
-
-  await choose(user, "Paid");
-  expect(screen.getByRole("checkbox", { name: "Paid" }).getAttribute("aria-checked")).toBe("true");
-  await submit(user);
-
-  await choose(user, "Paid");
-  await user.click(screen.getByRole("checkbox", { name: "Paid" }));
-  await submit(user);
 
   await choose(user, "Score");
   const stars = within(screen.getByRole("group", { name: "Score for every selected item" }));
   await user.click(stars.getAllByRole("button")[6] as HTMLElement);
   await submit(user);
 
-  expect(sent).toEqual([
-    ...filled({ field: "paid", value: true }),
-    ...filled({ field: "paid", value: false }),
-    ...filled({ field: "score", value: "7" }),
-  ]);
+  expect(sent).toEqual(filled({ field: "score", value: "7" }));
 });
 
 test("tags are added, and an empty list is refused", async () => {
@@ -280,7 +267,6 @@ test("Order Items offer Status and every Collection Item field, and a fill sends
   expect(within(popup).queryByRole("group")).toBeNull();
   expect(offeredIn(popup)).toEqual([
     "Status",
-    "Paid",
     "Price",
     "Count",
     "Condition",
@@ -339,6 +325,24 @@ test("Orders offer the eight fields they cascade, and say the fill sets their it
   ]);
 });
 
+test("an Orders fill of Paid starts checked, says nothing beside the checkbox, and sets only the Orders", async () => {
+  const sent = renderOrdersMenu({ orders: 2, items: 0 });
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Fill" }));
+  const popup = await screen.findByRole("dialog", { name: "Fill all" });
+  await user.click(within(popup).getByRole("button", { name: "Paid" }));
+
+  const paid = await screen.findByRole("checkbox", { name: "Paid" });
+  expect(paid.getAttribute("aria-checked")).toBe("true");
+  expect(screen.queryByText(/Replaces Paid/u) === null).toBe(true);
+  await user.click(paid);
+  await user.click(screen.getByRole("button", { name: "Fill 2 selected" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Fill all" })).toBeNull());
+  expect(sent).toEqual([
+    { orderIds: ["od-alpha", "od-bravo"], fill: { field: "paid", value: false } },
+  ]);
+});
+
 test("Orders and Order Items selected together list their fields under two headings", async () => {
   const sent = renderOrdersMenu({ orders: 1, items: 2 });
   const user = userEvent.setup();
@@ -350,7 +354,7 @@ test("Orders and Order Items selected together list their fields under two headi
   ).toBeDefined();
   const orders = within(popup).getByRole("group", { name: "Orders" });
   const items = within(popup).getByRole("group", { name: "Order Items" });
-  expect([offeredIn(orders).length, offeredIn(items).length]).toEqual([8, 14]);
+  expect([offeredIn(orders).length, offeredIn(items).length]).toEqual([8, 13]);
 
   await user.click(within(items).getByRole("button", { name: "Shop" }));
   expect(await screen.findByText("Clears Shop on every selected item.")).toBeDefined();

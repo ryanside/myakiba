@@ -6,7 +6,6 @@ import { WRITE_LIMITS } from "../shared/write-limits";
 /** The value a client may write to each field of a Collection Item. */
 export const COLLECTION_FIELD = {
   status: z.enum(COLLECTION_STATUSES),
-  paid: z.boolean(),
   count: countSchema,
   score: z.string().max(WRITE_LIMITS.label),
   price: z.number().int(),

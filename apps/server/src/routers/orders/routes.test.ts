@@ -522,17 +522,13 @@ describe("a failure after a write leaves nothing behind", () => {
   });
 });
 
-type PaidRow = { readonly paid: boolean; readonly payment?: string };
-type ItemRow = { readonly id: string; readonly status: string; readonly paid: boolean };
+type OrderRead = { readonly paid: boolean; readonly payment?: string };
+type ItemRead = { readonly id: string; readonly paid?: boolean };
 
 describe("Paid on an Order", () => {
   const read = async <T>(path: string): Promise<T> => {
     const { body } = await call("GET", path);
     return body as T;
-  };
-  const paidOf = async (orderId: string) => {
-    const { paid, payment } = await read<PaidRow>(`/${orderId}`);
-    return { paid, payment };
   };
   const setPaid = (orderId: string, paid: boolean, cascadeOptions: string[]) =>
     call("PUT", `/${orderId}`, JSON.stringify({ order: { paid }, cascadeOptions }));
@@ -543,40 +539,18 @@ describe("Paid on an Order", () => {
       JSON.stringify({ orderIds: [orderId], fill: { field: "paid", value: paid } }),
     );
 
-  test("the payment state is paid when the Order and every Order Item are paid, unpaid when none are, and partly otherwise", async () => {
-    await db.insert(order).values({ id: "order-empty", userId, title: "No items yet", paid: true });
-    expect(await paidOf("order-1")).toEqual({ paid: false, payment: "unpaid" });
-    expect(await paidOf("order-empty")).toEqual({ paid: true, payment: "paid" });
-
+  test("an Order and its items answer the Order's Paid alone, with no payment state and no item Paid", async () => {
     expect(await setPaid("order-1", true, [])).toMatchObject({ status: 200 });
-    expect(await paidOf("order-1")).toEqual({ paid: true, payment: "partly" });
+    const paidOrder = await read<OrderRead>("/order-1");
+    expect(await fillPaid("order-1", false)).toMatchObject({ status: 200 });
+    const unpaidOrder = await read<OrderRead>("/order-1");
+    const { items } = await read<{ items: ItemRead[] }>("/order-1/items?limit=10");
 
-    expect(await fillPaid("order-1", true)).toMatchObject({ status: 200 });
-    expect(await paidOf("order-1")).toEqual({ paid: true, payment: "paid" });
-
-    expect(await setPaid("order-1", false, [])).toMatchObject({ status: 200 });
-    expect(await paidOf("order-1")).toEqual({ paid: false, payment: "partly" });
-  });
-
-  test("an edit that names Paid without changing it leaves a partly paid Order's items alone", async () => {
-    expect(await setPaid("order-1", true, [])).toMatchObject({ status: 200 });
-    expect(await paidOf("order-1")).toEqual({ paid: true, payment: "partly" });
-
-    expect(await setPaid("order-1", true, ["paid"])).toMatchObject({ status: 200 });
-    expect(await paidOf("order-1")).toEqual({ paid: true, payment: "partly" });
-  });
-
-  test("Paid in Cascade to Items copies the Order's Paid to its items and leaves their status alone", async () => {
-    expect(await setPaid("order-1", true, ["paid"])).toMatchObject({ status: 200 });
-    const { items } = await read<{ items: ItemRow[] }>("/order-1/items?limit=10");
-    expect(
-      items
-        .map(({ id, status, paid }) => ({ id, status, paid }))
-        .toSorted((a, b) => a.id.localeCompare(b.id)),
-    ).toEqual([
-      { id: "c-ordered", status: "Ordered", paid: true },
-      { id: "c-owned", status: "Owned", paid: true },
-    ]);
+    expect({
+      paid: [paidOrder.paid, unpaidOrder.paid],
+      payment: "payment" in paidOrder,
+      itemPaid: items.some((row) => "paid" in row),
+    }).toEqual({ paid: [true, false], payment: false, itemPaid: false });
   });
 
   test("the list narrows to Paid or Unpaid Orders", async () => {

@@ -401,7 +401,7 @@
 
   .mk-order-lifecycle-item {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto auto;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
     align-items: center;
     gap: 14px;
     height: 56px;
@@ -1017,7 +1017,7 @@
     }
 
     .mk-order-lifecycle-item {
-      grid-template-columns: 36px minmax(0, 1fr) auto auto;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
       gap: 12px;
       height: 46px;
       margin-top: 4px;

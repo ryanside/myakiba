@@ -6,8 +6,10 @@ import { collection } from "@myakiba/db/schema/figure";
 
 type CollectionColumns = typeof collection.$inferInsert;
 
+type CascadeFill = Exclude<OrderFill, { readonly field: "paid" }>;
+
 /** What an Order fill writes to each Order and, by Cascade to Items, to each of its items. */
-export type CascadeColumns = Partial<Pick<CollectionColumns, OrderFill["field"]>>;
+export type CascadeColumns = Partial<Pick<CollectionColumns, CascadeFill["field"]>>;
 
 type ItemColumns = Partial<Pick<CollectionColumns, Exclude<ItemFill["field"], "tags">>> & {
   readonly tags?: SQL<string[]>;
@@ -27,14 +29,12 @@ function withAddedTags(added: readonly string[]): SQL<string[]> {
 }
 
 /** The column a fill writes. A tags fill adds to each row's tags; every other fill replaces. */
-export function fillColumns(fill: OrderFill): CascadeColumns;
+export function fillColumns(fill: CascadeFill): CascadeColumns;
 export function fillColumns(fill: ItemFill): ItemColumns;
 export function fillColumns(fill: ItemFill): ItemColumns {
   switch (fill.field) {
     case "status":
       return { status: fill.value };
-    case "paid":
-      return { paid: fill.value };
     case "price":
       return { price: fill.value };
     case "count":

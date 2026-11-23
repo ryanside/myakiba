@@ -1,12 +1,14 @@
 import path from "node:path";
-import type { TestRun } from "./test-run";
-import { beginTestRun, cleanupTestRun } from "./test-run";
+import type { Suite, TestRun } from "./test-run";
+import { beginTestRun, cleanupTestRun, suites } from "./test-run";
 import { checkReplayCoverage } from "./replay-reports";
 
-if (process.argv.length > 2)
-  throw new Error(
-    "bun run test requires the full suite; run package tests separately for filtering.",
-  );
+const [suite, ...extra] = process.argv.slice(2);
+function isSuite(name: string): name is Suite {
+  return suites.some((known) => known === name);
+}
+if (extra.length > 0 || (suite !== undefined && !isSuite(suite)))
+  throw new Error(`bun run test takes no argument or one suite name: ${suites.join(", ")}.`);
 const root = path.resolve(import.meta.dir, "..");
 let child: ReturnType<typeof Bun.spawn> | undefined;
 let interrupted: "SIGINT" | "SIGTERM" | undefined;
@@ -28,15 +30,29 @@ let run: TestRun | undefined;
 let code = 0;
 let failure: { error: unknown } | undefined;
 try {
-  run = await beginTestRun(root);
+  run = await beginTestRun(root, suite === undefined ? suites : [suite]);
   const reporter = ["--reporter=junit", `--reporter-outfile=${run.reportFile}`];
-  const steps = [
-    {
-      name: "Turbo package tests",
-      command: [path.join(root, "node_modules/.bin/turbo"), "run", "test", "--", ...reporter],
-    },
-    { name: "Tooling tests", command: [process.execPath, "run", "test:tooling", ...reporter] },
-  ];
+  const packageTests = (...filters: string[]) => ({
+    name: "Turbo package tests",
+    command: [
+      path.join(root, "node_modules/.bin/turbo"),
+      "run",
+      "test",
+      ...filters,
+      "--",
+      ...reporter,
+    ],
+  });
+  const tooling = {
+    name: "Tooling tests",
+    command: [process.execPath, "run", "test:tooling", ...reporter],
+  };
+  const bySuite = {
+    web: packageTests("--filter=web"),
+    packages: packageTests("--filter=!web"),
+    tooling,
+  };
+  const steps = suite === undefined ? [packageTests(), tooling] : [bySuite[suite]];
   for (const step of steps) {
     if (interrupted) break;
     child = Bun.spawn(step.command, {

@@ -111,7 +111,6 @@ const order = (
   shippingDate: null,
   collectionDate: null,
   paid: false,
-  payment: "unpaid",
   ...fields,
 });
 
@@ -243,9 +242,7 @@ function afterServerWrite(
   candidate: DashboardKanbanOrder,
   change: Write["change"],
 ): DashboardKanbanOrder {
-  const changed = { ...candidate, ...change } as DashboardKanbanOrder;
-  if (!("paid" in change)) return changed;
-  return { ...changed, payment: change.paid ? "paid" : "unpaid" };
+  return { ...candidate, ...change } as DashboardKanbanOrder;
 }
 
 const paidBox = (orderId: string) =>
@@ -577,23 +574,19 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
 });
 
 describe("a dashboard kanban card's Paid checkbox", () => {
-  test("shows the payment state: checked when paid, mixed when partly paid, unchecked when unpaid", async () => {
-    await renderBoard([
-      order("miku", "Ordered", { paid: true, payment: "paid" }),
-      order("rin", "Shipped", { paid: true, payment: "partly" }),
-      order("len", "Shipped"),
-    ]);
+  test("shows the Order's Paid: checked when Paid, unchecked when Unpaid", async () => {
+    await renderBoard([order("miku", "Ordered", { paid: true }), order("len", "Shipped")]);
 
-    expect(["miku", "rin", "len"].map(shownPaid)).toEqual(["true", "mixed", "false"]);
+    expect(["miku", "len"].map(shownPaid)).toEqual(["true", "false"]);
   });
 
-  test("a click on a partly paid card pays it at once and keeps it paid while a refetch lands mid-write", async () => {
-    const partly = order("rin", "Shipped", { paid: true, payment: "partly" });
-    const { refetchLands } = await renderBoard([partly]);
+  test("a click on an Unpaid card pays it at once and keeps it paid while a refetch lands mid-write", async () => {
+    const unpaid = order("rin", "Shipped");
+    const { refetchLands } = await renderBoard([unpaid]);
 
     await clickPaid("rin");
     const clicked = shownPaid("rin");
-    await refetchLands([partly]);
+    await refetchLands([unpaid]);
     const midWrite = shownPaid("rin");
     await settle(writes[0]);
 
@@ -606,7 +599,7 @@ describe("a dashboard kanban card's Paid checkbox", () => {
   });
 
   test("a click on a paid card unpays it and leaves its status and column alone", async () => {
-    await renderBoard([order("miku", "Shipped", { paid: true, payment: "paid" })]);
+    await renderBoard([order("miku", "Shipped", { paid: true })]);
 
     await clickPaid("miku");
     await settle(writes[0]);

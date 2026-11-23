@@ -97,6 +97,14 @@ async function typeShop(user: User) {
   await user.click(screen.getByRole("button", { name: "Fill 2 selected" }));
 }
 
+test("the Collection fill offers no Paid, which only an Order holds", async () => {
+  renderBar();
+  await userEvent.setup().click(await screen.findByRole("button", { name: "Fill" }));
+  const fillAll = await screen.findByRole("dialog", { name: "Fill all" });
+
+  expect(within(fillAll).queryByRole("button", { name: "Paid" }) === null).toBe(true);
+});
+
 test("a fill that saves closes the popover and keeps the selection", async () => {
   const fills = renderBar();
   const user = userEvent.setup();

@@ -117,7 +117,6 @@ describe("the calendar answers as before", () => {
             shop: "",
             status: "Ordered",
             paid: false,
-            payment: "unpaid",
             releaseDate: "2026-03-15",
             itemCount: 1,
             images: [],

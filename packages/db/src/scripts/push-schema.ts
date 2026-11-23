@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { installOwnerGuards } from "../item-ownership/guards";
 import { migrateItemOwnership } from "../item-ownership/migrate";
 import { migratePaid } from "../paid/migrate";
+import { markOrderPaid, migrateOrderPaid } from "../paid/order-paid";
 
 dotenv.config({
   path: "../../apps/server/.env",
@@ -49,8 +50,13 @@ const paidMigration = await attempt(
   () => migratePaid(database),
   "PAID MIGRATION FAILED. It rolled back, so Orders and Collection Items keep their statuses and have no paid column. An Item ownership migration reported above has committed.",
 );
-await database.close();
 console.log(`Paid migration: ${JSON.stringify(paidMigration)}`);
+const orderPaidMigration = await attempt(
+  () => migrateOrderPaid(database),
+  "PAID-ON-ORDER MIGRATION FAILED. It rolled back, so every Order keeps its Paid and Collection Items keep their paid column. The steps reported above have committed.",
+);
+await database.close();
+console.log(`Paid-on-Order migration: ${JSON.stringify(orderPaidMigration)}`);
 
 const child = Bun.spawn(["bunx", "drizzle-kit", "push", "--verbose"], {
   cwd: process.cwd(),
@@ -95,6 +101,12 @@ if (exitCode !== 0 || !completed) {
           "The Paid migration above has committed, so main's server shows every Order and Collection Item that had the Paid status as Ordered.",
         ]
       : []),
+    ...(orderPaidMigration.status === "migrated" ||
+    orderPaidMigration.status === "readded-column-dropped"
+      ? [
+          "The Paid-on-Order migration above has committed, so main's server fails on every read or write of a Collection Item's paid column.",
+        ]
+      : []),
     ...(droppedTables.length > 0
       ? [
           "main's Import/Export and sync no longer work, because the retired tables went with that commit.",
@@ -107,14 +119,15 @@ if (exitCode !== 0 || !completed) {
 
 // Push does not read triggers, so the owner guards are installed after every push. A database
 // without the owner columns yet has none to install.
-const guarded = new SQL({ url: databaseUrl });
+const afterPush = new SQL({ url: databaseUrl });
 try {
-  const guards = await installOwnerGuards(guarded);
+  await markOrderPaid(afterPush);
+  const guards = await installOwnerGuards(afterPush);
   console.log(
     guards === "installed"
       ? "Item owner guards installed."
       : "Item owner guards skipped: no owner columns.",
   );
 } finally {
-  await guarded.close();
+  await afterPush.close();
 }
