@@ -1,10 +1,10 @@
 import type { SQL } from "bun";
 
 /**
- * Marks a database whose Orders already carry Paid alone. Neither drizzle-kit push nor an older
- * image's db-push writes column comments, so a rollback that re-adds collection.paid keeps it.
+ * Neither drizzle-kit push nor an older image's db-push writes column comments, so a rollback
+ * that re-adds collection.paid keeps it.
  */
-const CONVERTED = "Covers every Order Item and all Order Fees.";
+const ORDER_PAID_MARK = "Covers every Order Item and all Order Fees.";
 
 export type OrderPaidReport =
   | { readonly status: "fresh-database" | "already-migrated" | "readded-column-dropped" }
@@ -17,13 +17,9 @@ export type OrderPaidReport =
     };
 
 export async function markOrderPaid(sql: SQL): Promise<void> {
-  await sql.unsafe(`COMMENT ON COLUMN "order"."paid" IS '${CONVERTED}'`);
+  await sql.unsafe(`COMMENT ON COLUMN "order"."paid" IS '${ORDER_PAID_MARK}'`);
 }
 
-/**
- * Sets each Order that holds items Paid when every item was paid, and Unpaid otherwise, then
- * drops collection.paid, in one transaction. It runs only while that column exists.
- */
 export async function migrateOrderPaid(sql: SQL): Promise<OrderPaidReport> {
   return sql.begin(async (tx) => {
     const [{ hasCollection }] = await tx<[{ hasCollection: boolean }]>`
@@ -37,7 +33,7 @@ export async function migrateOrderPaid(sql: SQL): Promise<OrderPaidReport> {
         EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.collection'::regclass
           AND attname = 'paid' AND NOT attisdropped) AS "hasItemPaid",
         col_description('public.order'::regclass, (SELECT attnum FROM pg_attribute
-          WHERE attrelid = 'public.order'::regclass AND attname = 'paid')) IS NOT DISTINCT FROM ${CONVERTED}
+          WHERE attrelid = 'public.order'::regclass AND attname = 'paid')) IS NOT DISTINCT FROM ${ORDER_PAID_MARK}
           AS converted
     `;
     if (!hasItemPaid) return { status: "already-migrated" };
@@ -60,7 +56,6 @@ export async function migrateOrderPaid(sql: SQL): Promise<OrderPaidReport> {
         (count(*) FILTER (WHERE NOT paid))::int AS "turnedUnpaid"
       FROM turned
     `;
-    // The same DDL drizzle-kit emits for removing the column, so the push that follows finds nothing.
     await tx`ALTER TABLE "collection" DROP COLUMN "paid"`;
     await markOrderPaid(tx);
     return {

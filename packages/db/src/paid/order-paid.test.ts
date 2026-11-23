@@ -71,7 +71,6 @@ async function freshlyPushed() {
   return database;
 }
 
-/** A database as main's db-push leaves it: an item Paid column and no mark, holding every case. */
 async function databaseAsMainLeavesIt() {
   const database = await freshlyPushed();
   await database.sql`ALTER TABLE collection ADD COLUMN IF NOT EXISTS "paid" boolean DEFAULT false NOT NULL`;

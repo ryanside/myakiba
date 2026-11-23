@@ -118,17 +118,16 @@ if (exitCode !== 0 || !completed) {
 }
 
 // Push does not read triggers, so the owner guards are installed after every push. A database
-// without the owner columns yet has none to install. A brand-new database first has an order table
-// here, so the Paid-on-Order mark is written here too.
-const guarded = new SQL({ url: databaseUrl });
+// without the owner columns yet has none to install.
+const afterPush = new SQL({ url: databaseUrl });
 try {
-  await markOrderPaid(guarded);
-  const guards = await installOwnerGuards(guarded);
+  await markOrderPaid(afterPush);
+  const guards = await installOwnerGuards(afterPush);
   console.log(
     guards === "installed"
       ? "Item owner guards installed."
       : "Item owner guards skipped: no owner columns.",
   );
 } finally {
-  await guarded.close();
+  await afterPush.close();
 }

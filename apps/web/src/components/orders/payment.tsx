@@ -46,7 +46,6 @@ export function PaidCheckbox({
   );
 }
 
-/** An Order's line shows its Paid; a Collection Item has no Paid of its own, so passes none. */
 export function PaymentLine({
   paid,
   paymentDate,

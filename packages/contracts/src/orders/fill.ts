@@ -5,10 +5,6 @@ import { ORDER_CASCADE_OPTIONS } from "./constants";
 
 const paidFillSchema = z.strictObject({ field: z.literal("paid"), value: z.boolean() });
 
-/**
- * An Order fill writes its field to each Order and cascades it to the Order's items, except Paid,
- * which is the Order's alone.
- */
 const orderFillSchema = z.union([
   paidFillSchema,
   ...ORDER_CASCADE_OPTIONS.map((field) => ITEM_FILL[field]),

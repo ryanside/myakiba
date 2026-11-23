@@ -6,7 +6,6 @@ import type { ReadTx } from "@myakiba/db/tx";
 export const orderIsUnpaid = sql`NOT ${order.paid}`;
 export const orderIsPaid = sql`${order.paid}`;
 
-/** A Collection Item outside an Order counts as paid; an Order Item counts as its Order's Paid. */
 export const itemIsPaid = sql`(${collection.orderId} IS NULL OR EXISTS (
   SELECT 1 FROM ${order} WHERE ${order.id} = ${collection.orderId} AND ${order.paid}
 ))`;
@@ -23,7 +22,6 @@ export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${
 export const orderSpend = sql<number>`CASE WHEN ${orderIsPaid} THEN ${orderTotal} ELSE 0 END`;
 export const orderUnpaidCosts = sql<number>`CASE WHEN ${orderIsUnpaid} THEN ${orderTotal} ELSE 0 END`;
 
-/** The Order Items of a Paid Order, in a query grouped by Order. */
 export const orderPaidItemCount = sql<number>`CASE WHEN ${orderIsPaid} THEN COUNT(${collection.id}) ELSE 0 END`;
 
 export function selectUnpaidCosts(tx: ReadTx, where: SQL | undefined) {

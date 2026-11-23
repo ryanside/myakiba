@@ -574,7 +574,6 @@ export const Orders = {
 
   /**
    * Writes one field to every listed Order and cascades it to their items, or writes nothing.
-   * Paid is the Order's alone, so a Paid fill writes only the Orders.
    * It locks the Orders, then their items, each in id order, the order Collection.fill locks
    * items in, so overlapping fills wait instead of deadlocking.
    */

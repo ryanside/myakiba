@@ -138,8 +138,6 @@ export const deleteCollectionItemsCommand = defineCommand({
       await queryClient.cancelQueries({ queryKey: listKey });
       previousList = queryClient.getQueryData<CollectionPage>(listKey);
 
-      // Whether an Order Item counts toward totalValue depends on its Order's Paid, which the row
-      // does not carry, so the totals wait for the refetch.
       queryClient.setQueryData<CollectionPage>(listKey, (old) =>
         old
           ? {

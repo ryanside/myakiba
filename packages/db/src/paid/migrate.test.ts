@@ -32,8 +32,7 @@ INSERT INTO "user" (id, name, email, email_verified, username) VALUES
   ('u2', 'User Two', 'u2@example.com', true, 'user_two');
 `;
 
-// The Paid-on-Order step that follows sets each Order holding items from what this step gave them.
-const CONVERTED_ORDERS = [
+const AFTER_DB_PUSH_ORDERS = [
   { id: "order-ordered", status: "Ordered", paid: true },
   { id: "order-ordered-dated", status: "Ordered", paid: false },
   { id: "order-owned", status: "Owned", paid: true },
@@ -123,7 +122,7 @@ test(
     expect(first.output).toContain(MIGRATED_REPORT);
     expect(first.output).not.toContain('ADD COLUMN "paid"');
     expect(await paidState(sql)).toEqual({
-      orders: CONVERTED_ORDERS,
+      orders: AFTER_DB_PUSH_ORDERS,
       collection: CONVERTED_COLLECTION,
     });
     expect(await columnsBothMigrationsKeep(sql)).toEqual(before);
@@ -153,7 +152,7 @@ test(
     expect(first.output).toContain(MIGRATED_REPORT);
     expect(first.output).not.toContain('ADD COLUMN "paid"');
     expect(await paidState(sql)).toEqual({
-      orders: CONVERTED_ORDERS,
+      orders: AFTER_DB_PUSH_ORDERS,
       collection: CONVERTED_COLLECTION,
     });
     expect(await columnsBothMigrationsKeep(sql)).toEqual(before);
