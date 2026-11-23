@@ -24,7 +24,7 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { orderDraft } from "./merged-order";
+import { orderDraft } from "./order-draft";
 import {
   paidItemCount,
   orderPayment,
@@ -383,7 +383,7 @@ export const Orders = {
   mergeDraft: query(
     { action: "orders.merge_draft", failure: "Couldn't load the orders to merge." },
     async (scope, input: { readonly orderIds: string[] }) => {
-      scope.log.set({ merge: { orderCount: input.orderIds.length } });
+      scope.log.set({ draft: { orderCount: input.orderIds.length } });
       const sources = await scope.tx
         .select({
           shop: order.shop,
@@ -413,7 +413,7 @@ export const Orders = {
   newOrderDraft: query(
     { action: "orders.new_order_draft", failure: "Couldn't load the selected items." },
     async (scope, input: { readonly collectionIds: string[] }) => {
-      scope.log.set({ split: { itemCount: input.collectionIds.length } });
+      scope.log.set({ draft: { itemCount: input.collectionIds.length } });
       const items = await scope.tx
         .select({
           shop: collection.shop,

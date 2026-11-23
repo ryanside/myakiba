@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { MergedOrder } from "@myakiba/contracts/orders/schema";
+import type { OrderDraft } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { Result } from "better-result";
 import type { Saving } from "@/data/client";
@@ -21,7 +21,7 @@ await mock.module("@/queries/search", () => ({
   searchOrders: async () => Result.ok(targets),
 }));
 
-const mergeDraft: MergedOrder = {
+const mergeDraft: OrderDraft = {
   shop: "AmiAmi",
   status: "Shipped",
   paid: true,
@@ -42,7 +42,7 @@ type DraftAnswer = Awaited<ReturnType<(typeof realOrders)["getMergeDraft"]>>;
 let answerDraft = async (_orderIds: readonly string[]): Promise<DraftAnswer> =>
   Result.ok(mergeDraft);
 const realOrders = await import("@/queries/orders");
-const itemsDraft: MergedOrder = {
+const itemsDraft: OrderDraft = {
   shop: "AmiAmi",
   status: "Shipped",
   paid: true,

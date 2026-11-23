@@ -7,7 +7,7 @@ import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import type {
   CascadeOptions,
   EditedOrder,
-  MergedOrder,
+  OrderDraft,
   NewOrder,
   OrderFilters,
   OrderItemsQuery,
@@ -92,7 +92,7 @@ export function getOrderItems(
 
 export function getMergeDraft(
   orderIds: readonly string[],
-): Promise<Result<MergedOrder, ApiFailure>> {
+): Promise<Result<OrderDraft, ApiFailure>> {
   return call(app.api.orders["merge-draft"].post({ orderIds: [...orderIds] }), {
     fallback: "Couldn't load the orders to merge.",
     empty: "Couldn't load the orders to merge.",
@@ -101,7 +101,7 @@ export function getMergeDraft(
 
 export function getNewOrderDraft(
   collectionIds: readonly string[],
-): Promise<Result<MergedOrder, ApiFailure>> {
+): Promise<Result<OrderDraft, ApiFailure>> {
   return call(app.api.orders["new-order-draft"].post({ collectionIds: [...collectionIds] }), {
     fallback: "Couldn't load the selected items.",
     empty: "Couldn't load the selected items.",

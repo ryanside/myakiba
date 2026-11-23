@@ -1,5 +1,5 @@
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import type { MergedOrder } from "@myakiba/contracts/orders/schema";
+import type { OrderDraft } from "@myakiba/contracts/orders/schema";
 
 const shared = <T>(values: readonly T[], otherwise: T): T =>
   new Set(values).size === 1 ? (values[0] ?? otherwise) : otherwise;
@@ -9,7 +9,7 @@ const dates = (values: readonly (string | null)[]) =>
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 
-export function orderDraft(sources: readonly MergedOrder[]): MergedOrder {
+export function orderDraft(sources: readonly OrderDraft[]): OrderDraft {
   const stage = Math.min(...sources.map((source) => ORDER_STATUSES.indexOf(source.status)));
   return {
     shop: shared(

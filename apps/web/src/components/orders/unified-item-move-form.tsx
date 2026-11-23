@@ -34,7 +34,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
-import type { MergedOrder, NewOrder } from "@myakiba/contracts/orders/schema";
+import type { OrderDraft, NewOrder } from "@myakiba/contracts/orders/schema";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { Spinner } from "@/components/ui/spinner";
@@ -406,7 +406,7 @@ function NewOrderForm({
   close,
   currency,
   submitLabel,
-}: NewOrderDestinationProps & { readonly initial: MergedOrder }) {
+}: NewOrderDestinationProps & { readonly initial: OrderDraft }) {
   const { status: buttonStatus, run } = useButtonStatus();
   const newOrderForm = useForm({
     defaultValues: {
