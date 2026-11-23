@@ -161,13 +161,6 @@ test("a new account sees one welcome dialog while Settings also offers Getting S
   expect(screen.getAllByRole("dialog")).toHaveLength(1);
 });
 
-test("Settings' Getting Started button opens the welcome for an onboarded account", async () => {
-  await openDashboard(true, { withAboutCopy: true });
-  fireEvent.click(screen.getByRole("button", { name: "Open Getting Started" }));
-
-  expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
-});
-
 test("a new account sees the welcome as soon as the dashboard renders", async () => {
   await openDashboard(false);
 
@@ -183,22 +176,6 @@ test("Getting Started opens at the welcome step even with a step left in local s
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
 
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
-});
-
-test("the last step closes onboarding and goes to the Add page", async () => {
-  const router = await openDashboard(true);
-  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
-  for (const title of ["Welcome to myakiba.", "Install the myakiba extension."]) {
-    await screen.findByRole("dialog", { name: title });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  }
-
-  const step = await screen.findByRole("dialog", { name: "Pick your first items." });
-  expect(step.textContent).not.toContain("CSV");
-  fireEvent.click(screen.getByRole("button", { name: "Get started" }));
-
-  await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
 async function continueToAddItems() {

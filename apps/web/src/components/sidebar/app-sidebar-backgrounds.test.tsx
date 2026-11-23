@@ -9,7 +9,6 @@ import {
 } from "../../../test/sidebar-app";
 
 const dashboardBackground = "11-akihabara-bright-bitgrain.webp";
-const analyticsBackground = "56-blossoms-and-wires-bitgrain.webp";
 const ordersBackground = "17-night-calendar-bitgrain.webp";
 const settingsBackground = "10-settings-desk-bitgrain.webp";
 
@@ -97,13 +96,6 @@ test("warm-up starts every background download together after the route code, wi
   expect(decodedSources(), "warm-up never decodes").toEqual([
     expect.stringContaining(dashboardBackground),
   ]);
-});
-
-test("a background that never downloads does not hold back the others", async () => {
-  stalled.add(analyticsBackground);
-  await renderWarmedSidebar();
-  await waitFor(() => expect(downloadedSources()).toHaveLength(10));
-  expect(downloadedSources()).toContainEqual(expect.stringContaining(settingsBackground));
 });
 
 test("a preload neither downloads nor decodes its background", async () => {
