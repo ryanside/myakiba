@@ -11,6 +11,8 @@ Run these from the repo root. CI's Validate job runs the same checks, each as it
 - `bun run test` runs every package's tests and the tooling tests. Tests need `TEST_DATABASE_URL` and `TEST_REDIS_URL`; database tests create and drop their own database. `TEST_S3_URL` names an S3-compatible bucket, such as MinIO's, for `pictures:reconcile`'s tests; without it they skip outside CI and fail in CI.
 - `bun run knip` checks undeclared dependencies and dead files and exports against their budget.
 
+The pre-commit hook runs the type check. The pre-push hook runs `bun run check` and `bun run knip`. No hook runs the tests.
+
 ## Budgets and approvals
 
 The lint budget (`tools/oxlint/budget.json`) and the knip budget (`knip-budget.json`) list the hits that existed when each check started. Counts only go down. A new hit fails the check, so fix the code. When you fix a budgeted hit, lower or remove its entry in the same commit, because a count below its budget also fails.
