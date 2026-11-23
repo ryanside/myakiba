@@ -93,7 +93,7 @@ export function getOrderItems(
 export function getMergeDraft(
   orderIds: readonly string[],
 ): Promise<Result<MergedOrder, ApiFailure>> {
-  return call(app.api.orders["merge-draft"].get({ query: { orderIds: [...orderIds] } }), {
+  return call(app.api.orders["merge-draft"].post({ orderIds: [...orderIds] }), {
     fallback: "Couldn't load the orders to merge.",
     empty: "Couldn't load the orders to merge.",
   });
@@ -102,13 +102,10 @@ export function getMergeDraft(
 export function getNewOrderDraft(
   collectionIds: readonly string[],
 ): Promise<Result<MergedOrder, ApiFailure>> {
-  return call(
-    app.api.orders["new-order-draft"].get({ query: { collectionIds: [...collectionIds] } }),
-    {
-      fallback: "Couldn't load the selected items.",
-      empty: "Couldn't load the selected items.",
-    },
-  );
+  return call(app.api.orders["new-order-draft"].post({ collectionIds: [...collectionIds] }), {
+    fallback: "Couldn't load the selected items.",
+    empty: "Couldn't load the selected items.",
+  });
 }
 
 export function mergeOrders(values: NewOrder, orderIds: Set<string>) {

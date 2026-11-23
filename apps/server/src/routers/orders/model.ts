@@ -22,12 +22,8 @@ export const ordersQuerySchema = searchSchema.extend({
 
 export const orderIdParamSchema = z.object({ orderId: z.string().max(WRITE_LIMITS.id) });
 
-export const mergeDraftQuerySchema = z.object({
-  orderIds: commaSeparatedStringArraySchema.pipe(idListSchema),
-});
+export const mergeDraftBodySchema = z.strictObject({ orderIds: idListSchema });
 
-export const newOrderDraftQuerySchema = z.object({
-  collectionIds: commaSeparatedStringArraySchema.pipe(idListSchema),
-});
+export const newOrderDraftBodySchema = z.strictObject({ collectionIds: idListSchema });
 
 export type OrdersQuery = z.infer<typeof ordersQuerySchema>;

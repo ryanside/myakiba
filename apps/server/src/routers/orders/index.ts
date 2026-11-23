@@ -10,8 +10,8 @@ import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limi
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
 import {
-  mergeDraftQuerySchema,
-  newOrderDraftQuerySchema,
+  mergeDraftBodySchema,
+  newOrderDraftBodySchema,
   ordersQuerySchema,
   orderIdParamSchema,
 } from "./model";
@@ -19,11 +19,11 @@ import { Orders } from "./module";
 
 const ordersRouter = privateApi("/orders")
   .get("/", (ctx) => serve(ctx, Orders.list, ctx.query), { query: ordersQuerySchema })
-  .get("/merge-draft", (ctx) => serve(ctx, Orders.mergeDraft, ctx.query), {
-    query: mergeDraftQuerySchema,
+  .post("/merge-draft", (ctx) => serve(ctx, Orders.mergeDraft, ctx.body), {
+    body: mergeDraftBodySchema,
   })
-  .get("/new-order-draft", (ctx) => serve(ctx, Orders.newOrderDraft, ctx.query), {
-    query: newOrderDraftQuerySchema,
+  .post("/new-order-draft", (ctx) => serve(ctx, Orders.newOrderDraft, ctx.body), {
+    body: newOrderDraftBodySchema,
   })
   .get("/:orderId", (ctx) => serve(ctx, Orders.get, ctx.params), { params: orderIdParamSchema })
   .get("/:orderId/items", (ctx) => serve(ctx, Orders.items, { ...ctx.params, ...ctx.query }), {
