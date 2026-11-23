@@ -41,9 +41,29 @@ type DraftAnswer = Awaited<ReturnType<(typeof realOrders)["getMergeDraft"]>>;
 let answerDraft = async (_orderIds: readonly string[]): Promise<DraftAnswer> =>
   Result.ok(mergeDraft);
 const realOrders = await import("@/queries/orders");
+const itemsDraft: MergedOrder = {
+  shop: "AmiAmi",
+  status: "Shipped",
+  paid: true,
+  orderDate: "2026-01-05",
+  releaseDate: null,
+  paymentDate: "2026-01-20",
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "EMS",
+  shippingFee: 0,
+  taxes: 0,
+  duties: 0,
+  tariffs: 0,
+  miscFees: 0,
+  notes: "",
+};
+let answerItemsDraft = async (_collectionIds: readonly string[]): Promise<DraftAnswer> =>
+  Result.ok(itemsDraft);
 await mock.module("@/queries/orders", () => ({
   ...realOrders,
   getMergeDraft: (orderIds: readonly string[]) => answerDraft(orderIds),
+  getNewOrderDraft: (collectionIds: readonly string[]) => answerItemsDraft(collectionIds),
 }));
 
 const { OrderForm } = await import("./order-form");
@@ -228,7 +248,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
     ),
     submit: async (user) => {
       await user.click(screen.getByRole("radio", { name: "New Order" }));
-      await user.click(screen.getByRole("button", { name: "Move to New Order" }));
+      await user.click(await screen.findByRole("button", { name: "Move to New Order" }));
     },
     clearsSelection: true,
   },
@@ -837,6 +857,99 @@ describe("the merge dialog reads its Orders fresh on every open", () => {
         merge.queryClient.clear();
       } finally {
         answerDraft = previous;
+      }
+    }),
+  );
+});
+
+describe("moving items to a New Order", () => {
+  function renderMove(send: (...args: unknown[]) => Saving) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UnifiedItemMoveForm
+          renderTrigger={trigger}
+          selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
+          onMoveToExisting={async () => Result.ok()}
+          onMoveToNew={send}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    return {
+      queryClient,
+      openNew: () => {
+        fireEvent.click(screen.getByRole("button", { name: "Open" }));
+        fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
+      },
+    };
+  }
+  const shown = () => ({
+    shop: (screen.getByLabelText("Shop") as HTMLInputElement).value,
+    status: (screen.getByRole("dialog").textContent ?? "").includes("Shipped"),
+    paid: screen.getByRole("checkbox", { name: "Paid" }).getAttribute("aria-checked"),
+  });
+
+  test(
+    "opens on the values read for the selected items and sends them unchanged",
+    untilBodyDone(async () => {
+      const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+      const move = renderMove(send);
+      move.openNew();
+      const submit = await screen.findByRole("button", { name: "Move to New Order" });
+
+      expect(shown()).toEqual({ shop: "AmiAmi", status: true, paid: "true" });
+      await userEvent.setup().click(submit);
+      await waitFor(() => expect(send.mock.calls.length).toBe(1));
+      expect(send.mock.calls[0]).toEqual([{ ...itemsDraft, title: "New Order" }, ids]);
+      move.queryClient.clear();
+    }),
+  );
+
+  test(
+    "says why it cannot open when the items do not load, with no way to submit",
+    untilBodyDone(async () => {
+      const previous = answerItemsDraft;
+      answerItemsDraft = async () =>
+        Result.err(
+          new ApiNotFound({ body: "Order items not found", message: "Order items not found" }),
+        );
+      try {
+        const move = renderMove(mock(async (): Saving => Result.ok()));
+        move.openNew();
+        await waitFor(() =>
+          expect(screen.queryByText("Order items not found") !== null).toBe(true),
+        );
+        expect(screen.queryByRole("button", { name: "Move to New Order" }) === null).toBe(true);
+        move.queryClient.clear();
+      } finally {
+        answerItemsDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "reads the items again on every opening",
+    untilBodyDone(async () => {
+      const previous = answerItemsDraft;
+      let reads = 0;
+      answerItemsDraft = async () => {
+        reads++;
+        return Result.ok({ ...itemsDraft, shop: reads === 1 ? "AmiAmi" : "HLJ" });
+      };
+      try {
+        const move = renderMove(mock(async (): Saving => Result.ok()));
+        move.openNew();
+        await screen.findByRole("button", { name: "Move to New Order" });
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        await waitFor(() => expect(formIsOpen()).toBe(false));
+        move.openNew();
+        await screen.findByRole("button", { name: "Move to New Order" });
+
+        expect({ reads, shop: shown().shop }).toEqual({ reads: 2, shop: "HLJ" });
+        move.queryClient.clear();
+      } finally {
+        answerItemsDraft = previous;
       }
     }),
   );

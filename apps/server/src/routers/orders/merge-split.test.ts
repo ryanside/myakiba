@@ -9,7 +9,7 @@ import * as figureSchema from "@myakiba/db/schema/figure";
 import * as z from "zod";
 import { newOrderSchema } from "@myakiba/contracts/orders/schema";
 
-const { collection, item, order } = figureSchema;
+const { collection, item, item_release, order } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -415,5 +415,118 @@ describe("a merge starts from its source Orders", () => {
       tariffs: 50,
       miscFees: 10,
     });
+  });
+});
+
+describe("a New Order starts from the selected items", () => {
+  beforeEach(seedSources);
+
+  const draftOf = async (collectionIds: readonly string[]) => {
+    const response = await app.handle(
+      new Request(
+        `http://localhost/api/orders/new-order-draft?collectionIds=${collectionIds.join(",")}`,
+        { headers: { "x-test-user": userId } },
+      ),
+    );
+    const json = response.headers.get("content-type")?.includes("json");
+    return { status: response.status, body: json ? await response.json() : await response.text() };
+  };
+  const noFees = { shippingFee: 0, taxes: 0, duties: 0, tariffs: 0, miscFees: 0, notes: "" };
+
+  test("one item gives its own values and no fees", async () => {
+    expect(await draftOf(["collection-1"])).toEqual({
+      status: 200,
+      body: {
+        shop: "Mandarake",
+        status: "Owned",
+        paid: true,
+        orderDate: "2025-12-30",
+        releaseDate: null,
+        paymentDate: "2026-01-02",
+        shippingDate: "2026-02-01",
+        collectionDate: "2026-02-09",
+        shippingMethod: "SURFACE",
+        ...noFees,
+      },
+    });
+  });
+
+  test("items take the shared Shop, the least advanced status, the earliest Order Date and the latest other dates, as Merge does", async () => {
+    await db.insert(item_release).values({
+      id: "00000000-0000-4000-8000-000000000001",
+      itemId: "item-1",
+      date: "2026-05-01",
+    });
+    await db
+      .update(collection)
+      .set({ releaseId: "00000000-0000-4000-8000-000000000001" })
+      .where(eq(collection.id, "collection-2"));
+
+    expect(await draftOf(["collection-1", "collection-2"])).toEqual({
+      status: 200,
+      body: {
+        shop: "",
+        status: "Shipped",
+        paid: true,
+        orderDate: "2025-12-30",
+        releaseDate: "2026-05-01",
+        paymentDate: "2026-01-21",
+        shippingDate: "2026-04-03",
+        collectionDate: "2026-02-09",
+        shippingMethod: "n/a",
+        ...noFees,
+      },
+    });
+  });
+
+  test("an item with every field blank gives a blank draft, and Paid stays off when one item is unpaid", async () => {
+    await db.insert(collection).values({ id: "collection-3", userId, itemId: "item-1" });
+
+    expect(await draftOf(["collection-3"])).toEqual({
+      status: 200,
+      body: {
+        shop: "",
+        status: "Owned",
+        paid: false,
+        orderDate: null,
+        releaseDate: null,
+        paymentDate: null,
+        shippingDate: null,
+        collectionDate: null,
+        shippingMethod: "n/a",
+        ...noFees,
+      },
+    });
+    expect(await draftOf(["collection-1", "collection-3"])).toMatchObject({
+      status: 200,
+      body: { paid: false },
+    });
+  });
+
+  test("an id the viewer does not hold answers 404", async () => {
+    expect(await draftOf(["collection-1", "missing"])).toEqual({
+      status: 404,
+      body: "Order items not found",
+    });
+  });
+
+  test("moving items to a New Order made from the draft keeps every item's own values", async () => {
+    const before = await itemsWithoutOrder();
+    const { body } = await draftOf(["collection-1", "collection-2"]);
+    const draft = newOrderSchema.omit({ title: true }).parse(body);
+
+    const response = await app.handle(
+      new Request("http://localhost/api/orders/split", {
+        method: "POST",
+        headers: { "x-test-user": userId, "content-type": "application/json" },
+        body: JSON.stringify({
+          collectionIds: ["collection-1", "collection-2"],
+          newOrder: { ...draft, title: "New Order" },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await itemsWithoutOrder()).toEqual(before);
   });
 });
