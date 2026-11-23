@@ -185,7 +185,7 @@ test("Getting Started opens at the welcome step even with a step left in local s
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
 
-test("the last step explains picking, then closes onboarding and goes to the Add page", async () => {
+test("the last step closes onboarding and goes to the Add page", async () => {
   const router = await openDashboard(true);
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
   for (const title of ["Welcome to myakiba.", "Install the myakiba extension."]) {
@@ -194,7 +194,6 @@ test("the last step explains picking, then closes onboarding and goes to the Add
   }
 
   const step = await screen.findByRole("dialog", { name: "Pick your first items." });
-  expect(step.textContent).toContain("Pick for myakiba");
   expect(step.textContent).not.toContain("CSV");
   fireEvent.click(screen.getByRole("button", { name: "Get started" }));
 

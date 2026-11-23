@@ -28,7 +28,12 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { localeFormats } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { ExtensionStep } from "@/components/onboarding/extension-step";
-import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
+import {
+  MissingExtensionNotice,
+  pickExtensionCopy,
+  pickHowTo,
+} from "@/components/extension/extension-notice";
+import { useExtensionStatus } from "@/lib/extension-gate";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import { isGeneratedUsername } from "@myakiba/contracts/shared/generated-username";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -335,7 +340,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                     </form>
                   ) : null}
                   {meta.id === "extension" ? <ExtensionStep /> : null}
-                  {meta.id === "add" ? <AddStep /> : null}
+                  {meta.id === "add" ? <NextAction /> : null}
                 </StepperContent>
               ))}
             </StepperPanel>
@@ -381,20 +386,18 @@ function StepHeader({ meta }: StepHeaderProps) {
   );
 }
 
-function AddStep() {
-  return (
-    <div className="flex flex-col gap-3 text-sm">
-      <MissingExtensionNotice copyOf={pickExtensionCopy} />
-      <ol className="flex list-decimal flex-col gap-2 pl-5 text-pretty">
-        <li>Open an item on MyFigureCollection.</li>
-        <li>
-          Click <span className="font-medium">Pick for myakiba</span>, next to MFC&apos;s own
-          buttons.
-        </li>
-        <li>Open the Add page, choose where your picks go and add them.</li>
-      </ol>
-    </div>
-  );
+function NextAction() {
+  const status = useExtensionStatus();
+  switch (status.kind) {
+    case "checking":
+      return null;
+    case "absent":
+      return <MissingExtensionNotice copyOf={pickExtensionCopy} />;
+    case "outdated":
+      return <ExtensionStep />;
+    case "ready":
+      return <p className="text-pretty text-sm">{pickHowTo("on the Add page")}</p>;
+  }
 }
 
 type StepFooterProps = {
