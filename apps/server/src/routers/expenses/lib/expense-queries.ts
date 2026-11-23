@@ -4,6 +4,7 @@ import { collection, item, order } from "@myakiba/db/schema/figure";
 import { and, count, desc, eq, gte, inArray, isNotNull, lte, sql, sum } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 import {
+  itemOrderJoin,
   orderFees,
   orderIsPaid,
   paidItemCount,
@@ -127,7 +128,7 @@ export async function getCollectionSummary(
       shopCount: sql<number>`COUNT(DISTINCT NULLIF(${collection.shop}, ''))::integer`,
     })
     .from(collection)
-    .leftJoin(order, eq(collection.orderId, order.id))
+    .leftJoin(...itemOrderJoin)
     .where(collectionWhere(userId, filters, "total"));
 
   return (
@@ -157,7 +158,7 @@ export function getCollectionCategoryRows(
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
-    .leftJoin(order, eq(collection.orderId, order.id))
+    .leftJoin(...itemOrderJoin)
     .where(and(collectionWhere(userId, filters, "total"), isNotNull(item.category)))
     .groupBy(item.category)
     .orderBy(desc(count(collection.id)), item.category);
@@ -278,7 +279,7 @@ export function getOwnedItemSeries(
       paidItemCount: sql<number>`${paidItemCount}::integer`,
     })
     .from(collection)
-    .leftJoin(order, eq(collection.orderId, order.id))
+    .leftJoin(...itemOrderJoin)
     .where(collectionWhere(userId, filters, "series"))
     .groupBy(itemBucket)
     .orderBy(itemBucket);

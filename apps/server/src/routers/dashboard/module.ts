@@ -8,6 +8,7 @@ import { Result } from "better-result";
 import { prepared, query } from "@/domain/kernel";
 import { itemImageSql } from "@/lib/item-image-url";
 import {
+  itemOrderJoin,
   orderIsPaid,
   orderIsUnpaid,
   orderSpend,
@@ -58,6 +59,7 @@ const collectionStatsRead = prepared("collection_stats", (tx) =>
       totalSpent: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)`.mapWith(Number),
     })
     .from(collection)
+    .leftJoin(...itemOrderJoin)
     .where(eq(collection.userId, sql.placeholder("userId"))),
 );
 
@@ -69,6 +71,7 @@ const categoriesOwnedRead = prepared("categories_owned", (tx) =>
       totalValue: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)`.mapWith(Number),
     })
     .from(collection)
+    .leftJoin(...itemOrderJoin)
     .innerJoin(item, eq(collection.itemId, item.id))
     .where(and(eq(collection.userId, sql.placeholder("userId")), eq(collection.status, "Owned")))
     .groupBy(item.category)

@@ -27,6 +27,7 @@ import { itemImageSql } from "@/lib/item-image-url";
 import { orderDraft } from "./order-draft";
 import {
   itemIsPaid,
+  itemOrderJoin,
   orderPaidItemCount,
   orderSpend,
   orderTotal,
@@ -423,6 +424,7 @@ export const Orders = {
           shippingMethod: collection.shippingMethod,
         })
         .from(collection)
+        .leftJoin(...itemOrderJoin)
         .leftJoin(item_release, eq(collection.releaseId, item_release.id))
         .where(
           and(

@@ -6,9 +6,15 @@ import type { ReadTx } from "@myakiba/db/tx";
 export const orderIsUnpaid = sql`NOT ${order.paid}`;
 export const orderIsPaid = sql`${order.paid}`;
 
-export const itemIsPaid = sql`(${collection.orderId} IS NULL OR EXISTS (
-  SELECT 1 FROM ${order} WHERE ${order.id} = ${collection.orderId} AND ${order.paid}
-))`;
+/**
+ * Each Collection Item's Order, joined once. Every query that reads `itemIsPaid`, `paidItemPrice`
+ * or `paidItemCount` joins it with `.leftJoin(...itemOrderJoin)`. A left join on the Order's
+ * primary key adds no rows.
+ */
+export const itemOrderJoin = [order, eq(collection.orderId, order.id)] as const;
+
+/** A Collection Item outside an Order counts as paid; an Order Item counts as its Order's Paid. */
+export const itemIsPaid = sql`(${collection.orderId} IS NULL OR ${order.paid})`;
 
 export const paidItemPrice = sql<number>`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`;
 

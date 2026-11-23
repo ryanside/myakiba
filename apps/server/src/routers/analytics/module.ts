@@ -38,7 +38,7 @@ import type {
   EntrySection,
 } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { itemIsPaid, paidItemCount, paidItemPrice } from "@/lib/order-money";
+import { itemIsPaid, itemOrderJoin, paidItemCount, paidItemPrice } from "@/lib/order-money";
 
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
@@ -119,6 +119,7 @@ function entryRankings(tx: ReadTx) {
       totalSpent: sql<number>`SUM(${paidItemPrice})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
+    .leftJoin(...itemOrderJoin)
     .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
     .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
     .where(and(eq(collection.userId, sql.placeholder("userId")), eq(collection.status, "Owned")))
@@ -156,6 +157,7 @@ function shopRankings(tx: ReadTx) {
       totalSpent: sql<number>`SUM(${paidItemPrice})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
+    .leftJoin(...itemOrderJoin)
     .where(
       and(
         eq(collection.userId, sql.placeholder("userId")),
@@ -193,6 +195,7 @@ function scaleRankings(tx: ReadTx) {
       totalSpent: sql<number>`SUM(${paidItemPrice})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
+    .leftJoin(...itemOrderJoin)
     .innerJoin(item, eq(collection.itemId, item.id))
     .where(
       and(
@@ -309,6 +312,7 @@ async function getSectionAnalytics(
           .as("totalSpent"),
       })
       .from(collection)
+      .leftJoin(...itemOrderJoin)
       .where(
         and(
           eq(collection.userId, userId),
@@ -366,6 +370,7 @@ async function getSectionAnalytics(
           .as("totalSpent"),
       })
       .from(collection)
+      .leftJoin(...itemOrderJoin)
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(
         and(
@@ -427,6 +432,7 @@ async function getSectionAnalytics(
         paid: sql<boolean>`${itemIsPaid}`.as("paid"),
       })
       .from(collection)
+      .leftJoin(...itemOrderJoin)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
       .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
       .where(entryFilters)
@@ -442,6 +448,7 @@ async function getSectionAnalytics(
           .as("totalSpent"),
       })
       .from(collection)
+      .leftJoin(...itemOrderJoin)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
       .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
       .where(entryFilters)

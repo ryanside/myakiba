@@ -18,7 +18,13 @@ import {
   paidOrderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
-import { orderFees, orderIsPaid, paidItemCount, paidItemPrice } from "@/lib/order-money";
+import {
+  itemOrderJoin,
+  orderFees,
+  orderIsPaid,
+  paidItemCount,
+  paidItemPrice,
+} from "@/lib/order-money";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const EMPTY_FEE_BREAKDOWN = {
@@ -72,7 +78,7 @@ async function getCollectionShopRows(
         paidItemCount: sql<number>`${paidItemCount}::integer`.as("paid_item_count"),
       })
       .from(collection)
-      .leftJoin(order, eq(collection.orderId, order.id))
+      .leftJoin(...itemOrderJoin)
       .where(collectionWhere(userId, scopedFilters, "total"))
       .groupBy(collection.shop),
   );
@@ -360,7 +366,7 @@ function loadCollectionItems(tx: ReadTx, userId: string, filters: ExpenseFilters
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
-    .leftJoin(order, eq(collection.orderId, order.id))
+    .leftJoin(...itemOrderJoin)
     .where(collectionWhere(userId, filters, "total"))
     .orderBy(desc(collection.paymentDate), desc(collection.createdAt), desc(collection.id))
     .limit(6);
