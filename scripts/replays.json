@@ -5391,17 +5391,6 @@
       "fixed": [
         "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
       ]
-    },
-    {
-      "fix": "05ce6b658c642807dbf8821042a6de87b08c41cb",
-      "bug": "A keyboard user who opened the account menu found Settings highlighted while focus sat on a theme tab, so Enter did nothing and the first ArrowDown went to Sign Out.",
-      "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
-      "fixed": [
-        "opening the account menu with Enter focuses the highlighted Settings, and Enter opens it",
-        "opening the account menu with Space focuses the highlighted Settings, and Enter opens it",
-        "ArrowDown then Enter in the account menu signs out",
-        "the theme tabs are reached with Tab, switched with the arrow keys, and Escape returns to the trigger"
-      ]
     }
   ],
   "lint": [

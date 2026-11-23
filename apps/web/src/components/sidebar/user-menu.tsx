@@ -66,16 +66,6 @@ export default function UserMenu({ session }: { session: Session }) {
         <div className="flex bg-linear-to-br from-background via-muted to-background rounded-inner outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
           <span className="text-foreground text-sm font-medium">{session.user.username}</span>
         </div>
-        <DropdownMenuGroup>
-          <DropdownMenuItem
-            onClick={() => {
-              navigate({ to: "/settings" });
-            }}
-          >
-            <HugeiconsIcon icon={Settings01Icon} aria-hidden="true" />
-            Settings
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
         <div className="py-2.5">
           <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
             <TabsList className="w-full" aria-label="Theme">
@@ -87,6 +77,16 @@ export default function UserMenu({ session }: { session: Session }) {
             </TabsList>
           </Tabs>
         </div>
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            onClick={() => {
+              navigate({ to: "/settings" });
+            }}
+          >
+            <HugeiconsIcon icon={Settings01Icon} aria-hidden="true" />
+            Settings
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
           <HugeiconsIcon icon={LogoutSquare01Icon} aria-hidden="true" />

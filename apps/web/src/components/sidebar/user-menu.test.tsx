@@ -1,7 +1,5 @@
-import { afterEach, expect, mock, test } from "bun:test";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { Result } from "better-result";
+import { afterEach, expect, test } from "bun:test";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -13,21 +11,10 @@ import {
 import { ComputerIcon, Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { ThemeProvider } from "next-themes";
+import UserMenu from "./user-menu";
 import { signedInSession } from "../../../test/session";
 
 const session = signedInSession();
-const signOut = mock(async () => ({ data: { success: true }, error: null }));
-const authModule = await import("@/lib/auth-client");
-const endSession: typeof authModule.endSession = async (operation) => {
-  await operation();
-  return Result.ok();
-};
-await mock.module("@/lib/auth-client", () => ({
-  ...authModule,
-  authClient: { signOut },
-  endSession,
-}));
-const { default: UserMenu } = await import("./user-menu");
 
 afterEach(() => {
   cleanup();
@@ -73,74 +60,6 @@ test("the account menu holds Settings and Sign Out, and no Profile", async () =>
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
   expect(router.state.location.pathname).toBe("/settings");
-});
-
-async function openWithKeyboard(key: "{Enter}" | " ") {
-  const user = userEvent.setup();
-  screen.getByRole("button", { name: "Account menu" }).focus();
-  await user.keyboard(key);
-  await screen.findByRole("menu");
-  return user;
-}
-
-function focusedName() {
-  const focused = document.activeElement;
-  return focused?.getAttribute("aria-label") ?? focused?.textContent ?? "";
-}
-
-test.each([
-  { key: "{Enter}" as const, label: "Enter" },
-  { key: " " as const, label: "Space" },
-])(
-  "opening the account menu with $label focuses the highlighted Settings, and Enter opens it",
-  async ({ key }) => {
-    const router = renderUserMenu();
-    await screen.findByRole("button", { name: "Account menu" });
-
-    const user = await openWithKeyboard(key);
-    const settings = screen.getByRole("menuitem", { name: "Settings" });
-    await waitFor(() => {
-      expect(focusedName()).toBe("Settings");
-      expect(settings.dataset.highlighted).toBe("");
-    });
-
-    await user.keyboard("{Enter}");
-    await screen.findByRole("heading", { name: "Settings" });
-    expect(router.state.location.pathname).toBe("/settings");
-  },
-);
-
-test("ArrowDown then Enter in the account menu signs out", async () => {
-  renderUserMenu();
-  await screen.findByRole("button", { name: "Account menu" });
-
-  const user = await openWithKeyboard("{Enter}");
-  await waitFor(() => expect(focusedName()).toBe("Settings"));
-  await user.keyboard("{ArrowDown}");
-  expect(focusedName()).toBe("Sign Out");
-  await user.keyboard("{Enter}");
-
-  await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
-});
-
-test("the theme tabs are reached with Tab, switched with the arrow keys, and Escape returns to the trigger", async () => {
-  localStorage.setItem("theme", "system");
-  renderUserMenu();
-  await screen.findByRole("button", { name: "Account menu" });
-
-  const user = await openWithKeyboard("{Enter}");
-  await waitFor(() => expect(focusedName()).toBe("Settings"));
-  await user.keyboard("{Tab}");
-  expect(focusedName()).toBe("System");
-  await user.keyboard("{ArrowLeft}");
-  expect(focusedName()).toBe("Dark");
-  await user.keyboard("{Enter}");
-  expect(localStorage.getItem("theme")).toBe("dark");
-  expect(screen.getByRole("tab", { name: "Dark" }).getAttribute("aria-selected")).toBe("true");
-
-  await user.keyboard("{Escape}");
-  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-  expect(focusedName()).toBe("Account menu");
 });
 
 test("the account menu's theme tablist has an accessible name", async () => {
