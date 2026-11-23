@@ -109,7 +109,6 @@ const order = (
   shippingDate: null,
   collectionDate: null,
   paid: false,
-  payment: "unpaid",
   ...fields,
 });
 
@@ -172,9 +171,7 @@ function afterServerWrite(
   candidate: DashboardKanbanOrder,
   change: Write["change"],
 ): DashboardKanbanOrder {
-  const changed = { ...candidate, ...change } as DashboardKanbanOrder;
-  if (!("paid" in change)) return changed;
-  return { ...changed, payment: change.paid ? "paid" : "unpaid" };
+  return { ...candidate, ...change } as DashboardKanbanOrder;
 }
 
 const paidBox = (orderId: string) =>
@@ -264,11 +261,8 @@ describe("a failed dashboard kanban write rolls back only its own change", () =>
     });
   });
 
-  test("a failed Paid write restores the card's payment state and keeps another card's move that is still in flight", async () => {
-    await renderBoard([
-      order("miku", "Ordered"),
-      order("rin", "Shipped", { paid: true, payment: "partly" }),
-    ]);
+  test("a failed Paid write restores the card's Paid and keeps another card's move that is still in flight", async () => {
+    await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     await clickPaid("rin");
     const clicked = shownPaid("rin");
@@ -290,8 +284,8 @@ describe("a failed dashboard kanban write rolls back only its own change", () =>
         { orderId: "miku", change: { status: "Owned" } },
       ],
       clicked: "true",
-      afterFailure: { board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] }, paid: "mixed" },
-      afterRefetch: { board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] }, paid: "mixed" },
+      afterFailure: { board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] }, paid: "false" },
+      afterRefetch: { board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] }, paid: "false" },
     });
   });
 });

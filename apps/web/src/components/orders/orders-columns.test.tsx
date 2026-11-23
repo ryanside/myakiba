@@ -33,7 +33,6 @@ function order(orderId: string): Order {
     collectionDate: null,
     status: "Ordered",
     paid: false,
-    payment: "unpaid",
     shippingFee: 0,
     taxes: 0,
     duties: 0,
@@ -117,7 +116,6 @@ test("refuses to render without a pending provider", () => {
 const {
   createdAt: _createdAt,
   updatedAt: _updatedAt,
-  payment: _payment,
   total: _total,
   itemCount: _itemCount,
   images: _images,
@@ -160,18 +158,20 @@ test("saves a fee edit without cascading", async () => {
   await waitFor(() => expect(edits).toEqual([[{ ...savedOrder, taxes: 500 }, []]]));
 });
 
-test("a Paid click on a partly paid Order sets Paid on the Order and every item, not an edit", async () => {
+test("the Paid checkbox shows the Order's own Paid, never half-ticked, and a click sets the Order's Paid, not an edit", async () => {
   render(
     <OrderPendingContext
       value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
     >
-      <ColumnCells orders={[{ ...order("o1"), paid: true, payment: "partly" }]} columnId="paid" />
+      <ColumnCells orders={[{ ...order("o1"), paid: true }]} columnId="paid" />
     </OrderPendingContext>,
   );
 
-  fireEvent.click(screen.getByRole("checkbox", { name: "o1 paid" }));
+  const paid = screen.getByRole("checkbox", { name: "o1 paid" });
+  expect(paid.getAttribute("aria-checked")).toBe("true");
+  fireEvent.click(paid);
 
-  await waitFor(() => expect(paidSets).toEqual([["o1", true]]));
+  await waitFor(() => expect(paidSets).toEqual([["o1", false]]));
   expect(edits).toEqual([]);
 });
 

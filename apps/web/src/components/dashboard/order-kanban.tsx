@@ -36,7 +36,7 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { TILE_HOVER_CLASS_NAME, TILE_SURFACE_CLASS_NAME } from "@/components/media-tile";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { ORDER_STATUS_COLORS, paymentOf } from "@/lib/orders";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaidCheckbox } from "@/components/orders/payment";
 import { getCurrencyLocale } from "@/lib/locale";
 import { Skeleton } from "../ui/skeleton";
@@ -76,7 +76,7 @@ interface DateMutationVariables {
   readonly previousDate: string | null;
 }
 
-type PaymentFields = Pick<DashboardKanbanOrder, "paid" | "payment">;
+type PaymentFields = Pick<DashboardKanbanOrder, "paid">;
 
 interface PaidMutationVariables {
   readonly orderId: string;
@@ -257,10 +257,6 @@ function updateOrderInColumns(
   return columns;
 }
 
-function paymentAfterPaidCascade(paid: boolean): PaymentFields {
-  return { paid, payment: paymentOf(paid) };
-}
-
 function updateOrderDateInColumns(
   columns: OrderColumns,
   orderId: string,
@@ -360,7 +356,7 @@ function OrderCard({
             <span className="shrink-0 text-xs font-medium text-muted-foreground">Paid</span>
             <PaidCheckbox
               label={`${order.title} paid`}
-              payment={order.payment}
+              paid={order.paid}
               onPaidChange={(paid) => onPaidChange(order.orderId, paid)}
             />
           </div>
@@ -676,7 +672,7 @@ function OrderKanbanBoard({
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
 
-          queue.persisted = paymentAfterPaidCascade(persistedVariables.paid);
+          queue.persisted = { paid: persistedVariables.paid };
         },
         async () => {
           setColumns((current) =>
@@ -703,11 +699,11 @@ function OrderKanbanBoard({
       setColumns((current) =>
         updateOrderInColumns(current, orderId, (shown) => ({
           ...shown,
-          ...paymentAfterPaidCascade(paid),
+          paid,
         })),
       );
 
-      enqueuePaidMutation({ orderId, paid }, { paid: order.paid, payment: order.payment });
+      enqueuePaidMutation({ orderId, paid }, { paid: order.paid });
     },
     [columns, enqueuePaidMutation],
   );

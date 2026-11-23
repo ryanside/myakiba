@@ -48,7 +48,6 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { PaidField } from "@/components/orders/payment";
 import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
@@ -158,88 +157,75 @@ function CollectionItemFormContent({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <form.Field
-                  name="status"
-                  validators={{
-                    onChange: z.enum(COLLECTION_STATUSES, "Status is required"),
-                  }}
-                  children={(field) => (
-                    <div className="grid gap-1.5">
-                      <Label htmlFor={field.name}>Status</Label>
-                      <Select
-                        value={field.state.value ?? ""}
-                        onValueChange={(value) =>
-                          field.handleChange(value as typeof field.state.value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status">
-                            {field.state.value && (
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
-                                />
-                                {field.state.value}
-                              </span>
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COLLECTION_STATUSES.map((status) => {
-                            const disabled = requiresOrderBeforeStatusChange && status !== "Owned";
-                            const label = (
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
-                                />
-                                {status}
-                              </span>
-                            );
+              <form.Field
+                name="status"
+                validators={{
+                  onChange: z.enum(COLLECTION_STATUSES, "Status is required"),
+                }}
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Status</Label>
+                    <Select
+                      value={field.state.value ?? ""}
+                      onValueChange={(value) =>
+                        field.handleChange(value as typeof field.state.value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status">
+                          {field.state.value && (
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
+                              />
+                              {field.state.value}
+                            </span>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLLECTION_STATUSES.map((status) => {
+                          const disabled = requiresOrderBeforeStatusChange && status !== "Owned";
+                          const label = (
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
+                              />
+                              {status}
+                            </span>
+                          );
 
-                            return (
-                              <SelectItem
-                                key={status}
-                                value={status}
-                                disabled={disabled}
-                                className={disabled ? "data-disabled:pointer-events-auto" : ""}
-                              >
-                                {disabled ? (
-                                  <Tooltip>
-                                    <TooltipTrigger render={label} />
-                                    <TooltipContent side="right">
-                                      Assign this item to an order before changing it to Ordered or
-                                      Shipped.
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ) : (
-                                  label
-                                )}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                      {!field.state.meta.isValid && (
-                        <p role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                />
-
-                <form.Field
-                  name="paid"
-                  children={(field) => (
-                    <PaidField
-                      id={field.name}
-                      paid={field.state.value}
-                      onPaidChange={field.handleChange}
-                    />
-                  )}
-                />
-              </div>
+                          return (
+                            <SelectItem
+                              key={status}
+                              value={status}
+                              disabled={disabled}
+                              className={disabled ? "data-disabled:pointer-events-auto" : ""}
+                            >
+                              {disabled ? (
+                                <Tooltip>
+                                  <TooltipTrigger render={label} />
+                                  <TooltipContent side="right">
+                                    Assign this item to an order before changing it to Ordered or
+                                    Shipped.
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                label
+                              )}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    {!field.state.meta.isValid && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
 
               <form.Field
                 name="condition"

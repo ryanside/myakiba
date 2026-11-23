@@ -240,7 +240,6 @@ const sourceOrders = {
 const ownItemValues = {
   "collection-1": {
     status: "Owned",
-    paid: true,
     shop: "Mandarake",
     orderDate: "2025-12-30",
     paymentDate: "2026-01-02",
@@ -250,7 +249,6 @@ const ownItemValues = {
   },
   "collection-2": {
     status: "Shipped",
-    paid: true,
     shop: "",
     orderDate: null,
     paymentDate: "2026-01-21",
@@ -489,7 +487,7 @@ describe("a New Order starts from the selected items", () => {
     });
   });
 
-  test("an item with every field blank gives a blank draft, and Paid stays off when one item is unpaid", async () => {
+  test("an item outside any Order with every field blank gives a blank draft that starts Paid", async () => {
     await db.insert(collection).values({ id: "collection-3", userId, itemId: "item-1" });
 
     expect(await draftOf(["collection-3"])).toEqual({
@@ -497,7 +495,7 @@ describe("a New Order starts from the selected items", () => {
       body: {
         shop: "",
         status: "Owned",
-        paid: false,
+        paid: true,
         orderDate: null,
         releaseDate: null,
         paymentDate: null,
@@ -507,9 +505,33 @@ describe("a New Order starts from the selected items", () => {
         ...noFees,
       },
     });
-    expect(await draftOf(["collection-1", "collection-3"])).toMatchObject({
-      status: 200,
-      body: { paid: false },
+  });
+
+  test("the draft's Paid follows each item's Order: Paid outside any Order or in a Paid Order, Unpaid once one item is in an Unpaid Order", async () => {
+    await db.insert(collection).values({ id: "collection-3", userId, itemId: "item-1" });
+    const paidOf = async (collectionIds: readonly string[]) => {
+      const { body } = await draftOf(collectionIds);
+      return (body as { readonly paid: boolean }).paid;
+    };
+    const outside = await paidOf(["collection-3"]);
+    const allInPaidOrders = await paidOf(["collection-1", "collection-2"]);
+    const outsideAndPaidOrder = await paidOf(["collection-1", "collection-3"]);
+    await db.update(order).set({ paid: false }).where(eq(order.id, "order-2"));
+    const oneInUnpaidOrder = await paidOf(["collection-1", "collection-2"]);
+    const outsideAndUnpaidOrder = await paidOf(["collection-2", "collection-3"]);
+
+    expect({
+      outside,
+      allInPaidOrders,
+      outsideAndPaidOrder,
+      oneInUnpaidOrder,
+      outsideAndUnpaidOrder,
+    }).toEqual({
+      outside: true,
+      allInPaidOrders: true,
+      outsideAndPaidOrder: true,
+      oneInUnpaidOrder: false,
+      outsideAndUnpaidOrder: false,
     });
   });
 
@@ -517,7 +539,7 @@ describe("a New Order starts from the selected items", () => {
     const ids = Array.from({ length: 1000 }, (_, i) => `bulk-item-${i}`);
     await db
       .insert(collection)
-      .values(ids.map((id) => ({ id, userId, itemId: "item-1", shop: "AmiAmi", paid: true })));
+      .values(ids.map((id) => ({ id, userId, itemId: "item-1", shop: "AmiAmi" })));
 
     expect(await draftOf(ids)).toMatchObject({
       status: 200,

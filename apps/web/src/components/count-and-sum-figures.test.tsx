@@ -76,7 +76,6 @@ const calendarOrder = {
   itemCount: 1,
   status: "Ordered",
   paid: false,
-  payment: "unpaid",
   releaseDate: "2026-11-15",
   total: 3600,
 } satisfies CalendarOrder;

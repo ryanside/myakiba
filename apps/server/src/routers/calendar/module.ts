@@ -6,7 +6,7 @@ import { Result } from "better-result";
 import { query } from "@/domain/kernel";
 import type { CalendarQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { orderPayment, orderTotal } from "@/lib/order-money";
+import { orderTotal } from "@/lib/order-money";
 
 export const Calendar = {
   items: query(
@@ -68,7 +68,6 @@ export const Calendar = {
           shop: order.shop,
           status: order.status,
           paid: order.paid,
-          payment: orderPayment,
           releaseDate: order.releaseDate,
           itemCount: sql<number>`COUNT(${collection.id})`.mapWith(Number),
           images: orderPreviewImagesSql,

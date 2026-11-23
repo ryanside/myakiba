@@ -86,7 +86,6 @@ const withoutUpdatedAt = <Row extends { readonly updatedAt: Date }>(rows: readon
 
 const FILLS = [
   [{ field: "status", value: "Owned" }, "Owned"],
-  [{ field: "paid", value: true }, true],
   [{ field: "shop", value: " Mandarake " }, "Mandarake"],
   [{ field: "shop", value: "" }, ""],
   [{ field: "orderDate", value: "2026-03-01" }, "2026-03-01"],
@@ -122,31 +121,38 @@ describe("an Order fill writes its field to every listed Order and cascades it t
   });
 });
 
-test("a paid fill leaves status alone on the Orders and their items, and a status fill leaves paid alone", async () => {
-  const paidAndStatus = async () => {
-    const { orders, items } = await readState();
-    return [...orders, ...items]
-      .filter(({ id }) => id === "order-1" || id === "c-1" || id === "c-2")
-      .map(({ id, status, paid }) => ({ id, status, paid }));
+test("a Paid fill writes the Orders alone and leaves their items as they were", async () => {
+  const before = await readState();
+
+  expect(
+    await fill({ orderIds: ["order-2", "order-1"], fill: { field: "paid", value: true } }),
+  ).toEqual(FILLED);
+
+  const after = await readState();
+  expect(withoutUpdatedAt(after.orders)).toEqual(
+    withoutUpdatedAt(before.orders).map((row) =>
+      row.id === "order-1" || row.id === "order-2" ? { ...row, paid: true } : row,
+    ),
+  );
+  expect(after.items).toEqual(before.items);
+});
+
+test("a Paid fill leaves status alone, and a status fill leaves Paid alone", async () => {
+  const orderOne = async () => {
+    const { orders } = await readState();
+    const found = orders.find(({ id }) => id === "order-1");
+    return { status: found?.status, paid: found?.paid };
   };
 
   expect(await fill({ orderIds: ["order-1"], fill: { field: "paid", value: true } })).toEqual(
     FILLED,
   );
-  expect(await paidAndStatus()).toEqual([
-    { id: "order-1", status: "Ordered", paid: true },
-    { id: "c-1", status: "Ordered", paid: true },
-    { id: "c-2", status: "Shipped", paid: true },
-  ]);
+  expect(await orderOne()).toEqual({ status: "Ordered", paid: true });
 
   expect(await fill({ orderIds: ["order-1"], fill: { field: "status", value: "Owned" } })).toEqual(
     FILLED,
   );
-  expect(await paidAndStatus()).toEqual([
-    { id: "order-1", status: "Owned", paid: true },
-    { id: "c-1", status: "Owned", paid: true },
-    { id: "c-2", status: "Owned", paid: true },
-  ]);
+  expect(await orderOne()).toEqual({ status: "Owned", paid: true });
 });
 
 test("an Order with no items is filled", async () => {
@@ -208,7 +214,10 @@ test("an Order fill and a fill of its items, each given in reverse id order, bot
   });
   await locked.promise;
 
-  const orders = fill({ orderIds: ["order-2", "order-1"], fill: { field: "paid", value: true } });
+  const orders = fill({
+    orderIds: ["order-2", "order-1"],
+    fill: { field: "shippingMethod", value: "DHL" },
+  });
   const items = put("/collection/fill", {
     ids: ["c-3", "c-2", "c-1"],
     fill: { field: "notes", value: "Checked" },
@@ -223,10 +232,12 @@ test("an Order fill and a fill of its items, each given in reverse id order, bot
   ]);
   const { items: rows } = await readState();
   expect(
-    rows.filter(({ id }) => id <= "c-3").map(({ id, paid, notes }) => ({ id, paid, notes })),
+    rows
+      .filter(({ id }) => id <= "c-3")
+      .map(({ id, shippingMethod, notes }) => ({ id, shippingMethod, notes })),
   ).toEqual([
-    { id: "c-1", paid: true, notes: "Checked" },
-    { id: "c-2", paid: true, notes: "Checked" },
-    { id: "c-3", paid: true, notes: "Checked" },
+    { id: "c-1", shippingMethod: "DHL", notes: "Checked" },
+    { id: "c-2", shippingMethod: "DHL", notes: "Checked" },
+    { id: "c-3", shippingMethod: "DHL", notes: "Checked" },
   ]);
 });

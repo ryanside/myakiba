@@ -39,7 +39,6 @@ const DEFAULT_COLUMN_ORDER = [
   "count",
   "price",
   "status",
-  "paid",
   "actions",
 ];
 

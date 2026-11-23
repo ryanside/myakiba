@@ -29,7 +29,6 @@ type Placement = {
 const orderTerms = {
   id: order.id,
   status: order.status,
-  paid: order.paid,
   shop: order.shop,
   orderDate: order.orderDate,
   paymentDate: order.paymentDate,
@@ -74,7 +73,6 @@ async function placementOf(
         orderId: null,
         fields: (row) => ({
           status: "Owned",
-          paid: true,
           shop: row.shop ?? shared.shop,
           orderDate: row.orderDate,
           paymentDate: row.paymentDate,

@@ -29,7 +29,7 @@ Preconditions:
 - **Search.** Type `Plush` into `role=textbox[name='Search Collection']`, then `preview_wait_for` with `urlIncludes: "search=Plush"`. Only titles containing `Plush` remain, or `No data available`. Navigate back to `<url>/collection` to clear it.
 - **Edit.** Click `role=button[name='Edit item'] >> nth=0`. The sheet `Edit Item` opens. Click `role=dialog >> role=button[name='8 stars']`, then `role=dialog >> role=button[name='Update']`. The toast reads `Collection updated`, the row's Score reads `8.0`, `$H logs <run>` has `PUT /api/collection/<id>`, and `$H psql <run> "select score from collection"` returns `8.0`.
 - **Select a row.** Click `role=main >> role=checkbox[name='Select row'] >> nth=0`. The page reads `1 of 1 row(s) selected`, and a toolbar shows `Assign Order`, `Fill`, `Add selected items to List`, `Delete` and `Clear selection`.
-- **Fill.** Click `role=toolbar >> role=button[name='Fill']`. The dialog `Fill all` lists `Paid`, `Price`, `Count`, `Condition`, `Shop`, four dates, `Shipping Method`, `Score`, `Tags` and `Notes`. Click `Shop`, type `Verify Shop` into `role=dialog[name='Fill all'] >> role=combobox[name='Shop']`, and click `role=button[name='Fill 1 selected']`. The toast reads `Filled Shop on 1 item`, the selection stays, `$H logs <run>` has `PUT /api/collection/fill`, and `$H psql <run> "select shop from collection"` returns `Verify Shop`.
+- **Fill.** Click `role=toolbar >> role=button[name='Fill']`. The dialog `Fill all` lists `Price`, `Count`, `Condition`, `Shop`, four dates, `Shipping Method`, `Score`, `Tags` and `Notes`. Click `Shop`, type `Verify Shop` into `role=dialog[name='Fill all'] >> role=combobox[name='Shop']`, and click `role=button[name='Fill 1 selected']`. The toast reads `Filled Shop on 1 item`, the selection stays, `$H logs <run>` has `PUT /api/collection/fill`, and `$H psql <run> "select shop from collection"` returns `Verify Shop`.
 - **Escape order.** Open `Fill` again and press `Escape`. The `Fill all` dialog closes and the toolbar and selection stay.
 - **Delete.** Click `role=button[name='Open menu'] >> nth=0`, then `role=menuitem[name='Delete item']`, then `role=dialog >> role=button[name='Delete']` in the `Delete item?` dialog. The toast reads `Collection item(s) deleted`, the row disappears, `$H logs <run>` has `DELETE /api/collection`, and `$H psql` no longer returns it.
 - **Proof.** Save the snapshot with the row, the evaluate JSON of rows and `total items`, the SQL result and the log lines to `evidence/collection/`.
@@ -38,7 +38,7 @@ Preconditions:
 
 - The page lists `Owned` rows only. An Order Item that is `Ordered` or `Shipped` is a `collection` row in SQL but does not show here, and `total items` does not count it.
 - The row menu holds `View details` (to `/item/<externalId>`), `Copy MFC ID`, `Add to List`, `Assign order` and `Delete item`.
-- The `Edit Item` sheet also edits `Price`, `Count`, `Status`, `Paid`, `Condition`, `Shop`, the release, four dates, `Shipping Method`, `Tags` and `Notes`.
+- The `Edit Item` sheet also edits `Price`, `Count`, `Status`, `Condition`, `Shop`, the release, four dates, `Shipping Method`, `Tags` and `Notes`.
 - The search box has the placeholder `Search`, but its accessible name is `Search Collection`.
 - The view mode persists in `localStorage` under `collection:viewMode` for this origin.
 - From source: below the `md` width, `Filters`, `Sort` and `Columns` lose their visible text. Keep the preview at its default width.

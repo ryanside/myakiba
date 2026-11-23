@@ -31,7 +31,6 @@ export function deleteCollectionItems(ids: string[]) {
 export function updateCollectionItem(values: CollectionItemFormValues) {
   const request = app.api.collection({ id: values.id }).put({
     status: values.status,
-    paid: values.paid,
     count: values.count,
     score: values.score,
     price: values.price,

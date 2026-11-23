@@ -38,8 +38,7 @@ import { withOrderItemPending } from "./order-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import { ORDER_STATUS_COLORS, paymentOf } from "@/lib/orders";
-import { PaidCheckbox } from "./payment";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
@@ -322,27 +321,6 @@ export function createOrderItemSubColumns({
       size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
-      },
-    },
-    {
-      accessorKey: "paid",
-      header: ({ column }) => (
-        <DataGridColumnHeader title="Paid" visibility={true} column={column} />
-      ),
-      cell: editItem("paid", (item, { disabled, onSubmit }) => (
-        <PaidCheckbox
-          label={`${item.itemTitle} paid`}
-          payment={paymentOf(item.paid)}
-          disabled={disabled}
-          onPaidChange={(paid) => onSubmit(paid)}
-        />
-      )),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 72,
-      meta: {
-        skeleton: <Skeleton className="size-4" />,
       },
     },
     {

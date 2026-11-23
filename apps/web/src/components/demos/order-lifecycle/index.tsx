@@ -326,7 +326,6 @@ function Items({ s }: { readonly s: S }) {
         <span className="mk-order-lifecycle-item-status">
           <StatusText status={statusOf(s.step)} className="mk-order-lifecycle-status--item" />
         </span>
-        <Check checked={s.paid} />
       </div>
     </section>
   );

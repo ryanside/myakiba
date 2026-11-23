@@ -48,7 +48,7 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
         <ThemedBadge variant={getStatusVariant(order.status)} size="sm">
           {order.status}
         </ThemedBadge>
-        <PaymentBadge payment={order.payment} size="sm" />
+        <PaymentBadge paid={order.paid} size="sm" />
         <span className="text-sm font-medium tabular-nums">
           {formatCurrencyFromMinorUnits(order.total, currency, locale)}
         </span>

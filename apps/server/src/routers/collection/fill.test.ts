@@ -98,7 +98,6 @@ const tagsOf = async (id: string) => {
 
 const FILLS = [
   [{ field: "status", value: "Owned" }, "Owned"],
-  [{ field: "paid", value: true }, true],
   [{ field: "price", value: 4200 }, 4200],
   [{ field: "price", value: 0 }, 0],
   [{ field: "count", value: 3 }, 3],
@@ -140,17 +139,6 @@ describe("a fill writes its one field to every listed Collection Item and nothin
     ]);
     expect(await readOrders()).toEqual(orders);
   });
-});
-
-test("a paid fill leaves status alone, and a status fill leaves paid alone", async () => {
-  expect(await fill({ ids: ["c-2"], fill: { field: "paid", value: true } })).toEqual(FILLED);
-  expect(await rowOf("c-2")).toMatchObject({ status: "Ordered", paid: true });
-
-  expect(await fill({ ids: ["c-2"], fill: { field: "status", value: "Owned" } })).toEqual(FILLED);
-  expect(await rowOf("c-2")).toMatchObject({ status: "Owned", paid: true });
-
-  expect(await fill({ ids: ["c-2"], fill: { field: "paid", value: false } })).toEqual(FILLED);
-  expect(await rowOf("c-2")).toMatchObject({ status: "Owned", paid: false });
 });
 
 describe("only an Order Item can be Ordered or Shipped", () => {
@@ -248,9 +236,19 @@ describe("a tags fill keeps every row within 100 tags", () => {
 });
 
 test.each([
-  ["an extra key in the body", { ids: ["c-1"], fill: { field: "paid", value: true }, userId }],
-  ["an extra key in the fill", { ids: ["c-1"], fill: { field: "paid", value: true, id: "c-2" } }],
-  ["a value of another field's type", { ids: ["c-1"], fill: { field: "paid", value: "Owned" } }],
+  [
+    "an extra key in the body",
+    { ids: ["c-1"], fill: { field: "condition", value: "New" }, userId },
+  ],
+  [
+    "an extra key in the fill",
+    { ids: ["c-1"], fill: { field: "condition", value: "New", id: "c-2" } },
+  ],
+  ["a value of another field's type", { ids: ["c-1"], fill: { field: "condition", value: true } }],
+  [
+    "a Paid fill, which only an Order takes",
+    { ids: ["c-1"], fill: { field: "paid", value: true } },
+  ],
   ["a release fill", { ids: ["c-1"], fill: { field: "releaseId", value: null } }],
   ["a count of 0", { ids: ["c-1"], fill: { field: "count", value: 0 } }],
 ])("a fill with %s answers 422 and changes no row", async (_, body) => {

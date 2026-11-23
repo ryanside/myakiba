@@ -104,6 +104,7 @@ test("Orders alone list their fields with no heading", async () => {
   expect(within(fillAll).getByText("Write one value to 2 selected orders.")).toBeDefined();
   expect(within(fillAll).queryByRole("group")).toBeNull();
   expect(within(fillAll).getAllByRole("button")).toHaveLength(8);
+  expect(within(fillAll).queryByRole("button", { name: "Paid" }) !== null).toBe(true);
 });
 
 test("Order Items alone list their fields with no heading", async () => {
@@ -112,7 +113,8 @@ test("Order Items alone list their fields with no heading", async () => {
 
   expect(within(fillAll).getByText("Write one value to 2 selected items.")).toBeDefined();
   expect(within(fillAll).queryByRole("group")).toBeNull();
-  expect(within(fillAll).getAllByRole("button")).toHaveLength(14);
+  expect(within(fillAll).getAllByRole("button")).toHaveLength(13);
+  expect(within(fillAll).queryByRole("button", { name: "Paid" }) === null).toBe(true);
 });
 
 test("Orders and Order Items together fill through their own handlers and keep both selections", async () => {

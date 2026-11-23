@@ -5,7 +5,6 @@ import type { ItemFill } from "./fill";
 
 const FILLS = [
   { field: "status", value: "Shipped" },
-  { field: "paid", value: true },
   { field: "price", value: 0 },
   { field: "count", value: 999 },
   { field: "condition", value: "Pre-Owned" },
@@ -43,9 +42,19 @@ test("a shop fill is trimmed, as an edit's shop is", () => {
 });
 
 test.each([
-  ["an extra key in the body", { ids: ["c-1"], fill: { field: "paid", value: true }, userId: "u" }],
-  ["an extra key in the fill", { ids: ["c-1"], fill: { field: "paid", value: true, id: "c-2" } }],
-  ["a value of another field's type", { ids: ["c-1"], fill: { field: "paid", value: "Owned" } }],
+  [
+    "an extra key in the body",
+    { ids: ["c-1"], fill: { field: "condition", value: "New" }, userId: "u" },
+  ],
+  [
+    "an extra key in the fill",
+    { ids: ["c-1"], fill: { field: "condition", value: "New", id: "c-2" } },
+  ],
+  ["a value of another field's type", { ids: ["c-1"], fill: { field: "condition", value: true } }],
+  [
+    "a Paid fill, which only an Order takes",
+    { ids: ["c-1"], fill: { field: "paid", value: true } },
+  ],
   ["a release fill", { ids: ["c-1"], fill: { field: "releaseId", value: null } }],
   ["an unknown field", { ids: ["c-1"], fill: { field: "updatedAt", value: "2026-01-01" } }],
   ["a fill with no value", { ids: ["c-1"], fill: { field: "notes" } }],

@@ -15,8 +15,6 @@ export const ORDER_STATUSES = ["Ordered", "Shipped", "Owned"] as const;
 
 export const COLLECTION_STATUSES = ["Ordered", "Shipped", "Owned"] as const;
 
-export const ORDER_PAYMENTS = ["paid", "partly", "unpaid"] as const;
-
 export const CONDITIONS = ["New", "Pre-Owned"] as const;
 
 export const ENTRY_CATEGORIES = [

@@ -33,7 +33,6 @@ import {
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import { FILL_FIELD } from "@/lib/fill-fields";
-import { paymentOf } from "@/lib/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, messageAs, rootedRead } from "../client";
 
@@ -121,10 +120,7 @@ export const editOrderCommand = defineCommand({
     cascadeOptions,
   }: { readonly values: EditedOrder; readonly cascadeOptions: CascadeOptions } & OnList) =>
     editOrder(values, cascadeOptions),
-  optimistic: async (queryClient, { values, cascadeOptions, list }) => {
-    const cascadedPayment = cascadeOptions.includes("paid")
-      ? { payment: paymentOf(values.paid) }
-      : {};
+  optimistic: async (queryClient, { values, list }) => {
     // Always patch the order detail cache; it is keyed by id, so it is safe to update
     // regardless of any list-page filter state.
     const orderDetailKey = orders.detail.key(values.orderId);
@@ -143,7 +139,6 @@ export const editOrderCommand = defineCommand({
         ? {
             ...old,
             ...values,
-            ...cascadedPayment,
             ...(detailNewTotal !== undefined && { total: detailNewTotal }),
           }
         : old,
@@ -174,7 +169,6 @@ export const editOrderCommand = defineCommand({
                   ? {
                       ...order,
                       ...values,
-                      ...cascadedPayment,
                       ...(newTotal !== undefined && { total: newTotal }),
                     }
                   : order,
@@ -218,7 +212,7 @@ export const setOrderPaidCommand = defineCommand({
         ? {
             ...old,
             items: old.items.map((order) =>
-              order.orderId === orderId ? { ...order, paid, payment: paymentOf(paid) } : order,
+              order.orderId === orderId ? { ...order, paid } : order,
             ),
           }
         : old,
@@ -263,6 +257,12 @@ export const deleteOrdersCommand = defineCommand({
   failureToast: () => ({ title: "Failed to delete order(s). Please try again." }),
 });
 
+function ordersFilled(count: number, field: OrderFill["field"]): string {
+  const named = count === 1 ? "1 order" : `${count} orders`;
+  if (field === "paid") return named;
+  return count === 1 ? "1 order and its items" : `${named} and their items`;
+}
+
 export const fillOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
   refetchBy: "settled",
@@ -274,7 +274,7 @@ export const fillOrdersCommand = defineCommand({
     readonly fill: OrderFill;
   }) => fillOrders(orderIds, fill),
   successTitle: ({ orderIds, fill }) =>
-    `Filled ${FILL_FIELD[fill.field].label} on ${orderIds.length === 1 ? "1 order and its items" : `${orderIds.length} orders and their items`}`,
+    `Filled ${FILL_FIELD[fill.field].label} on ${ordersFilled(orderIds.length, fill.field)}`,
   failureToast: messageAs("title", () => "Failed to fill orders"),
 });
 

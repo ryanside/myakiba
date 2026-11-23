@@ -26,7 +26,7 @@ import {
 } from "@/components/reui/timeline";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { getStatusVariant, paymentOf } from "@/lib/orders";
+import { getStatusVariant } from "@/lib/orders";
 import { PaymentLine } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
@@ -295,17 +295,12 @@ export function CollectionItemCard({
         </Timeline>
       )}
 
-      {collectionItem ? (
+      {collectionItem ? null : <Skeleton className="h-5 w-32" />}
+      {collectionItem?.paymentDate ? (
         <div className="animate-data-in">
-          <PaymentLine
-            payment={paymentOf(collectionItem.paid)}
-            paymentDate={collectionItem.paymentDate}
-            dateFormat={dateFormat}
-          />
+          <PaymentLine paymentDate={collectionItem.paymentDate} dateFormat={dateFormat} />
         </div>
-      ) : (
-        <Skeleton className="h-5 w-32" />
-      )}
+      ) : null}
 
       {hasExtras && (
         <div className="flex flex-col gap-3">

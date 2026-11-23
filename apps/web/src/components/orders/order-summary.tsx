@@ -144,7 +144,7 @@ export function OrderSummary({
         ) : (
           <div className="animate-data-in">
             <PaymentLine
-              payment={order.payment}
+              paid={order.paid}
               paymentDate={order.paymentDate}
               dateFormat={dateFormat}
             />

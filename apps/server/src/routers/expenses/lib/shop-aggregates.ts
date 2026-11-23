@@ -15,11 +15,16 @@ import {
   createOrderItemSpendByOrder,
   getShippingMethodTotals,
   orderSpendSums,
-  orderSpendWhere,
   paidOrderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
-import { orderFees, orderIsPaid, paidItemCount, paidItemPrice } from "@/lib/order-money";
+import {
+  itemOrderJoin,
+  orderFees,
+  orderIsPaid,
+  paidItemCount,
+  paidItemPrice,
+} from "@/lib/order-money";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const EMPTY_FEE_BREAKDOWN = {
@@ -73,7 +78,7 @@ async function getCollectionShopRows(
         paidItemCount: sql<number>`${paidItemCount}::integer`.as("paid_item_count"),
       })
       .from(collection)
-      .leftJoin(order, eq(collection.orderId, order.id))
+      .leftJoin(...itemOrderJoin)
       .where(collectionWhere(userId, scopedFilters, "total"))
       .groupBy(collection.shop),
   );
@@ -159,7 +164,7 @@ async function getOrdersShopRows(
       })
       .from(order)
       .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-      .where(orderSpendWhere(userId, scopedFilters, "total", orderItems))
+      .where(paidOrderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
   const scopedShops = tx.$with("scoped_shops").as(
@@ -361,7 +366,7 @@ function loadCollectionItems(tx: ReadTx, userId: string, filters: ExpenseFilters
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
-    .leftJoin(order, eq(collection.orderId, order.id))
+    .leftJoin(...itemOrderJoin)
     .where(collectionWhere(userId, filters, "total"))
     .orderBy(desc(collection.paymentDate), desc(collection.createdAt), desc(collection.id))
     .limit(6);
@@ -403,11 +408,7 @@ async function loadTopOrders(
     .from(order)
     .leftJoin(orderItems, eq(order.id, orderItems.orderId))
     .leftJoin(collection, eq(order.id, collection.orderId))
-    .where(
-      scope === "shipping"
-        ? paidOrderWhere(userId, filters, "total")
-        : orderSpendWhere(userId, filters, "total", orderItems),
-    )
+    .where(paidOrderWhere(userId, filters, "total"))
     .groupBy(
       order.id,
       order.title,

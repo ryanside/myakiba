@@ -125,7 +125,7 @@ function LoadedOrderHero({
                 />
                 {order.status}
               </span>
-              <PaymentBadge payment={order.payment} className="ml-2 align-middle" />
+              <PaymentBadge paid={order.paid} className="ml-2 align-middle" />
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {order.shop ? (
