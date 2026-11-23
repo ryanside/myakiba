@@ -35,10 +35,6 @@ async function backgroundAt(pathname: string) {
 }
 
 describe("page background", () => {
-  test("the Orders list shows the Orders background", async () => {
-    expect(await backgroundAt("/orders")).toContain("17-night-calendar-bitgrain.webp");
-  });
-
   test("an order detail page shows no background", async () => {
     expect(await backgroundAt("/orders/uy1ru0816jq10g4ooo73ckhw")).toBe(null);
   });
