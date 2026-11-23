@@ -5508,6 +5508,36 @@
         "the merge dialog reads its Orders fresh on every open > a reopen while the first read is still pending waits for its own read",
         "the merge dialog reads its Orders fresh on every open > a reopen in the same tick as the close reads the Orders again"
       ]
+    },
+    {
+      "fix": "e2840f8dfe309923f3506b6ba9ee8dbf0e08782f",
+      "bug": "Move and Assign to a New Order opened blank, so the new Order started as Ordered, unpaid, with no Shop or dates whatever the selected items held; nothing derived it from the items, and nothing read the items fresh for each opening.",
+      "test": "apps/server/src/routers/orders/merge-split.test.ts",
+      "fixed": [
+        "a New Order starts from the selected items > one item gives its own values and no fees",
+        "a New Order starts from the selected items > items take the shared Shop, the least advanced status, the earliest Order Date and the latest other dates, as Merge does",
+        "a New Order starts from the selected items > an item with every field blank gives a blank draft, and Paid stays off when one item is unpaid",
+        "a New Order starts from the selected items > an id the viewer does not hold answers 404",
+        "a New Order starts from the selected items > moving items to a New Order made from the draft keeps every item's own values"
+      ]
+    },
+    {
+      "fix": "e2840f8dfe309923f3506b6ba9ee8dbf0e08782f",
+      "bug": "Move and Assign to a New Order opened blank, so the new Order started as Ordered, unpaid, with no Shop or dates whatever the selected items held; nothing derived it from the items, and nothing read the items fresh for each opening.",
+      "test": "apps/server/src/routers/owner-isolation.test.ts",
+      "fixed": [
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the New Order draft of her Order Item"
+      ]
+    },
+    {
+      "fix": "e2840f8dfe309923f3506b6ba9ee8dbf0e08782f",
+      "bug": "Move and Assign to a New Order opened blank, so the new Order started as Ordered, unpaid, with no Shop or dates whatever the selected items held; nothing derived it from the items, and nothing read the items fresh for each opening.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "moving items to a New Order > opens on the values read for the selected items and sends them unchanged",
+        "moving items to a New Order > says why it cannot open when the items do not load, with no way to submit",
+        "moving items to a New Order > reads the items again on every opening"
+      ]
     }
   ],
   "lint": [
