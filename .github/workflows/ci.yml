@@ -12,31 +12,8 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate
+    name: Static checks
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18.6
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U test"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 15
-      redis:
-        image: redis:8.8.0
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -75,6 +52,62 @@ jobs:
       - name: Check types
         run: bunx turbo run check-types
 
+  test-web:
+    name: Test web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        run: bun run test web
+
+  test-packages:
+    name: Test packages
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+      redis:
+        image: redis:8.8.0
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
       # A service container cannot take MinIO's `server` command, so this step starts it.
       - name: Start MinIO for pictures:reconcile
         run: |
@@ -85,11 +118,44 @@ jobs:
             cgr.dev/chainguard/minio-client@sha256:2fc4412391f1ce7372db8dd8bee17b38d76f7bb898bac195915bfe6979aa5784 mb s3/myakiba-test
 
       - name: Test
-        run: bun run test
+        run: bun run test packages
         env:
           TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
           TEST_REDIS_URL: redis://localhost:6379
           TEST_S3_URL: http://test:test-password@localhost:9000/myakiba-test
+
+  test-tooling:
+    name: Test tooling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        run: bun run test tooling
+
+  # The main ruleset requires a check named Validate, so this job stands for the four above.
+  # It runs even when one of them fails or is skipped, and passes only when all of them passed.
+  validate-gate:
+    name: Validate
+    needs: [validate, test-web, test-packages, test-tooling]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every check to pass
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          jq -e 'all(.[]; .result == "success")' <<< "$NEEDS" > /dev/null
 
   extension-sources:
     name: Rebuild the extension from its sources zip
