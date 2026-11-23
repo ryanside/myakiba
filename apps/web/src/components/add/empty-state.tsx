@@ -4,6 +4,7 @@ import {
   RUNS_IN,
   installLink,
   meanwhile,
+  pickHowTo,
   reviewTitle,
 } from "@/components/extension/extension-notice";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,10 +29,7 @@ export function emptyMessage(
   availability: ExtensionAvailability,
 ): EmptyMessage {
   if (status === "ready" || status === "outdated") {
-    return {
-      body: "Click Pick for myakiba on any MyFigureCollection item and it lands here.",
-      link: null,
-    };
+    return { body: pickHowTo("here"), link: null };
   }
   switch (availability.kind) {
     case "listed":

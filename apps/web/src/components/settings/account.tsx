@@ -108,13 +108,7 @@ function EmailRow({ email, isVerified }: { readonly email: string; readonly isVe
   return (
     <SettingsRow
       setting="email"
-      status={
-        isVerified ? (
-          <StatusText tone="positive">Verified</StatusText>
-        ) : (
-          <StatusText tone="warning">Not verified</StatusText>
-        )
-      }
+      status={isVerified ? null : <StatusText tone="warning">Not verified</StatusText>}
     >
       <span className="text-sm [overflow-wrap:anywhere] sm:text-right">{email}</span>
       {isVerified ? null : (

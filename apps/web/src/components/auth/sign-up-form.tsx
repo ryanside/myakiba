@@ -208,11 +208,6 @@ export default function SignUpForm({ redirectTo = "/dashboard" }: { redirectTo?:
                   {error?.message}
                 </p>
               ))}
-              <div className="flex items-center justify-end">
-                <Link to="/forgot-password" className="text-sm text-muted-foreground underline">
-                  Forgot password?
-                </Link>
-              </div>
             </div>
           )}
         </form.Field>

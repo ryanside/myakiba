@@ -66,7 +66,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
     validators: {
       onSubmit: z.object({
         email: z.email({ error: "Invalid email address" }),
-        password: z.string().min(8, "Password must be at least 8 characters"),
+        password: z.string(),
       }),
     },
   });
@@ -150,11 +150,6 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
               />
-              {field.state.meta.errors.map((error) => (
-                <p key={error?.message} className="text-red-500 text-sm">
-                  {error?.message}
-                </p>
-              ))}
             </div>
           )}
         </form.Field>
