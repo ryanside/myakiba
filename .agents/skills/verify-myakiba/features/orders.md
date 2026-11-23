@@ -8,7 +8,7 @@ A user creates an Order holding one or more Items, follows it from Ordered to Ow
 - `order-add-item` adds an Item to an existing Order from the Order page's items grid.
 - `order-status` changes an Order's status in the orders table, which also updates its items.
 - `order-paid` marks an Order paid from the orders table or the dashboard board. Paid covers the Order's items and fees; items have no Paid of their own.
-- `order-fill` writes one field to every selected Order and its items.
+- `order-fill` writes one field to every selected Order and its items, except Paid, which it writes to the Orders alone.
 - `order-merge` merges two or more selected Orders into a new one.
 - `order-split` moves selected items from an Order to a new Order.
 - `order-delete` deletes an Order and keeps its `Owned` items.
@@ -36,7 +36,7 @@ Preconditions:
 - **Merge.** Click `role=toolbar >> role=button[name='Merge']`. The dialog `Merge Orders` opens with the title `New Merged Order`. Click `role=dialog[name='Merge Orders'] >> role=button[name='Merge']`. `$H logs <run>` has `POST /api/orders/merge`, and one Order titled `New Merged Order` holds all three items.
 - **Split.** Open the merged Order and click `role=main >> role=checkbox[name='Select row'] >> nth=0`. A toolbar shows `Move Item`, `Fill`, `Delete Items` and `Clear selection`. Click `Move Item`. In the dialog `Move Items`, click `role=radio[name='New Order']`, type `Verify Split Order` into `input[placeholder='Enter order title']` with `clear: true`, and click `role=button[name='Move to New Order']`. `$H logs <run>` has `POST /api/orders/split`, the merged Order shows `Items (2)`, and `Verify Split Order` holds one item.
 - **Delete.** Open `Verify Split Order`, click `role=button[name='More order actions']`, then `role=menuitem[name='Delete order']`, then `role=dialog >> role=button[name='Delete']` in the `Delete order?` dialog. The toast reads `Order deleted`, the page returns to `/orders`, `$H logs <run>` has `DELETE /api/orders`, and the Order and its `Ordered` item are gone from SQL.
-- **Dashboard board.** `preview_navigate` to `<url>/dashboard`. The Order's card sits in the `Ordered` column. Click `role=checkbox[name='New Merged Order paid']`. `$H logs <run>` has `PUT /api/orders/<id>`, `"order".paid` is `t`, and the `unpaid costs` card reads `$0.00`.
+- **Dashboard board.** `preview_navigate` to `<url>/dashboard`. The Order's card sits in the `Ordered` column. Click `role=checkbox[name='New Merged Order paid']`. `$H logs <run>` has `PUT /api/orders/fill`, `"order".paid` is `t`, and the `unpaid costs` card reads `$0.00`.
 - **Proof.** Save the snapshot of the Order page, the SQL rows and the log lines to `evidence/orders/`.
 
 ## Gotchas
