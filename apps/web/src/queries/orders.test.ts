@@ -16,7 +16,14 @@ globalThis.fetch = Object.assign(
   { preconnect: realFetch.preconnect },
 );
 
-const { editOrder, fillOrderPaid, getMergeDraft, getNewOrderDraft } = await import("./orders");
+const {
+  editOrder,
+  fillOrderPaid,
+  getMergeDraft,
+  getNewOrderDraft,
+  updateOrderDate,
+  updateOrderStatus,
+} = await import("./orders");
 
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -46,6 +53,25 @@ test("an Order edit names the Order in the path and sends only the fields a user
 
   expect(requested.map(({ url, method, body }) => [url.pathname, method, body])).toEqual([
     ["/api/orders/order-1", "PUT", { order: editable, cascadeOptions: ["shop"] }],
+  ]);
+});
+
+test("a date changed on a Dashboard card names its field, so its Order Items that held the old date follow it", async () => {
+  requested.length = 0;
+  await updateOrderDate("order-1", "orderDate", "2026-01-06");
+  await updateOrderDate("order-1", "paymentDate", "2026-02-20");
+  await updateOrderDate("order-1", "shippingDate", null);
+  await updateOrderDate("order-1", "collectionDate", "2026-03-09");
+  await updateOrderDate("order-1", "releaseDate", "2026-03-01");
+  await updateOrderStatus("order-1", "Shipped");
+
+  expect(requested.map(({ body }) => body)).toEqual([
+    { order: { orderDate: "2026-01-06" }, cascadeOptions: ["orderDate"] },
+    { order: { paymentDate: "2026-02-20" }, cascadeOptions: ["paymentDate"] },
+    { order: { shippingDate: null }, cascadeOptions: ["shippingDate"] },
+    { order: { collectionDate: "2026-03-09" }, cascadeOptions: ["collectionDate"] },
+    { order: { releaseDate: "2026-03-01" }, cascadeOptions: [] },
+    { order: { status: "Shipped" }, cascadeOptions: ["status"] },
   ]);
 });
 
