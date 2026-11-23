@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ShopInput } from "@/components/vocabulary-fields";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,7 +46,6 @@ import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
 import type { EditedOrder, NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
-import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
@@ -59,6 +59,7 @@ import { PaidField } from "@/components/orders/payment";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
+import { cascadeToItems } from "@/lib/order-cascade";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
@@ -147,6 +148,8 @@ function OrderFormContent(
 
   const { status: buttonStatus, run } = useButtonStatus();
   const notesReasonId = useId();
+  const alsoUpdateItemsId = useId();
+  const [alsoUpdateItems, setAlsoUpdateItems] = useState(true);
   const form = useForm({
     validators: type === "merge" ? { onSubmit: mergedNotesFit } : {},
     defaultValues: {
@@ -181,10 +184,13 @@ function OrderFormContent(
         if (type === "edit-order") {
           const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
           const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
-          const changed = ORDER_CASCADE_OPTIONS.filter(
-            (field) => transformedValue[field] !== editOrderData[field],
+          const changed = Object.entries(base)
+            .filter(([field, edited]) => editOrderData[field as keyof NewOrder] !== edited)
+            .map(([field]) => field);
+          const saved = await callbackFn(
+            transformedValue,
+            alsoUpdateItems ? cascadeToItems(changed) : [],
           );
-          const saved = await callbackFn(transformedValue, changed);
           // A failed write already rolled back and said why, so the form stays open to retry.
           if (saved.isErr()) return saved;
         } else {
@@ -511,6 +517,18 @@ function OrderFormContent(
             </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">{formFields}</div>
+          {orderData && orderData.itemCount > 0 ? (
+            <div className="flex items-center gap-2 px-4 pt-4">
+              <Checkbox
+                id={alsoUpdateItemsId}
+                checked={alsoUpdateItems}
+                onCheckedChange={(checked) => setAlsoUpdateItems(checked === true)}
+              />
+              <Label htmlFor={alsoUpdateItemsId} className="cursor-pointer">
+                Also update matching items in this order
+              </Label>
+            </div>
+          ) : null}
           <SheetFooter className="flex flex-row w-full">
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}

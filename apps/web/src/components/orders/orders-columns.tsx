@@ -18,7 +18,6 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaidCheckbox } from "./payment";
 import type {
@@ -36,6 +35,7 @@ import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
 import { withOrderPending } from "./order-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
 import { NavigateIcon } from "@/lib/icons";
+import { cascadeToItems } from "@/lib/order-cascade";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
@@ -54,11 +54,6 @@ function editedOrder({
   ...edited
 }: Order): EditedOrder {
   return edited;
-}
-
-function cascadeFor(field: keyof Order): CascadeOptions {
-  const option = ORDER_CASCADE_OPTIONS.find((candidate) => candidate === field);
-  return option ? [option] : [];
 }
 
 interface OrdersColumnsParams {
@@ -83,7 +78,7 @@ export function createOrdersColumns({
   dateFormat,
 }: OrdersColumnsParams): ColumnDef<Order>[] {
   const editOrder = editableCell(withOrderPending, (order, field, value) =>
-    onEditOrder({ ...editedOrder(order), [field]: value }, cascadeFor(field)),
+    onEditOrder({ ...editedOrder(order), [field]: value }, cascadeToItems([field])),
   );
   const setPaid = editableCell(withOrderPending, (order, _field, paid) =>
     onSetPaid(order.orderId, paid === true),
@@ -408,7 +403,10 @@ export function createOrdersColumns({
             locale={locale}
             disabled={isPending}
             onSubmit={async (newValues) => {
-              return onEditOrder({ ...editedOrder(order), ...newValues }, []);
+              return onEditOrder(
+                { ...editedOrder(order), ...newValues },
+                cascadeToItems(Object.keys(newValues)),
+              );
             }}
           />
         );
