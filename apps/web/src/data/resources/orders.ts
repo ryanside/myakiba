@@ -233,6 +233,12 @@ export const deleteOrdersCommand = defineCommand({
   failureToast: () => ({ title: "Failed to delete order(s). Please try again." }),
 });
 
+function ordersFilled(count: number, field: OrderFill["field"]): string {
+  const named = count === 1 ? "1 order" : `${count} orders`;
+  if (field === "paid") return named;
+  return count === 1 ? "1 order and its items" : `${named} and their items`;
+}
+
 export const fillOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
   refetchBy: "settled",
@@ -244,7 +250,7 @@ export const fillOrdersCommand = defineCommand({
     readonly fill: OrderFill;
   }) => fillOrders(orderIds, fill),
   successTitle: ({ orderIds, fill }) =>
-    `Filled ${FILL_FIELD[fill.field].label} on ${orderIds.length === 1 ? "1 order and its items" : `${orderIds.length} orders and their items`}`,
+    `Filled ${FILL_FIELD[fill.field].label} on ${ordersFilled(orderIds.length, fill.field)}`,
   failureToast: messageAs("title", () => "Failed to fill orders"),
 });
 

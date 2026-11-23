@@ -120,8 +120,8 @@ const isItemFill = (fill: Fill): fill is ItemFill => fill.field !== "paid";
 function groupOf(rows: SavedRows): FillGroup<FillFieldId> {
   const { target, ids } = rows;
   const { fields, heading, noun } = TARGET[target];
-  const where = (field: FillFieldId) =>
-    target === "orders" && field !== "paid"
+  const where =
+    target === "orders"
       ? "every selected order and every item in those orders"
       : `every selected ${noun.one}`;
   return {
@@ -137,9 +137,10 @@ function groupOf(rows: SavedRows): FillGroup<FillFieldId> {
         : undefined,
     hint: (field, draft) => {
       if (field === "tags") return `Adds to the tags each ${noun.one} already has.`;
+      if (field === "paid") return null;
       const { label } = FILL_FIELD[field];
       const fill = readFill(field, draft);
-      return `${fill.isOk() && clears(fill.value) ? "Clears" : "Replaces"} ${label} on ${where(field)}.`;
+      return `${fill.isOk() && clears(fill.value) ? "Clears" : "Replaces"} ${label} on ${where}.`;
     },
     prepare: (field, draft) =>
       readFill(field, draft).andThen((fill) => {

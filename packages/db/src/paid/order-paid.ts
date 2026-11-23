@@ -20,22 +20,32 @@ export async function markOrderPaid(sql: SQL): Promise<void> {
   await sql.unsafe(`COMMENT ON COLUMN "order"."paid" IS '${ORDER_PAID_MARK}'`);
 }
 
+async function itemPaidState(tx: SQL) {
+  const [state] = await tx<[{ hasItemPaid: boolean; converted: boolean }]>`
+    SELECT
+      EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.collection'::regclass
+        AND attname = 'paid' AND NOT attisdropped) AS "hasItemPaid",
+      col_description('public.order'::regclass, (SELECT attnum FROM pg_attribute
+        WHERE attrelid = 'public.order'::regclass AND attname = 'paid')) IS NOT DISTINCT FROM ${ORDER_PAID_MARK}
+        AS converted
+  `;
+  return state;
+}
+
 export async function migrateOrderPaid(sql: SQL): Promise<OrderPaidReport> {
   return sql.begin(async (tx) => {
     const [{ hasCollection }] = await tx<[{ hasCollection: boolean }]>`
       SELECT to_regclass('public.collection') IS NOT NULL AS "hasCollection"
     `;
     if (!hasCollection) return { status: "fresh-database" };
+    const unlocked = await itemPaidState(tx);
+    if (!unlocked.hasItemPaid) return { status: "already-migrated" };
 
+    // The order the app's own writes lock them in. Another db-push may have dropped the column
+    // while this one waited, so look again under the locks.
+    await tx`LOCK TABLE "order" IN EXCLUSIVE MODE`;
     await tx`LOCK TABLE collection IN ACCESS EXCLUSIVE MODE`;
-    const [{ hasItemPaid, converted }] = await tx<[{ hasItemPaid: boolean; converted: boolean }]>`
-      SELECT
-        EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.collection'::regclass
-          AND attname = 'paid' AND NOT attisdropped) AS "hasItemPaid",
-        col_description('public.order'::regclass, (SELECT attnum FROM pg_attribute
-          WHERE attrelid = 'public.order'::regclass AND attname = 'paid')) IS NOT DISTINCT FROM ${ORDER_PAID_MARK}
-          AS converted
-    `;
+    const { hasItemPaid, converted } = await itemPaidState(tx);
     if (!hasItemPaid) return { status: "already-migrated" };
     if (converted) {
       await tx`ALTER TABLE "collection" DROP COLUMN "paid"`;
