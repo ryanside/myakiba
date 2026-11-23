@@ -28,7 +28,6 @@ import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as changelogChangelogRouteImport } from './routes/(changelog)/changelog'
-import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/analytics_.$sectionName'
 import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
 import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
@@ -131,11 +130,6 @@ const changelogChangelogRoute = changelogChangelogRouteImport.update({
   path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
-  id: '/profile/$username',
-  path: '/profile/$username',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const appAnalyticsSectionNameRoute = appAnalyticsSectionNameRouteImport.update({
   id: '/analytics_/$sectionName',
   path: '/analytics/$sectionName',
@@ -191,7 +185,6 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof authResetPasswordRoute
   '/signup': typeof authSignupRoute
   '/changelog': typeof changelogChangelogRouteWithChildren
-  '/profile/$username': typeof ProfileUsernameRoute
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
@@ -218,7 +211,6 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signup': typeof authSignupRoute
-  '/profile/$username': typeof ProfileUsernameRoute
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
@@ -248,7 +240,6 @@ export interface FileRoutesById {
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signup': typeof authSignupRoute
   '/(changelog)/changelog': typeof changelogChangelogRouteWithChildren
-  '/profile/$username': typeof ProfileUsernameRoute
   '/(app)/analytics_/$sectionName': typeof appAnalyticsSectionNameRoute
   '/(app)/item_/$externalId': typeof appItemExternalIdRoute
   '/(app)/lists_/$listId': typeof appListsListIdRoute
@@ -278,7 +269,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/changelog'
-    | '/profile/$username'
     | '/analytics/$sectionName'
     | '/item/$externalId'
     | '/lists/$listId'
@@ -305,7 +295,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
-    | '/profile/$username'
     | '/analytics/$sectionName'
     | '/item/$externalId'
     | '/lists/$listId'
@@ -334,7 +323,6 @@ export interface FileRouteTypes {
     | '/(auth)/reset-password'
     | '/(auth)/signup'
     | '/(changelog)/changelog'
-    | '/profile/$username'
     | '/(app)/analytics_/$sectionName'
     | '/(app)/item_/$externalId'
     | '/(app)/lists_/$listId'
@@ -353,7 +341,6 @@ export interface RootRouteChildren {
   authResetPasswordRoute: typeof authResetPasswordRoute
   authSignupRoute: typeof authSignupRoute
   changelogChangelogRoute: typeof changelogChangelogRouteWithChildren
-  ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -491,13 +478,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof changelogChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile/$username': {
-      id: '/profile/$username'
-      path: '/profile/$username'
-      fullPath: '/profile/$username'
-      preLoaderRoute: typeof ProfileUsernameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(app)/analytics_/$sectionName': {
       id: '/(app)/analytics_/$sectionName'
       path: '/analytics/$sectionName'
@@ -614,7 +594,6 @@ const rootRouteChildren: RootRouteChildren = {
   authResetPasswordRoute: authResetPasswordRoute,
   authSignupRoute: authSignupRoute,
   changelogChangelogRoute: changelogChangelogRouteWithChildren,
-  ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

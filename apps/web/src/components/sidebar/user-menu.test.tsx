@@ -3,7 +3,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { ComputerIcon, Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
@@ -22,8 +24,22 @@ afterEach(() => {
 });
 
 function renderUserMenu() {
+  const root = createRootRoute({
+    component: () => (
+      <>
+        <UserMenu session={session} />
+        <Outlet />
+      </>
+    ),
+  });
+  const home = createRoute({ getParentRoute: () => root, path: "/" });
+  const settings = createRoute({
+    getParentRoute: () => root,
+    path: "/settings",
+    component: () => <h1>Settings</h1>,
+  });
   const router = createRouter({
-    routeTree: createRootRoute({ component: () => <UserMenu session={session} /> }),
+    routeTree: root.addChildren([home, settings]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   render(
@@ -31,7 +47,20 @@ function renderUserMenu() {
       <RouterProvider router={router} />
     </ThemeProvider>,
   );
+  return router;
 }
+
+test("the account menu holds Settings and Sign Out, and no Profile", async () => {
+  const router = renderUserMenu();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
+  const items = await screen.findAllByRole("menuitem");
+  expect(items.map((item) => item.textContent)).toEqual(["Settings", "Sign Out"]);
+
+  fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
+  await screen.findByRole("heading", { name: "Settings" });
+  expect(router.state.location.pathname).toBe("/settings");
+});
 
 test("the account menu's theme tablist has an accessible name", async () => {
   renderUserMenu();
