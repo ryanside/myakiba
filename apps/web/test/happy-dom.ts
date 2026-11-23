@@ -22,6 +22,14 @@ afterEach(() => {
   localStorage.clear();
 });
 
+// Bun prints a node in a failed expect by walking its properties, which reach the whole window and
+// React's fiber tree, so one failed poll in `waitFor` took 40 s. Print a node as its markup instead.
+Object.defineProperty(Node.prototype, Symbol.for("nodejs.util.inspect.custom"), {
+  value(this: Node) {
+    return this instanceof Element ? this.outerHTML : `${this.nodeName} ${this.textContent ?? ""}`;
+  },
+});
+
 // Browsers mark a cancelled animation's `finished` promise as handled. happy-dom leaves it to
 // reject unhandled, which fails any test that unmounts a running Motion animation.
 const { cancel } = Animation.prototype;
