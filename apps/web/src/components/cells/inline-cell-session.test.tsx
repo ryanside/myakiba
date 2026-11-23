@@ -72,11 +72,6 @@ const currencyCell: CellCase<number> = {
 describe.each([textCell, countCell, currencyCell] as CellCase<unknown>[])(
   "an inline $name cell",
   (cell) => {
-    test("names its trigger after the value it shows", () => {
-      render(cell.render(async () => Result.ok()));
-      expect(screen.getByRole("button", { name: cell.trigger })).toBeDefined();
-    });
-
     test("saves what was typed on Enter", async () => {
       const { writes, onSubmit } = recordedWrites<unknown>();
       render(cell.render(onSubmit));

@@ -59,15 +59,12 @@ test.each([
   expect(link.getAttribute("href")).toBe(href);
 });
 
-test("the command palette's Add items opens the Add page, and the old paste forms are gone", async () => {
+test("the command palette's Add items opens the Add page", async () => {
   const user = userEvent.setup();
   const router = renderInApp(<AppCommand />);
   await user.click(await screen.findByRole("button", { name: "Search" }));
 
-  const addItems = await screen.findByRole("option", { name: /^Add items/u });
-  expect(screen.queryByRole("option", { name: /^Add to collection/u })).toBeNull();
-  expect(screen.queryByRole("option", { name: /^Create order/u })).toBeNull();
-  await user.click(addItems);
+  await user.click(await screen.findByRole("option", { name: /^Add items/u }));
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
 });

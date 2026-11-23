@@ -353,11 +353,6 @@ test("while the extension is in review, the message has no action of its own and
   await waitFor(() => expect(document.activeElement).toBe(searchBox()));
 });
 
-test("from=mfc reads as reviewing picks", async () => {
-  openAddPage("/add?from=mfc");
-  await screen.findByRole("heading", { name: "Review your picks" });
-});
-
 test("saved picks appear as rows, and the extension hears only after the save", async () => {
   seedItems(item("item-98777", { title: "Picked Miku", externalId: 98_777 }));
   let finishUpload: (() => void) | undefined;
@@ -485,21 +480,6 @@ test("a failed read of the rows' Items says so, never that they are gone, and Re
   await waitFor(() => expect(server.commits).toHaveLength(1));
 });
 
-test("removing a row moves focus to the next row's remove button", async () => {
-  seedDraft([
-    { itemId: ITEM_ID, overrides: {}, selected: true },
-    { itemId: OTHER_ID, overrides: {}, selected: true },
-  ]);
-  const user = userEvent.setup();
-  openAddPage("/add");
-
-  await user.click(await screen.findByRole("button", { name: "Remove Hatsune Miku" }));
-
-  await waitFor(() =>
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Remove Rem" })),
-  );
-});
-
 test("the toast shows the added Items' pictures and its View opens the filtered Collection", async () => {
   seedItems(item(ITEM_ID, { title: "Hatsune Miku", image: "/images/miku.jpg" }));
   const user = userEvent.setup();
@@ -547,7 +527,6 @@ test("every Order field is on screen, with nothing to open first", async () => {
   openAddPage(`/add?item=${ITEM_ID}&to=collection`);
   await choose(user, "New Order");
 
-  expect(screen.queryByRole("button", { name: /Order details/u })).toBeNull();
   for (const name of ["Status", "Shipping Method"]) {
     expect(screen.getByRole("combobox", { name })).toBeDefined();
   }

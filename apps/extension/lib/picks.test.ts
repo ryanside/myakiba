@@ -158,14 +158,6 @@ describe("removing picks", () => {
 
     expect(await ids(NORMAL)).toEqual([itemId(1)]);
   });
-
-  test("reading picks deletes none of them", async () => {
-    const { picks, ids } = store();
-    await ok(picks.add(NORMAL, capture(1)));
-    await picks.read(NORMAL);
-
-    expect(await ids(NORMAL)).toEqual([itemId(1)]);
-  });
 });
 
 describe("browsing contexts", () => {

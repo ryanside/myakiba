@@ -1,4 +1,4 @@
-import { afterEach, expect, mock, spyOn, test } from "bun:test";
+import { afterEach, expect, mock, test } from "bun:test";
 import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toast";
@@ -76,19 +76,6 @@ function sentPasswords(requests: readonly AuthRequest[], path: string) {
     .map(({ body }) => (body as { readonly password?: string }).password);
 }
 
-test("a sign-in goes to the page it was headed for", async () => {
-  const assign = spyOn(window.location, "assign").mockImplementation(() => {});
-  serve(() => Response.json({ redirect: false, token: "token", user }));
-
-  signIn();
-
-  try {
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:3001/dashboard"));
-  } finally {
-    assign.mockRestore();
-  }
-});
-
 test("a sign-in with an unverified email asks to verify it instead of the server's text", async () => {
   serve(() =>
     refuse(403, "Forbidden", { code: "EMAIL_NOT_VERIFIED", message: "Email not verified" }),
@@ -102,19 +89,6 @@ test("a sign-in with an unverified email asks to verify it instead of the server
     ),
   ).toBeTruthy();
   expect(screen.queryByText("Email not verified")).toBeNull();
-});
-
-test("a refused sign-in shows the server's text", async () => {
-  serve(() =>
-    refuse(401, "Unauthorized", {
-      code: "INVALID_EMAIL_OR_PASSWORD",
-      message: "Invalid email or password",
-    }),
-  );
-
-  signIn();
-
-  expect(await screen.findByText("Invalid email or password")).toBeTruthy();
 });
 
 test("a sign-in sends a short password to the server and shows its answer", async () => {

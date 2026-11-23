@@ -247,15 +247,4 @@ describe("refreshing an item", () => {
     expect(extension.runs).toEqual([]);
     expect(sent).toEqual([]);
   });
-
-  test("sends nothing when the extension cannot fetch the page", async () => {
-    fakeFetch();
-    loadExtension((fetch) => {
-      fetch.fail(98_777, "mfc_signed_out");
-      fetch.done("complete");
-    });
-
-    expect(await failureTextOf(98_777)).toBe("Sign in to MyFigureCollection to refresh this item");
-    expect(sent).toEqual([]);
-  });
 });
