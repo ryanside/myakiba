@@ -526,7 +526,7 @@ function OrderFormContent(
                 checked={alsoUpdateItems}
                 onCheckedChange={(checked) => setAlsoUpdateItems(checked === true)}
               />
-              <Label htmlFor={alsoUpdateItemsId} className="cursor-pointer">
+              <Label htmlFor={alsoUpdateItemsId} className="cursor-pointer text-balance">
                 Also update matching items in this order
               </Label>
             </div>
