@@ -1,6 +1,8 @@
+![myakiba](apps/web/public/og-image-v2.png)
+
 <div align="center">
 
-  <h1>myakiba.app</h1>
+  <h1>myakiba</h1>
 
   <a href="https://discord.gg/VKHVvhcC2z">
     <img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white">
@@ -9,279 +11,98 @@
 
 </div>
 
-<br />
+myakiba tracks your collection of figures and other Japanese pop-culture goods, along with your orders, lists, wishlist, and spending. Its browser extension reads item details from MyFigureCollection, so you never type them.
 
-**[myakiba](https://myakiba.app)** is a collection management tool for Japanese pop-culture goods. Track your collection, orders, and analytics with a modern interface.
+Open the web app at [myakiba.app](https://myakiba.app). Install the browser extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/myakiba/cipiinpifbjbpjnhghkeonigecihoebm) or [Firefox Add-ons](https://addons.mozilla.org/addon/myakiba/).
 
-Early in development!
-
-![myakiba](apps/web/public/og-image.png)
-
-## Motivation
-
-- MyFigureCollection’s collection manager felt limited and its UI/UX dated, but it has the most comprehensive database for collectors.
-- Spreadsheets are flexible and easy to edit, but they’re fragmented and don’t provide real item data or a unified platform.
-- New collection tools have appeared, but most still rely on users manually entering item information.
-
-myakiba is being created in hopes to be a useful alternative, as well as a fun/learning/hobby project for myself.
-
-## Features
-
-### Core features
-
-- **Add items from MyFigureCollection.** Click Pick for myakiba on an MFC item page, then choose on the Add page where it goes. myakiba pulls in the item information for you.
-- **Manage your collection.** Get the flexibility of a spreadsheet with the item information from MFC already attached. Track what you own, what you paid, where you bought it, its condition, dates, tags, notes, and more.
-- **Multi-item orders.** Group multiple items into an order, follow each order from Ordered to Owned, and keep track of shipping, taxes, duties, tariffs, and other fees.
-- **See what is coming up.** Use the dashboard and personal calendar to check upcoming releases,
-  active orders, unpaid costs, and what is happening each month.
-- **See where your money goes.** Break down paid spend and unpaid costs by date, shop, item prices,
-  order fees, and shipping method.
-- **See what shapes your collection.** Find your most-collected and highest-spend artists,
-  characters, origins, companies, shops, scales, and more.
-
-### Tech
-
-- **TypeScript**
-- **React and Vite**
-- **TanStack Router, Query, Table, and Form**
-- **Tailwind CSS and shadcn/ui**
-- **Elysia and Bun**
-- **Better Auth**
-- **PostgreSQL and Drizzle ORM**
-- **Redis**
-- **AWS S3**
-- **Turborepo**
-
-## Page showcase
+## Inside the app
 
 ### Add
 
-Click Pick for myakiba on any MyFigureCollection item page, and the item lands on the Add page with
-its information already filled in. Choose where your picks go: your collection, a new or existing
-order, your wishlist, or your lists. Set the price, count, and condition for each item, then add
-them all at once.
+On a MyFigureCollection item page, click **Pick for myakiba**. Each pick becomes a row on the Add page with its details filled in. Send your rows to your collection, a new or existing order, your wishlist, or your lists in one click.
 
 https://github.com/user-attachments/assets/7b902fd9-fafe-4764-aecc-a6eb026b95cf
 
 ![Add](apps/web/public/add-light.webp)
 
-### Dashboard
-
-The overview puts your total items, total spend, active orders, and unpaid costs up front. It also
-shows a collection breakdown, your order activity for the year, and a release calendar. Switch to
-the monthly view to focus on one month at a time with order totals, fees, shop breakdowns, and an
-order board.
-
-![Dashboard](apps/web/public/dashboard-light.webp)
-
 ### Collection
 
-View your collection as a table, a card grid, or an image gallery. Filter
-and sort it, choose which columns to show, then move, resize, or pin those columns to fit how you
-collect. Prices, scores, counts, releases, shops, and dates can all be edited directly in
-the table.
+View your collection as a table, a card grid, or an image gallery. Filter and sort your collection, choose columns, and move, resize, or pin them. Edit prices, scores, counts, releases, shops, and dates in the table.
 
 ![Collection](apps/web/public/collection-light.webp)
 
 ### Orders
 
-Keep orders organized by status, shop, release date, payment date, shipping date,
-and collection date. Each order can hold multiple items, with separate item prices plus shipping,
-taxes, duties, tariffs, and other fees. Orders also have table, card, and gallery views, along with
-the same filtering and column controls as your collection.
+An order can hold several items, each with its own price, plus shipping, taxes, duties, tariffs, and miscellaneous fees. Track each order as Ordered, Shipped, or Owned, and mark it Paid or Unpaid. The Orders page has the same views, filters, and column controls as the Collection page.
 
 ![Orders](apps/web/public/orders-light.webp)
 
+### Dashboard
+
+The dashboard shows your total items, total spend, active orders, and unpaid costs. It includes a collection breakdown, the year's order activity, and a release calendar. Switch to the monthly view for one month's order totals, fees, shop breakdown, and order board.
+
+![Dashboard](apps/web/public/dashboard-light.webp)
+
 ### Analytics
 
-See the artists, characters, origins, companies, classifications, events, materials, shops, and
-scales that make up your collection. Each section shows the top results by item count and by spend.
-Open one for a searchable table, totals that update with your filters, and the exact collection
-items behind each result.
+See your artists, characters, origins, companies, classifications, events, materials, shops, and scales ranked by item count and by spend. Open any section for a searchable table and the collection items behind each result.
 
 ![Analytics](apps/web/public/analytics-light.webp)
 
-## Roadmap
+### Other pages
 
-myakiba is still in active development. Current priorities:
+myakiba also includes these pages:
 
-- [ ] Refine existing features
-- [ ] Profiles
+- **Expenses.** Break down spend and unpaid costs by date, shop, item prices, order fees, and shipping method.
+- **Calendar.** See upcoming releases and orders by month.
+- **Wishlist.** Keep a ranked set of items you plan to get.
+- **Lists.** Group items, collection items, and orders into your own lists.
 
-## Run locally
+## Development and self-hosting
 
-myakiba does not run entirely locally as cloned. Postgres and Redis run locally, but the app
-still uses external services such as AWS S3 and Cloudflare Turnstile. Google OAuth and Resend can be
-skipped by using the workarounds below.
+Read [`SETUP.md`](SETUP.md) to run myakiba locally or self-host it. The guide covers three setups:
 
-### Prerequisites
-
-- [Bun](https://bun.sh/)
-- Docker with Docker Compose
-- An AWS S3 bucket and credentials
-
-### Services
-
-- Google OAuth is optional, but its environment variables must be non-empty. Use placeholder values if
-  you do not need Google sign-in.
-- Resend is used for email verification and password resets. Its environment variables must also
-  be non-empty. If you do not use Resend, enter placeholder values. After creating an account, set
-  `email_verified` to `true` in the `user` table in Postgres. You can use Drizzle Kit Studio for
-  this. See the instructions for your setup below.
-
-For Turnstile, use Cloudflare's
-[official test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/):
-
-```dotenv
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
-VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
-```
-
-### Run with `bun dev`
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/ryanside/myakiba.git
-cd myakiba
-```
-
-1. Install dependencies:
-
-```bash
-bun install
-```
-
-1. Create the app environment files:
-
-```bash
-cp apps/server/.env.example apps/server/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-Use these values for the services that run locally:
-
-```dotenv
-# apps/server/.env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/myakiba
-REDIS_HOST=localhost
-REDIS_PORT=6379
-CORS_ORIGIN=http://localhost:3001
-BETTER_AUTH_URL=http://localhost:3000
-
-# apps/web/.env
-VITE_SERVER_URL=http://localhost:3000
-```
-
-Fill in the remaining auth, email, Turnstile, and S3 values in the example files.
-`BETTER_AUTH_SECRET` must be at least 32 characters; `openssl rand -base64 32` makes one.
-Each `CORS_ORIGIN` entry is a bare origin such as `https://myakiba.app`. The server accepts an
-`http://localhost` origin only in development, or when `BETTER_AUTH_URL` is itself on localhost.
-Leave `REDIS_PASSWORD` empty for a local Redis without one; production requires it.
-`AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
-Set `AWS_BUCKET_URL` if uploaded files should use a custom domain or CDN, such as
-`https://cdn.example.com`. If it is empty, the server builds each file's URL from
-`AWS_BUCKET_NAME` and `AWS_BUCKET_REGION`:
-`https://<AWS_BUCKET_NAME>.s3.<AWS_BUCKET_REGION>.amazonaws.com/<filename>`.
-Set `S3_ENDPOINT_URL` only to store item pictures in an S3-compatible store other
-than AWS, such as MinIO. The server then requires `AWS_BUCKET_URL`.
-
-1. Start the app:
-
-```bash
-bun dev
-```
-
-`bun dev` also starts the Postgres and Redis containers, starts Drizzle Kit Studio, and pushes the
-database schema.
-Open [http://localhost:3001](http://localhost:3001). The API runs at
-[http://localhost:3000](http://localhost:3000).
-
-Open [https://local.drizzle.studio](https://local.drizzle.studio) to use Drizzle Kit Studio.
-
-Run `bun stop` when you want to stop the Postgres and Redis containers.
-
-### Run the full stack with Docker Compose
-
-The root `docker-compose.yml` runs Postgres, Redis, the schema push, the server and bundled web
-app.
-
-1. Create the Compose environment file:
-
-```bash
-cp .env.example .env
-```
-
-Use the Compose service names for database and Redis connections:
-
-```dotenv
-POSTGRES_DB=myakiba
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=password
-DATABASE_URL=postgresql://postgres:password@postgres:5432/myakiba
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-CORS_ORIGIN=http://localhost:3000
-BETTER_AUTH_URL=http://localhost:3000
-VITE_SERVER_URL=http://localhost:3000
-```
-
-Fill in the remaining required values in `.env`. The same optional variables listed in the
-`bun dev` setup may stay empty.
-
-1. Build and start the stack:
-
-```bash
-docker compose up -d --build
-```
-
-Open [http://localhost:3000](http://localhost:3000). To follow startup logs or stop the stack:
-
-```bash
-docker compose logs -f
-docker compose down
-```
-
-Docker Compose does not start Drizzle Kit Studio. If you want to use it, open another terminal and run:
-
-```bash
-DATABASE_URL=postgresql://postgres:password@localhost:5432/myakiba \
-  bun run --cwd packages/db db:studio
-```
-
-Use the Postgres username, password, and database name from your `.env` file. Then open
-[https://local.drizzle.studio](https://local.drizzle.studio).
+- [Local development](SETUP.md#local-development) with `bun dev`.
+- [The production build with Docker Compose](SETUP.md#production-build-with-docker-compose).
+- [The browser extension against a local instance](SETUP.md#run-the-extension-against-a-local-instance) for Chrome and Firefox.
 
 ## Project structure
 
 ```
 myakiba/
 ├── apps/
-│   ├── web/            # Frontend (Vite + React + TanStack Router)
-│   └── server/         # API and production web server (Elysia + Bun)
+│   ├── web/         # Web app: React, Vite, TanStack Router, Tailwind CSS, shadcn/ui
+│   ├── server/      # API and production web server: Elysia on Bun
+│   └── extension/   # Browser extension for Chrome and Firefox: WXT
 ├── packages/
-│   ├── auth/           # Better Auth configuration
-│   ├── config/         # Shared TypeScript configuration
-│   ├── contracts/      # Shared Zod schemas, constants, and types
-│   ├── db/             # Drizzle schema and database scripts
-│   ├── env/            # Typed environment schemas
-│   ├── redis/          # Redis client and local Compose setup
-│   └── utils/          # Shared utilities
-├── GLOSSARY.md         # Domain glossary
-├── docker-compose.yml  # Local full-stack build
-├── docker-compose.production.yml
-│                       # Production stack using published images
-└── turbo.json          # Turborepo task pipeline
+│   ├── auth/        # Better Auth configuration
+│   ├── config/      # Shared TypeScript configuration
+│   ├── contracts/   # Zod schemas, constants, and types shared by server, web, and extension
+│   ├── db/          # Drizzle schema and PostgreSQL database scripts
+│   ├── env/         # Typed environment schemas
+│   ├── mfc/         # Parser for MyFigureCollection item pages
+│   ├── redis/       # Redis client
+│   └── utils/       # Shared utilities
+├── AGENTS.md        # Rules for changing the code, and the check behind each rule
+├── GLOSSARY.md      # What Item, Collection Item, Order, and the other domain words mean
+└── SETUP.md         # Local development, browser extension, and Docker Compose setup
 ```
 
-## Contributors
+Turborepo runs the workspace tasks in [`turbo.json`](turbo.json).
+
+## Contributing
+
+Run these checks from the repository root before you push:
+
+- `bun run check` checks formatting and lint.
+- `bunx turbo run check-types` type-checks every package.
+- `bun run test` runs every test and requires `TEST_DATABASE_URL` and `TEST_REDIS_URL`. `bun run test web` runs only the web app's tests and needs neither variable.
+- `bun run knip` checks for undeclared dependencies and dead code.
+
+CI runs the same checks. Read [`AGENTS.md`](AGENTS.md) for the full repository rules. Open issues, discussions, and pull requests on [GitHub](https://github.com/ryanside/myakiba).
 
 [![Contributors](https://contrib.rocks/image?repo=ryanside/myakiba)](https://github.com/ryanside/myakiba/graphs/contributors)
 
-Made with [contrib.rocks](https://contrib.rocks).
+## License
 
-### Interested in contributing?
-
-Contributions are welcome. Open an issue, discussion, or pull request.
+myakiba is licensed under the [GNU Affero General Public License v3.0](LICENSE).
