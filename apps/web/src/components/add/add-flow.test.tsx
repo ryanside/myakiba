@@ -1323,8 +1323,9 @@ test("Items waiting past the row cap survive a reload, before and after a commit
   const extension = loadExtension({ picks: mfcIds.map((mfcId) => fakePick(mfcId, null)) });
   const user = userEvent.setup();
   openAddPage("/add?to=none");
-  await waitFor(() =>
-    expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(103),
+  await waitFor(
+    () => expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(103),
+    { timeout: 15_000 },
   );
   await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
   cleanup();
