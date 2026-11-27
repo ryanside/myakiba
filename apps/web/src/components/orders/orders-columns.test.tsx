@@ -59,7 +59,6 @@ const columns = createOrdersColumns({
     paidSets.push([orderId, paid]);
     return Result.ok();
   },
-  onDeleteOrders: async () => Result.ok(),
   onEditItem: async () => Result.ok(),
   onDeleteItem: async () => Result.ok(),
   currency: "USD",
@@ -185,25 +184,22 @@ function OrderRow() {
   return table
     .getRowModel()
     .rows[0]?.getVisibleCells()
-    .filter(({ column }) => column.id === "expand" || column.id === "title")
     .map((cell) => (
       <div key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
     ));
 }
 
-function glyph(control: HTMLElement): (string | null)[] {
-  return [...control.querySelectorAll("svg path")].map((path) => path.getAttribute("d"));
-}
-
-test("draws the row's open-order link with a different icon from its expand button", async () => {
+test("an Orders row links to its Order once and has no row menu", async () => {
   const router = createRouter({
     routeTree: createRootRoute({
       component: () => (
-        <OrderPendingContext
-          value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
-        >
-          <OrderRow />
-        </OrderPendingContext>
+        <QueryClientProvider client={new QueryClient()}>
+          <OrderPendingContext
+            value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+          >
+            <OrderRow />
+          </OrderPendingContext>
+        </QueryClientProvider>
       ),
     }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
@@ -211,9 +207,9 @@ test("draws the row's open-order link with a different icon from its expand butt
   await router.load();
   render(<RouterProvider router={router} />);
 
-  const expand = await screen.findByRole("button", { name: "Expand row" });
-  const open = screen.getAllByRole("link", { name: "View o1" }).at(-1);
-  if (!open) throw new Error("the row has no open-order link");
-
-  expect(glyph(open)).not.toEqual(glyph(expand));
+  await screen.findByRole("button", { name: "Expand row" });
+  const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+  expect(links).toEqual(["/orders/o1"]);
+  expect(screen.queryByRole("button", { name: "Open menu" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Edit order" })).toBeTruthy();
 });

@@ -74,7 +74,6 @@ async function fromOrdersTable(): Promise<CascadeOptions | undefined> {
       return Result.ok();
     },
     onSetPaid: async () => Result.ok(),
-    onDeleteOrders: async () => Result.ok(),
     onEditItem: async () => Result.ok(),
     onDeleteItem: async () => Result.ok(),
     currency: "USD",
