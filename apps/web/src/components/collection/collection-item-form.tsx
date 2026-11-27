@@ -89,7 +89,7 @@ function CollectionItemFormContent({
   const form = useForm({
     defaultValues: {
       ...itemData,
-      price: minorUnitsToMajorString(itemData.price ?? 0),
+      price: itemData.price === 0 ? "" : minorUnitsToMajorString(itemData.price),
     },
     onSubmit: async ({ value }) => {
       const transformedValue: CollectionItemFormValues = {
@@ -127,7 +127,6 @@ function CollectionItemFormContent({
                   currency={currency}
                   placeholder="0.00"
                   label="Price"
-                  required="Price is required"
                 />
 
                 <form.Field
