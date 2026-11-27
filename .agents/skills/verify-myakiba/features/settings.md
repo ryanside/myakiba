@@ -27,7 +27,7 @@ Preconditions:
 - **Change date format.** Click `role=main >> role=button[name='YYYY/MM/DD']`. The preview card switches to `¥` amounts and `YYYY/MM/DD` dates, and the page reads `Unsaved changes`.
 - **Save.** Click `role=button[name='Save formats']`. The `Notifications` region shows `Preferences updated successfully` and the button is disabled again.
 - **Confirm the write.** `$H psql <run> "select currency, date_format from \"user\" where email = 'verify@example.com'"` returns `JPY|YYYY/MM/DD`. `$H logs <run>` has `POST /api/auth/update-user`.
-- **See it applied.** `preview_navigate` to an Order page. Its `Cost breakdown` reads in `¥`, and its `Created` and `Release` dates read as `YYYY/MM/DD`. The `/collection` cards read in `¥` too.
+- **See it applied.** `preview_navigate` to an Order page. Its `Cost breakdown` reads in `¥`, and its `Release` date reads as `YYYY/MM/DD`. The `/collection` cards read in `¥` too.
 - **Rename a shop.** `preview_navigate` to `<url>/settings?section=shops`. The row reads `Verify Shop`, `1 Collection Item`. Click `role=button[name='Rename Verify Shop']`, type `Verify Shop Two` into `role=dialog >> role=combobox[name='New name']` with `clear: true`, and click `role=dialog >> role=button[name='Rename']`. The toast starts with `Saved as`, the row reads `Verify Shop Two`, `$H logs <run>` has `POST /api/vocabulary/shops/rename`, and `$H psql <run> "select distinct shop from collection where shop <> ''"` returns `Verify Shop Two`.
 - **Proof.** Save the snapshot after save, the SQL row and a snapshot of an Order page to `evidence/settings/`.
 
