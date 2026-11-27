@@ -126,7 +126,7 @@ describe("readinessCheck", () => {
       const before = await livePromises();
       for (let round = 0; round < 20; round += 1) await timeOut(500);
       const kept = (await livePromises()) - before;
-      console.log([...answers].join(" "));
+      console.log(JSON.stringify([...answers]));
       console.log(kept);
     `,
       ],
@@ -138,8 +138,7 @@ describe("readinessCheck", () => {
       new Response(child.stderr).text(),
     ]);
     expect({ code, stderr }).toMatchObject({ code: 0 });
-    const [answers, kept] = stdout.trim().split("\n");
-    expect(answers).toBe("redis");
-    expect(Number(kept)).toBeLessThan(1000);
+    expect(stdout).toMatch(/^\["redis"\]\n-?\d+\n$/);
+    expect(Number(stdout.split("\n")[1])).toBeLessThan(1000);
   });
 });
