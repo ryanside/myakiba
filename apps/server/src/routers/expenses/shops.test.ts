@@ -67,18 +67,28 @@ beforeAll(async () => {
 
 type ShopsResponse = { items: { shop: string; share: number }[] };
 
+const getShops = async (query: string) => {
+  const response = await app.handle(
+    new Request(`http://localhost/api/expenses/shops?${query}`, {
+      headers: { "x-test-user": userId },
+    }),
+  );
+  expect(response.status).toBe(200);
+  return (await response.json()) as ShopsResponse;
+};
+
 test.each(["collection", "orders", "shipping"])(
   "GET /expenses/shops?scope=%s returns all 20 shops, largest Spend first",
   async (scope) => {
-    const response = await app.handle(
-      new Request(`http://localhost/api/expenses/shops?scope=${scope}`, {
-        headers: { "x-test-user": userId },
-      }),
-    );
-    expect(response.status).toBe(200);
-    const { items } = (await response.json()) as ShopsResponse;
+    const { items } = await getShops(`scope=${scope}`);
 
     expect(items.map((row) => row.shop)).toEqual(shopNumbers.map((n) => `Shop ${21 - n}`));
     expect(items.reduce((sum, row) => sum + row.share, 0)).toBeCloseTo(100, 6);
   },
 );
+
+test("GET /expenses/shops answers every shop to a client that still sends limit, offset and search", async () => {
+  const { items } = await getShops("scope=collection&limit=5&offset=5&search=Shop%201");
+
+  expect(items).toHaveLength(SHOP_COUNT);
+});

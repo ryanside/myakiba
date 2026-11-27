@@ -22,9 +22,14 @@ test("the Shops table shows all 20 shops with no pager and no search", async () 
     itemCount: 1,
     averageItemCost: 1000 * (20 - index),
   }));
-  globalThis.fetch = Object.assign(async () => Response.json({ items: shops }), {
-    preconnect: realFetch.preconnect,
-  });
+  const requested: URL[] = [];
+  globalThis.fetch = Object.assign(
+    async (input: RequestInfo | URL) => {
+      requested.push(new URL(input instanceof Request ? input.url : String(input)));
+      return Response.json({ items: shops });
+    },
+    { preconnect: realFetch.preconnect },
+  );
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
@@ -45,6 +50,9 @@ test("the Shops table shows all 20 shops with no pager and no search", async () 
   expect(screen.queryByRole("navigation", { name: "pagination" }) === null).toBe(true);
   expect(screen.queryByRole("textbox") === null).toBe(true);
   expect(screen.queryByText(/^Showing/) === null).toBe(true);
+  expect(requested.map((url) => [...url.searchParams.keys()].toSorted().join(","))).toEqual([
+    "scope",
+  ]);
 });
 
 // The rows rise 3 px as they fade in, and a box that scrolls sideways also scrolls down, so a

@@ -5844,7 +5844,8 @@
       "fixed": [
         "GET /expenses/shops?scope=collection returns all 20 shops, largest Spend first",
         "GET /expenses/shops?scope=orders returns all 20 shops, largest Spend first",
-        "GET /expenses/shops?scope=shipping returns all 20 shops, largest Spend first"
+        "GET /expenses/shops?scope=shipping returns all 20 shops, largest Spend first",
+        "GET /expenses/shops answers every shop to a client that still sends limit, offset and search"
       ]
     },
     {
