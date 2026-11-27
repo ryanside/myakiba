@@ -2057,7 +2057,9 @@
       "test": "apps/web/src/components/settings/settings-section-param.test.ts",
       "fixed": [
         "a link to a section that no longer exists, or never did, opens Settings without one"
-      ]
+      ],
+      "testAt": "20587cd5",
+      "reason": "The working copy's test no longer mocks @/lib/changelog, which this PR deletes, but the Settings route at this revision still imports it, and its import.meta.glob does not run under bun. The pin takes the test and its harness from the fix's revision, and HEAD keeps the same test names."
     },
     {
       "fix": "5e31bc97",
@@ -2145,7 +2147,9 @@
       "fix": "eb965ba0",
       "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
       "test": "apps/web/src/components/settings/account.test.tsx",
-      "fixed": ["Change password reopened right after a change starts idle"]
+      "fixed": ["Change password reopened right after a change starts idle"],
+      "testAt": "eb965ba0",
+      "reason": "The working copy's test no longer mocks @/lib/changelog, which this PR deletes, but the Settings route at this revision still imports it, and its import.meta.glob does not run under bun. The pin takes the test and its harness from the fix's revision, and HEAD keeps the same test names."
     },
     {
       "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
@@ -5475,7 +5479,9 @@
       "fix": "f17b75d1f09432f1141ae526821e7a92afb52e81",
       "bug": "Settings showed a Verified tick on the email row, though only a verified email can sign in with a password.",
       "test": "apps/web/src/components/settings/account.test.tsx",
-      "fixed": ["a verified email shows no status and no resend"]
+      "fixed": ["a verified email shows no status and no resend"],
+      "testAt": "f17b75d1f09432f1141ae526821e7a92afb52e81",
+      "reason": "The working copy's test no longer mocks @/lib/changelog, which this PR deletes, but the Settings route at this revision still imports it, and its import.meta.glob does not run under bun. The pin takes the test and its harness from the fix's revision, and HEAD keeps the same test names."
     },
     {
       "fix": "dbfbb9ba7e50e89d398c024ea03e1a4077abbc8d",
