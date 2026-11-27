@@ -1,4 +1,3 @@
-import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ExpandIcon } from "@/lib/icons";
@@ -61,21 +60,7 @@ const TOTAL_SIZE = COLUMNS.reduce((sum, column) => sum + column.size, 0);
 
 function ShopsPanel() {
   return (
-    <Panel
-      title="Shops"
-      className="min-w-0"
-      action={
-        <div className="relative w-64 min-w-0">
-          <HugeiconsIcon
-            icon={Search01Icon}
-            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <div className="flex h-8 w-full min-w-0 items-center rounded-full border border-transparent bg-muted py-1 ps-9 pe-3.5 text-sm text-muted-foreground">
-            Search shops...
-          </div>
-        </div>
-      }
-    >
+    <Panel title="Shops" className="min-w-0">
       <div className="overflow-hidden">
         <table className="w-full min-w-150 table-fixed border-collapse text-xs">
           <thead>

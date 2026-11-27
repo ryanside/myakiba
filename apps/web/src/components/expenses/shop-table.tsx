@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRead } from "@/data/client";
-import { expenses, SHOP_PAGE_SIZE, shopTableInput } from "@/data/resources/expenses";
+import { expenses, shopTableInput } from "@/data/resources/expenses";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef, ExpandedState } from "@tanstack/react-table";
 import type {
@@ -18,11 +18,8 @@ import {
   DATA_TABLE_SKELETON,
 } from "@/components/data-table/data-table";
 import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
-import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
-import { SearchPill } from "@/components/search-pill";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { shownMessageOf } from "@/data/api";
 
@@ -42,55 +39,23 @@ export function ShopTable({
   readonly locale: string;
   readonly dateFormat: DateFormat;
 }): ReactNode {
-  const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const paginationKey = JSON.stringify([
-    scope,
-    filters.dateStart,
-    filters.dateEnd,
-    filters.shop,
-    search,
-  ]);
-  const [pagination, setPagination] = useState(() => ({ key: paginationKey, offset: 0 }));
-  const offset = pagination.key === paginationKey ? pagination.offset : 0;
   const { dateStart, dateEnd, shop } = filters;
   const queryFilters = useMemo(
-    () => shopTableInput(scope, { dateStart, dateEnd, shop }, search, offset),
-    [dateStart, dateEnd, shop, offset, scope, search],
+    () => shopTableInput(scope, { dateStart, dateEnd, shop }),
+    [dateStart, dateEnd, shop, scope],
   );
   const query = useRead(expenses.shops, queryFilters);
   const rows = query.data?.items ?? [];
-  const totalCount = query.data?.totalCount ?? 0;
-  const shopSearchInput = (
-    <SearchPill
-      value={search}
-      onChange={(value) => {
-        setSearch(String(value));
-      }}
-      placeholder="Search shops..."
-      aria-label="Search shops"
-      className="sm:w-64"
-    />
-  );
-  let resultCount: ReactNode = null;
-  if (query.isPending) {
-    resultCount = <Skeleton className="h-3 w-28" />;
-  } else if (totalCount > 0) {
-    resultCount = (
-      <p className="animate-data-in shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-        Showing {pageRange({ totalCount, limit: SHOP_PAGE_SIZE, offset })}
-      </p>
-    );
-  }
 
   return (
-    <ExpensePanel title="Shops" headerAction={shopSearchInput} className="min-w-0">
+    <ExpensePanel title="Shops" className="min-w-0">
       {query.isError ? (
         <div className="flex h-64 items-center justify-center">
           <p className="text-sm text-destructive">Error: {shownMessageOf(query.error)}</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-4" aria-busy={query.isPending}>
+        <div aria-busy={query.isPending}>
           <ShopsTable
             scope={scope}
             rows={rows}
@@ -100,25 +65,9 @@ export function ShopTable({
             currency={currency}
             locale={locale}
             dateFormat={dateFormat}
-            offset={offset}
             isPending={query.isPending}
             isFetching={query.isFetching}
           />
-          <div className="flex items-center justify-between gap-3 pt-1">
-            {resultCount}
-            {query.isPending ? null : (
-              <div className="animate-data-in">
-                <DataTablePagination
-                  totalCount={totalCount}
-                  limit={SHOP_PAGE_SIZE}
-                  offset={offset}
-                  onOffsetChange={(nextOffset) =>
-                    setPagination({ key: paginationKey, offset: nextOffset })
-                  }
-                />
-              </div>
-            )}
-          </div>
         </div>
       )}
     </ExpensePanel>
@@ -134,7 +83,6 @@ function ShopsTable({
   currency,
   locale,
   dateFormat,
-  offset,
   isPending,
   isFetching,
 }: {
@@ -146,7 +94,6 @@ function ShopsTable({
   readonly currency: Currency;
   readonly locale: string;
   readonly dateFormat: DateFormat;
-  readonly offset: number;
   readonly isPending: boolean;
   readonly isFetching: boolean;
 }): ReactNode {
@@ -156,8 +103,8 @@ function ShopsTable({
     [currency, locale],
   );
   const columns = useMemo<ColumnDef<ExpenseShopRow>[]>(
-    () => getColumns({ scope, offset, formatCurrency }),
-    [formatCurrency, offset, scope],
+    () => getColumns({ scope, formatCurrency }),
+    [formatCurrency, scope],
   );
   const table = useReactTable({
     data,
@@ -174,7 +121,6 @@ function ShopsTable({
     <DataTable
       table={table}
       isLoading={isPending}
-      skeletonRowCount={SHOP_PAGE_SIZE}
       empty={<DataTableEmpty title="No shops found" />}
       variant="sized"
       className={cn(
@@ -201,11 +147,9 @@ function ShopsTable({
 
 function getColumns({
   scope,
-  offset,
   formatCurrency,
 }: {
   scope: ExpenseScope;
-  offset: number;
   formatCurrency: (value: number) => string;
 }): ColumnDef<ExpenseShopRow>[] {
   const columns: ColumnDef<ExpenseShopRow>[] = [
@@ -219,7 +163,7 @@ function getColumns({
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
-      cell: ({ row }) => offset + row.index + 1,
+      cell: ({ row }) => row.index + 1,
       size: 40,
       meta: { skeleton: DATA_TABLE_SKELETON.rank },
     },

@@ -51,9 +51,8 @@ test("the Shops table shows all 20 shops with no pager and no search", async () 
 // scroller that let them overflow showed a vertical scrollbar that shifted the table for a moment.
 test("the Shops table's sideways scroller never scrolls down while its rows fade in", () => {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-  client.setQueryData(expenses.shops.key({ scope: "orders", limit: 10, offset: 0 }), {
+  client.setQueryData(expenses.shops.key({ scope: "orders" }), {
     items: [],
-    totalCount: 0,
   });
   render(
     <QueryClientProvider client={client}>
@@ -82,9 +81,8 @@ test("the Shops table holds each column to a fixed share of its width in every s
     readonly number[],
   ][]) {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-    client.setQueryData(expenses.shops.key({ scope, limit: 10, offset: 0 }), {
+    client.setQueryData(expenses.shops.key({ scope }), {
       items: [],
-      totalCount: 0,
     });
     render(
       <QueryClientProvider client={client}>

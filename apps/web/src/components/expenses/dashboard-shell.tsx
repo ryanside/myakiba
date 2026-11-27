@@ -28,24 +28,16 @@ export function ExpensePanel({
   children,
   className,
   panelClassName,
-  headerAction,
 }: {
   readonly title: string;
   readonly children: ReactNode;
   readonly className?: string;
   readonly panelClassName?: string;
-  readonly headerAction?: ReactNode;
 }): ReactNode {
   return (
     <Frame spacing="sm" className={className}>
-      <FrameHeader
-        className={cn(
-          "gap-2 sm:flex-row sm:items-center sm:justify-between",
-          headerAction && "py-1",
-        )}
-      >
+      <FrameHeader className="gap-2 sm:flex-row sm:items-center sm:justify-between">
         <FrameTitle className="text-base">{title}</FrameTitle>
-        {headerAction}
       </FrameHeader>
       <FramePanel className={panelClassName}>{children}</FramePanel>
     </Frame>

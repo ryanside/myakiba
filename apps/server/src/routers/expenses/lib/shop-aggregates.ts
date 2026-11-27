@@ -1,7 +1,6 @@
 import type { ReadTx } from "@myakiba/db/tx";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { asc, count, desc, eq, sql, sum } from "drizzle-orm";
-import { paginateBy } from "@/domain/kernel";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import type {
   ExpenseFilters,
@@ -64,80 +63,31 @@ async function getCollectionShopRows(
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
-  const scopedFilters: ExpenseFilters = {
-    dateStart: filters.dateStart,
-    dateEnd: filters.dateEnd,
-    shop: filters.shop,
-  };
-  const grouped = tx.$with("shop_agg").as(
-    tx
-      .select({
-        shop: collection.shop,
-        spend: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`.as("spend"),
-        itemCount: sql<number>`${count(collection.id)}::integer`.as("item_count"),
-        paidItemCount: sql<number>`${paidItemCount}::integer`.as("paid_item_count"),
-      })
-      .from(collection)
-      .leftJoin(...itemOrderJoin)
-      .where(collectionWhere(userId, scopedFilters, "total"))
-      .groupBy(collection.shop),
-  );
-  const scopedShops = tx.$with("scoped_shops").as(
-    tx
-      .with(grouped)
-      .select({
-        shop: grouped.shop,
-        spend: grouped.spend,
-        itemCount: grouped.itemCount,
-        paidItemCount: grouped.paidItemCount,
-        totalScopedSpend:
-          sql<number>`(SELECT SUM(${grouped.spend}) FROM ${grouped})::double precision`.as(
-            "total_scoped_spend",
-          ),
-      })
-      .from(grouped),
-  );
-  const page = await paginateBy(
-    { tx },
-    { limit: filters.limit ?? 10, offset: filters.offset ?? 0 },
-    {
-      select: {
-        shop: scopedShops.shop,
-        spend: scopedShops.spend,
-        itemCount: scopedShops.itemCount,
-        paidItemCount: scopedShops.paidItemCount,
-        totalScopedSpend: scopedShops.totalScopedSpend,
-      },
-      rows: (fields) =>
-        tx
-          .with(grouped, scopedShops)
-          .select(fields)
-          .from(scopedShops)
-          .where(
-            filters.search
-              ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
-              : undefined,
-          )
-          .$dynamic(),
-      orderBy: [
-        [sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`, "desc"],
-        [scopedShops.spend, "desc"],
-        [scopedShops.shop, "asc"],
-      ],
-    },
-  );
+  const spend = sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`;
+  const rows = await tx
+    .select({
+      shop: collection.shop,
+      spend,
+      itemCount: sql<number>`${count(collection.id)}::integer`,
+      paidItemCount: sql<number>`${paidItemCount}::integer`,
+    })
+    .from(collection)
+    .leftJoin(...itemOrderJoin)
+    .where(collectionWhere(userId, filters, "total"))
+    .groupBy(collection.shop)
+    .orderBy(desc(spend), asc(collection.shop));
+  const shareOf = shareOfSpend(rows);
 
   return {
-    items: page.items.map((row) => ({
+    items: rows.map((row) => ({
       scope: "collection",
       id: shopId(row.shop),
       shop: row.shop,
       spend: row.spend,
-      share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
+      share: shareOf(row.spend),
       itemCount: row.itemCount,
       averageItemCost: row.paidItemCount > 0 ? Math.round(row.spend / row.paidItemCount) : 0,
     })),
-    totalCount: page.totalCount,
   };
 }
 
@@ -146,87 +96,35 @@ async function getOrdersShopRows(
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
-  const scopedFilters: ExpenseFilters = {
-    dateStart: filters.dateStart,
-    dateEnd: filters.dateEnd,
-    shop: filters.shop,
-  };
-  const orderItems = createOrderItemSpendByOrder(tx, userId, scopedFilters);
+  const orderItems = createOrderItemSpendByOrder(tx, userId, filters);
   const sums = orderSpendSums(orderItems);
-  const grouped = tx.$with("shop_agg").as(
-    tx
-      .select({
-        shop: order.shop,
-        spend: sums.orderSpend.as("spend"),
-        orderCount: sums.paidOrderCount.as("order_count"),
-        orderItemCount: sums.orderItemCount.as("order_item_count"),
-        fees: sums.fees.as("fees"),
-      })
-      .from(order)
-      .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-      .where(paidOrderWhere(userId, scopedFilters, "total"))
-      .groupBy(order.shop),
-  );
-  const scopedShops = tx.$with("scoped_shops").as(
-    tx
-      .with(grouped)
-      .select({
-        shop: grouped.shop,
-        spend: grouped.spend,
-        orderCount: grouped.orderCount,
-        orderItemCount: grouped.orderItemCount,
-        fees: grouped.fees,
-        totalScopedSpend:
-          sql<number>`(SELECT SUM(${grouped.spend}) FROM ${grouped})::double precision`.as(
-            "total_scoped_spend",
-          ),
-      })
-      .from(grouped),
-  );
-  const page = await paginateBy(
-    { tx },
-    { limit: filters.limit ?? 10, offset: filters.offset ?? 0 },
-    {
-      select: {
-        shop: scopedShops.shop,
-        spend: scopedShops.spend,
-        orderCount: scopedShops.orderCount,
-        orderItemCount: scopedShops.orderItemCount,
-        fees: scopedShops.fees,
-        totalScopedSpend: scopedShops.totalScopedSpend,
-      },
-      rows: (fields) =>
-        tx
-          .with(orderItems, grouped, scopedShops)
-          .select(fields)
-          .from(scopedShops)
-          .where(
-            filters.search
-              ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
-              : undefined,
-          )
-          .$dynamic(),
-      orderBy: [
-        [sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`, "desc"],
-        [scopedShops.spend, "desc"],
-        [scopedShops.shop, "asc"],
-      ],
-    },
-  );
+  const rows = await tx
+    .select({
+      shop: order.shop,
+      spend: sums.orderSpend,
+      orderCount: sums.paidOrderCount,
+      orderItemCount: sums.orderItemCount,
+      fees: sums.fees,
+    })
+    .from(order)
+    .leftJoin(orderItems, eq(order.id, orderItems.orderId))
+    .where(paidOrderWhere(userId, filters, "total"))
+    .groupBy(order.shop)
+    .orderBy(desc(sums.orderSpend), asc(order.shop));
+  const shareOf = shareOfSpend(rows);
 
   return {
-    items: page.items.map((row) => ({
+    items: rows.map((row) => ({
       scope: "orders",
       id: shopId(row.shop),
       shop: row.shop,
       spend: row.spend,
-      share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
+      share: shareOf(row.spend),
       orderCount: row.orderCount,
       averageOrder: row.orderCount > 0 ? Math.round(row.spend / row.orderCount) : 0,
       orderItemCount: row.orderItemCount,
       fees: row.fees,
     })),
-    totalCount: page.totalCount,
   };
 }
 
@@ -235,77 +133,35 @@ async function getShippingShopRows(
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
-  const scopedFilters: ExpenseFilters = {
-    dateStart: filters.dateStart,
-    dateEnd: filters.dateEnd,
-    shop: filters.shop,
-  };
-  const grouped = tx.$with("shop_agg").as(
-    tx
-      .select({
-        shop: order.shop,
-        spend: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`.as("spend"),
-        orderCount: sql<number>`${count(order.id)}::integer`.as("order_count"),
-      })
-      .from(order)
-      .where(paidOrderWhere(userId, scopedFilters, "total"))
-      .groupBy(order.shop),
-  );
-  const scopedShops = tx.$with("scoped_shops").as(
-    tx
-      .with(grouped)
-      .select({
-        shop: grouped.shop,
-        spend: grouped.spend,
-        orderCount: grouped.orderCount,
-        totalScopedSpend:
-          sql<number>`(SELECT SUM(${grouped.spend}) FROM ${grouped})::double precision`.as(
-            "total_scoped_spend",
-          ),
-      })
-      .from(grouped),
-  );
-  const page = await paginateBy(
-    { tx },
-    { limit: filters.limit ?? 10, offset: filters.offset ?? 0 },
-    {
-      select: {
-        shop: scopedShops.shop,
-        spend: scopedShops.spend,
-        orderCount: scopedShops.orderCount,
-        totalScopedSpend: scopedShops.totalScopedSpend,
-      },
-      rows: (fields) =>
-        tx
-          .with(grouped, scopedShops)
-          .select(fields)
-          .from(scopedShops)
-          .where(
-            filters.search
-              ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
-              : undefined,
-          )
-          .$dynamic(),
-      orderBy: [
-        [sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`, "desc"],
-        [scopedShops.spend, "desc"],
-        [scopedShops.shop, "asc"],
-      ],
-    },
-  );
+  const spend = sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`;
+  const rows = await tx
+    .select({
+      shop: order.shop,
+      spend,
+      orderCount: sql<number>`${count(order.id)}::integer`,
+    })
+    .from(order)
+    .where(paidOrderWhere(userId, filters, "total"))
+    .groupBy(order.shop)
+    .orderBy(desc(spend), asc(order.shop));
+  const shareOf = shareOfSpend(rows);
 
   return {
-    items: page.items.map((row) => ({
+    items: rows.map((row) => ({
       scope: "shipping",
       id: shopId(row.shop),
       shop: row.shop,
       spend: row.spend,
-      share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
+      share: shareOf(row.spend),
       orderCount: row.orderCount,
       averageShipping: row.orderCount > 0 ? Math.round(row.spend / row.orderCount) : 0,
     })),
-    totalCount: page.totalCount,
   };
+}
+
+function shareOfSpend(rows: readonly { readonly spend: number }[]): (spend: number) => number {
+  const total = rows.reduce((spent, row) => spent + row.spend, 0);
+  return (spend) => (total > 0 ? (spend / total) * 100 : 0);
 }
 
 export async function loadScopedShopExpansion(

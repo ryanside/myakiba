@@ -15,23 +15,11 @@ import { rootedRead } from "../client";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
-export const SHOP_PAGE_SIZE = 10;
-
 export function shopTableInput(
   scope: ExpenseScope,
   { dateStart, dateEnd, shop }: ExpenseFilters,
-  search = "",
-  offset = 0,
 ): ExpenseShopFilters {
-  return {
-    scope,
-    dateStart,
-    dateEnd,
-    shop,
-    search: search || undefined,
-    limit: SHOP_PAGE_SIZE,
-    offset,
-  };
+  return { scope, dateStart, dateEnd, shop };
 }
 
 export const expenses = {

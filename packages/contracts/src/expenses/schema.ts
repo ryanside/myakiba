@@ -1,6 +1,5 @@
 import * as z from "zod";
 import { CATEGORIES, SHIPPING_METHODS } from "../shared/constants";
-import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
 
 const EXPENSE_BUCKETS = ["month", "year"] as const;
 export const EXPENSE_SCOPES = ["collection", "orders", "shipping"] as const;
@@ -25,9 +24,6 @@ export const expenseFiltersSchema = z.object({
 
 export const expenseShopFiltersSchema = expenseFiltersSchema.extend({
   scope: z.enum(EXPENSE_SCOPES),
-  search: z.string().optional(),
-  limit: paginationLimitSchema.optional(),
-  offset: paginationOffsetSchema.optional(),
 });
 
 export const expenseFilterOptionsSchema = z.object({
@@ -180,7 +176,6 @@ export const expenseShopRowSchema = z.discriminatedUnion("scope", [
 
 export const expenseShopsResponseSchema = z.object({
   items: z.array(expenseShopRowSchema),
-  totalCount: z.number(),
 });
 
 const expenseOrderSchema = z.object({
