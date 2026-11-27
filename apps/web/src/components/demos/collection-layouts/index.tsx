@@ -5,7 +5,6 @@ import {
   FilterIcon,
   GridViewIcon,
   Image01Icon,
-  LeftToRightListDashIcon,
   Menu01Icon,
   MoreHorizontalIcon,
   Search01Icon,
@@ -17,7 +16,7 @@ import { UnsortedIcon } from "@/lib/icons";
 import type { DemoProps } from "../demo-props";
 import "./collection-layouts.css";
 
-// Collection, the view toggle: Compact to Gallery and back. Each figure keeps
+// Collection, the view toggle: Table to Gallery and back. Each figure keeps
 // its identity across the switch: its row thumbnail grows into its gallery
 // tile on a short stagger while the rows' words fade, and on the way back
 // every tile flies home to its own row. Nothing cross-fades between two
@@ -109,8 +108,8 @@ async function script(a: Act<State>): Promise<void> {
   await a.moveCursor(REST[a.layout], { duration: 750 });
   await a.wait(2300);
   a.mark("back");
-  await a.click({ at: "view-compact", ...AIM });
-  a.mark("compact");
+  await a.click({ at: "view-table", ...AIM });
+  a.mark("table");
   await a.set({ gallery: false });
   await a.wait(500);
   await a.moveCursor(REST[a.layout], { duration: 750 });
@@ -118,7 +117,6 @@ async function script(a: Act<State>): Promise<void> {
 }
 
 const MODES = [
-  { mode: "compact", icon: LeftToRightListDashIcon },
   { mode: "table", icon: Menu01Icon },
   { mode: "grid", icon: GridViewIcon },
   { mode: "gallery", icon: Image01Icon },
@@ -126,14 +124,14 @@ const MODES = [
 
 function ViewToggle({ gallery }: { readonly gallery: boolean }): ReactNode {
   return (
-    <div className="mk-collection-layouts-toggle" data-value={gallery ? "gallery" : "compact"}>
+    <div className="mk-collection-layouts-toggle" data-value={gallery ? "gallery" : "table"}>
       <span className="mk-collection-layouts-toggle-thumb" aria-hidden />
       {MODES.map(({ mode, icon }) => (
         <span
           key={mode}
           className="mk-collection-layouts-toggle-item"
-          data-target={mode === "compact" || mode === "gallery" ? `view-${mode}` : undefined}
-          data-on={(gallery ? mode === "gallery" : mode === "compact") || undefined}
+          data-target={mode === "table" || mode === "gallery" ? `view-${mode}` : undefined}
+          data-on={(gallery ? mode === "gallery" : mode === "table") || undefined}
         >
           <HugeiconsIcon icon={icon} size={16} strokeWidth={2} />
         </span>
@@ -232,7 +230,7 @@ function Rows({ compact }: { readonly compact: boolean }): ReactNode {
   );
 }
 
-/** One element per figure, laid over the table and the gallery: in Compact it
+/** One element per figure, laid over the table and the gallery: in Table it
  * sits on its row's thumbnail slot, in Gallery on its tile, and it travels
  * between the two, so the figure never stops being itself. */
 function Figures({ gallery, layout }: { readonly gallery: boolean; readonly layout: Layout }) {

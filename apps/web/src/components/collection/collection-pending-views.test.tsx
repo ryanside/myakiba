@@ -117,3 +117,18 @@ describe.each(["table", "grid", "gallery"])("the collection %s view", (viewMode)
     },
   );
 });
+
+test("a stored Compact view opens the table, and the toggle offers Table, Grid and Gallery", async () => {
+  await renderCollection("compact");
+
+  expect(document.querySelector("table") === null).toBe(false);
+  const views = [...document.querySelectorAll("[aria-pressed]")].map((button) => [
+    button.getAttribute("aria-label"),
+    button.getAttribute("aria-pressed"),
+  ]);
+  expect(views).toEqual([
+    ["Table view", "true"],
+    ["Grid view", "false"],
+    ["Gallery view", "false"],
+  ]);
+});

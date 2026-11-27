@@ -8,17 +8,23 @@ const DATA_VIEW_MODES = [
   "grid",
   "gallery",
 ] as const satisfies readonly DataViewMode[];
+const COLLECTION_VIEW_MODES = [
+  "table",
+  "grid",
+  "gallery",
+] as const satisfies readonly DataViewMode[];
 const MEDIA_VIEW_MODES = ["grid", "list", "gallery"] as const satisfies readonly MediaViewMode[];
 const DATA_VIEW_MODE = z.enum(DATA_VIEW_MODES);
+const COLLECTION_VIEW_MODE = z.enum(COLLECTION_VIEW_MODES);
 const MEDIA_VIEW_MODE = z.enum(MEDIA_VIEW_MODES);
 
 /** Where each page keeps the view it opens in. Settings writes the same keys the pages read. */
 export const VIEW_PREFERENCES = {
   collection: {
     key: "collection:viewMode",
-    modes: DATA_VIEW_MODES,
-    schema: DATA_VIEW_MODE,
-    fallback: "compact",
+    modes: COLLECTION_VIEW_MODES,
+    schema: COLLECTION_VIEW_MODE,
+    fallback: "table",
   },
   orders: {
     key: "orders:viewMode",

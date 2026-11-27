@@ -5,7 +5,7 @@ A user sees the Items they own in table, grid and gallery views with running tot
 ## Sub-features
 
 - `collection-add` adds Items from the toolbar's `Add` link, which opens the Add page with the Collection preset.
-- `collection-views` switches between compact table, table, grid and gallery views.
+- `collection-views` switches between table, grid and gallery views.
 - `collection-search` filters the list from the search box.
 - `collection-edit` edits a row's fields in the `Edit Item` sheet.
 - `collection-fill` writes one field to every selected row.

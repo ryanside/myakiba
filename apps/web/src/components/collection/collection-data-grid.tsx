@@ -72,7 +72,7 @@ export const CollectionDataGrid = () => {
     "collection:galleryLayout",
     "square",
   );
-  const isTableView = viewMode === "compact" || viewMode === "table";
+  const isTableView = viewMode === "table";
   const { filters, setFilters } = useCollectionFilters();
   const { items, totalCount, isPending } = useCollectionQuery();
   const tableData = useMemo(() => [...items], [items]);
@@ -304,7 +304,7 @@ export const CollectionDataGrid = () => {
           isLoading={isPending}
           recordCount={totalCount}
           tableLayout={{
-            dense: viewMode === "compact",
+            dense: true,
             columnsPinnable: true,
             columnsResizable: true,
             columnsMovable: true,

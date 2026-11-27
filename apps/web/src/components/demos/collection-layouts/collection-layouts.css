@@ -1,4 +1,4 @@
-/* Collection: the Compact table and the Gallery, one set of figures between
+/* Collection: the table and the Gallery, one set of figures between
    them. Anatomy from collection-data-grid.tsx, collection-columns.tsx,
    collection-gallery-grid.tsx, view-toggle.tsx and media-tile.tsx. The window
    is pinned a gutter from the top and sides and runs off the bottom, so the
@@ -130,7 +130,7 @@
   }
 
   & .mk-collection-layouts-toggle[data-value="gallery"] .mk-collection-layouts-toggle-thumb {
-    translate: calc(var(--step) * 3) 0;
+    translate: calc(var(--step) * 2) 0;
   }
 
   & .mk-collection-layouts-toggle-item {
