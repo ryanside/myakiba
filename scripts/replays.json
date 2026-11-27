@@ -5836,6 +5836,22 @@
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
       ]
+    },
+    {
+      "fix": "04ec9cd7803bd8955524e75100690abe349c3f15",
+      "bug": "The Expenses Shops endpoint returned 10 shops unless asked for another page, so the Shops table hid the rest behind a pager.",
+      "test": "apps/server/src/routers/expenses/shops.test.ts",
+      "fixed": [
+        "GET /expenses/shops?scope=collection returns all 20 shops, largest Spend first",
+        "GET /expenses/shops?scope=orders returns all 20 shops, largest Spend first",
+        "GET /expenses/shops?scope=shipping returns all 20 shops, largest Spend first"
+      ]
+    },
+    {
+      "fix": "04ec9cd7803bd8955524e75100690abe349c3f15",
+      "bug": "The Expenses Shops table carried a pager and a search box over a handful of shops.",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": ["the Shops table shows all 20 shops with no pager and no search"]
     }
   ],
   "lint": [
