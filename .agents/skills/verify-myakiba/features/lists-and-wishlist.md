@@ -42,6 +42,6 @@ Preconditions:
 - `Save` in `Add to List` stays disabled until a List is checked.
 - An Item, its Collection Item and its Order are three different members.
 - The remove buttons and `Actions for <list>` time out with `element is visible, enabled and stable` unless the card is hovered first.
-- The List page's `More List actions` menu also deletes the List. From source: not driven.
+- The List page deletes its List too. Click `role=button[name='Delete List']`, then `role=dialog >> role=button[name='Delete']` in `Delete List?`. The page returns to `/lists`, and `$H logs <run>` has `DELETE /api/lists`.
 - The Wishlist is its own `wishlist_item` table, not a collection status. Its routes use the internal item id, not the MFC id.
 - Adding to and removing from the Wishlist shows no toast, and removing has no confirmation.
