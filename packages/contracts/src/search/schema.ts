@@ -23,11 +23,11 @@ export const orderSearchSortSchema = z.enum([
   "createdAt",
 ]);
 
-const CUT_ORDER_SORTS = new Set<unknown>(["taxes", "duties", "tariffs", "miscFees"]);
+export const cutOrderSortSchema = z.enum(["taxes", "duties", "tariffs", "miscFees"]);
 
-export function ignoreCutOrderSort<TSchema extends z.ZodType>(schema: TSchema) {
-  return z.preprocess((value) => (CUT_ORDER_SORTS.has(value) ? undefined : value), schema);
-}
+export const bookmarkedOrderSortSchema = z
+  .enum([...orderSearchSortSchema.options, ...cutOrderSortSchema.options])
+  .transform((sort) => orderSearchSortSchema.safeParse(sort).data);
 
 export const collectionSearchSortSchema = z.enum([
   "itemTitle",

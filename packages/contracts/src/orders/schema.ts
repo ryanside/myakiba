@@ -6,13 +6,13 @@ import {
   sortDirectionSchema,
 } from "../shared/pagination";
 import { ORDER_CASCADE_OPTIONS } from "./constants";
-import { ignoreCutOrderSort, orderSearchSortSchema } from "../search/schema";
+import { bookmarkedOrderSortSchema, cutOrderSortSchema } from "../search/schema";
 import { WRITE_LIMITS } from "../shared/write-limits";
 
 export const orderFiltersSchema = z.object({
   limit: paginationLimitSchema.optional(),
   offset: paginationOffsetSchema.optional(),
-  sort: ignoreCutOrderSort(orderSearchSortSchema.optional()),
+  sort: bookmarkedOrderSortSchema.optional(),
   order: sortDirectionSchema.optional(),
   search: z.string().optional(),
   shop: z.array(z.string()).optional(),
@@ -39,6 +39,27 @@ export const orderFiltersSchema = z.object({
 });
 
 export const searchSchema = orderFiltersSchema;
+
+const CLEARED_CUT_ORDER_FILTERS = {
+  unpaidCostsMin: undefined,
+  unpaidCostsMax: undefined,
+  orderSpendMin: undefined,
+  orderSpendMax: undefined,
+  taxesMin: undefined,
+  taxesMax: undefined,
+  dutiesMin: undefined,
+  dutiesMax: undefined,
+  tariffsMin: undefined,
+  tariffsMax: undefined,
+  miscFeesMin: undefined,
+  miscFeesMax: undefined,
+} as const;
+
+export function clearCutOrderKeys(search: OrderFiltersInput) {
+  return cutOrderSortSchema.safeParse(search.sort).success
+    ? { ...CLEARED_CUT_ORDER_FILTERS, sort: undefined, order: undefined }
+    : CLEARED_CUT_ORDER_FILTERS;
+}
 
 export const orderItemsQuerySchema = z.object({
   limit: paginationLimitSchema.default(6),
@@ -78,6 +99,7 @@ export const cascadeOptionSchema = z.enum(ORDER_CASCADE_OPTIONS);
 export const cascadeOptionsSchema = z.array(cascadeOptionSchema).max(ORDER_CASCADE_OPTIONS.length);
 
 export type OrderFilters = z.infer<typeof orderFiltersSchema>;
+export type OrderFiltersInput = z.input<typeof orderFiltersSchema>;
 export type OrderItemsQuery = z.infer<typeof orderItemsQuerySchema>;
 export type NewOrder = z.infer<typeof newOrderSchema>;
 export type OrderEdit = z.infer<typeof orderEditSchema>;
