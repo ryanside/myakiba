@@ -6,13 +6,13 @@ import {
   sortDirectionSchema,
 } from "../shared/pagination";
 import { ORDER_CASCADE_OPTIONS } from "./constants";
-import { knownOrderSort, orderSearchSortSchema } from "../search/schema";
+import { ignoreCutOrderSort, orderSearchSortSchema } from "../search/schema";
 import { WRITE_LIMITS } from "../shared/write-limits";
 
 export const orderFiltersSchema = z.object({
   limit: paginationLimitSchema.optional(),
   offset: paginationOffsetSchema.optional(),
-  sort: knownOrderSort(orderSearchSortSchema.optional()),
+  sort: ignoreCutOrderSort(orderSearchSortSchema.optional()),
   order: sortDirectionSchema.optional(),
   search: z.string().optional(),
   shop: z.array(z.string()).optional(),

@@ -23,12 +23,10 @@ export const orderSearchSortSchema = z.enum([
   "createdAt",
 ]);
 
-/** Reads a sort the Orders list no longer offers, such as one in an old bookmark, as no sort. */
-export function knownOrderSort<TSchema extends z.ZodType>(schema: TSchema) {
-  return z.preprocess(
-    (value) => (orderSearchSortSchema.safeParse(value).success ? value : undefined),
-    schema,
-  );
+const CUT_ORDER_SORTS = new Set<unknown>(["taxes", "duties", "tariffs", "miscFees"]);
+
+export function ignoreCutOrderSort<TSchema extends z.ZodType>(schema: TSchema) {
+  return z.preprocess((value) => (CUT_ORDER_SORTS.has(value) ? undefined : value), schema);
 }
 
 export const collectionSearchSortSchema = z.enum([

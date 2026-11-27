@@ -585,6 +585,12 @@ describe("a list URL bookmarked before the Orders filters and sorts were trimmed
     });
   });
 
+  test("answers 422 for a sort the list never had", async () => {
+    const { status } = await call("GET", "/?limit=10&sort=nope");
+
+    expect(status).toBe(422);
+  });
+
   test("still sorts by a kept key", async () => {
     const { status, body } = await call("GET", "/?limit=10&sort=title&order=desc");
     const { items } = body as { items: { orderId: string }[] };

@@ -43,8 +43,11 @@ test("an Orders URL drops a cut filter and a cut sort and keeps the rest", () =>
   });
 });
 
-test("an Orders URL keeps a kept sort", () => {
-  expect(searchSchema.parse({ sort: "shippingFee" }).sort).toBe("shippingFee");
+test("an Orders URL keeps a kept sort and still rejects a sort the list never had", () => {
+  expect({
+    kept: searchSchema.parse({ sort: "shippingFee" }).sort,
+    unknown: searchSchema.safeParse({ sort: "nope" }).success,
+  }).toEqual({ kept: "shippingFee", unknown: false });
 });
 
 test("Orders sort by fourteen keys and none of the cut fees", () => {
