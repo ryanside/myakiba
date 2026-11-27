@@ -156,8 +156,7 @@ const MENUS: readonly (readonly [string, (externalId: number | null) => ReactNod
   ],
 ];
 
-/** Opens the menu and waits for it, so a missing entry is absent and not still loading. */
-async function openMenu(menu: () => ReactNode): Promise<void> {
+async function openLoadedMenu(menu: () => ReactNode): Promise<void> {
   const router = createRouter({
     routeTree: createRootRoute({ component: menu }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
@@ -174,7 +173,7 @@ async function openMenu(menu: () => ReactNode): Promise<void> {
 
 for (const [name, Menu] of MENUS) {
   test(`${name}'s menu opens an MFC Item's page on MFC in a new tab`, async () => {
-    await openMenu(() => Menu(1006));
+    await openLoadedMenu(() => Menu(1006));
 
     const link = await screen.findByRole("menuitem", { name: "Open on MFC" });
     expect(link.getAttribute("href")).toBe("https://myfigurecollection.net/item/1006");
@@ -183,7 +182,7 @@ for (const [name, Menu] of MENUS) {
   });
 
   test(`${name}'s menu has no MFC entry for a custom Item`, async () => {
-    await openMenu(() => Menu(null));
+    await openLoadedMenu(() => Menu(null));
 
     expect(screen.queryByRole("menuitem", { name: "Open on MFC" }) === null).toBe(true);
     expect(screen.queryByRole("menuitem", { name: /MFC/u }) === null).toBe(true);
