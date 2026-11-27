@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Copy01Icon,
   Delete02Icon,
   Edit03Icon,
   FolderAddIcon,
@@ -29,8 +28,7 @@ import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-colu
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { toast } from "@/components/ui/toast";
-import { writeClipboard } from "@/lib/clipboard";
+import { OpenOnMfcMenuItem } from "@/components/open-on-mfc-menu-item";
 import CollectionItemForm from "./collection-item-form";
 import { withCollectionPending } from "./collection-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
@@ -136,28 +134,7 @@ function CollectionActionsCell({
                   <HugeiconsIcon icon={ViewIcon} />
                   View details
                 </DropdownMenuLinkItem>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    if (item.itemExternalId === null) {
-                      toast.add({ type: "error", title: "No MFC item ID for custom items" });
-                      return;
-                    }
-
-                    const copied = await writeClipboard(String(item.itemExternalId));
-                    if (copied.isErr()) {
-                      toast.add({
-                        type: "error",
-                        title: "Could not copy MFC item ID to clipboard",
-                      });
-                      return;
-                    }
-
-                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
-                  }}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  Copy MFC ID
-                </DropdownMenuItem>
+                <OpenOnMfcMenuItem externalId={item.itemExternalId} />
                 <DropdownMenuItem
                   onClick={() => {
                     setMenuOpen(false);
