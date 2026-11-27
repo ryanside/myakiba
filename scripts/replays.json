@@ -3520,7 +3520,10 @@
       "test": "apps/web/src/components/orders/orders-columns.test.tsx",
       "fixed": ["draws the row's open-order link with a different icon from its expand button"],
       "testAt": "b9876b38b52f80196c15e885fbd29d8dcdee708b",
-      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix."
+      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix.",
+      "atHead": [
+        "an Orders row links to its Order once, with an icon unlike its expand button, and has no row menu"
+      ]
     },
     {
       "fix": "3cc4dbf2",
@@ -5835,6 +5838,14 @@
         "the edit-order sheet > starts with the matching-items box ticked, and a Shop change copies it to the items that held the old Shop",
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
+      ]
+    },
+    {
+      "fix": "ff5f6978557cc6053ca4a69f8d619786983e6473",
+      "bug": "A saved Orders layout that hid the Title column left a row with no link to its Order once the row menu was gone.",
+      "test": "apps/web/src/components/orders-title-column.test.tsx",
+      "fixed": [
+        "a saved layout that hid the Title column still shows it, with its link, and the Columns picker never offers it"
       ]
     }
   ],
