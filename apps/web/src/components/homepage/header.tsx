@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CONTAINER } from "@/components/homepage/kit";
-import { DISCORD_URL, GITHUB_URL } from "@/components/homepage/links";
+import { DISCORD_URL, GITHUB_URL, RELEASES_URL } from "@/components/homepage/links";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -41,9 +41,14 @@ export function HomeHeader() {
                   </a>
                 </li>
                 <li>
-                  <Link to="/changelog" className={NAV_LINK}>
+                  <a
+                    href={RELEASES_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={NAV_LINK}
+                  >
                     Changelog
-                  </Link>
+                  </a>
                 </li>
               </ul>
             </nav>

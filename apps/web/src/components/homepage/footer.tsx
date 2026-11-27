@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { scrollToTop } from "@/components/homepage/header";
 import { CONTAINER } from "@/components/homepage/kit";
-import { DISCORD_URL, GITHUB_URL } from "@/components/homepage/links";
+import { DISCORD_URL, GITHUB_URL, RELEASES_URL } from "@/components/homepage/links";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { cn } from "@/lib/utils";
 
@@ -38,9 +38,9 @@ export function HomeFooter() {
           </p>
         </div>
         <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2">
-          <Link to="/changelog" className={LINK}>
+          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className={LINK}>
             Changelog
-          </Link>
+          </a>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={LINK}>
             GitHub
           </a>

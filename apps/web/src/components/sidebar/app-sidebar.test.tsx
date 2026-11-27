@@ -43,6 +43,15 @@ test("every sidebar link is the whole menu button, so its hover area is its hit 
   }
 });
 
+test("the Changelog link opens GitHub Releases in a new tab", async () => {
+  await renderSidebar();
+
+  const link = screen.getByRole("link", { name: "Changelog" });
+  expect(link.getAttribute("href")).toBe("https://github.com/ryanside/myakiba/releases");
+  expect(link.getAttribute("target")).toBe("_blank");
+  expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+});
+
 test("every active-state style on the active sidebar item matches its attribute", async () => {
   await renderSidebar();
   await act(async () => {

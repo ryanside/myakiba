@@ -11,6 +11,7 @@ import {
 import { useEffect } from "react";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { ActiveDot } from "@/components/active-dot";
+import { DISCORD_URL, GITHUB_URL, RELEASES_URL } from "@/components/homepage/links";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useOpenOnboarding } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
@@ -48,9 +49,9 @@ const NAV_GROUPS: readonly { readonly label: string; readonly items: readonly Na
 ];
 
 const FOOTER_LINKS = [
-  { title: "Changelog", url: "/changelog", external: false },
-  { title: "Discord", url: "https://discord.gg/VKHVvhcC2z", external: true },
-  { title: "GitHub", url: "https://github.com/ryanside/myakiba", external: true },
+  { title: "Changelog", url: RELEASES_URL },
+  { title: "Discord", url: DISCORD_URL },
+  { title: "GitHub", url: GITHUB_URL },
 ] as const;
 
 function useWarmDestinations(urls: readonly string[]) {
@@ -148,17 +149,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 size="sm"
                 className="-mx-1.5 h-7 px-1.5 text-[0.8125rem] text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent"
-                render={
-                  link.external ? (
-                    (renderProps) => (
-                      <a {...renderProps} href={link.url} target="_blank" rel="noopener noreferrer">
-                        {renderProps.children}
-                      </a>
-                    )
-                  ) : (
-                    <Link to={link.url} />
-                  )
-                }
+                render={(renderProps) => (
+                  <a {...renderProps} href={link.url} target="_blank" rel="noopener noreferrer">
+                    {renderProps.children}
+                  </a>
+                )}
               >
                 {link.title}
               </SidebarMenuButton>

@@ -1,21 +1,18 @@
 import { RefreshIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { env } from "@myakiba/env/web";
-import { Link } from "@tanstack/react-router";
 import type { ComponentType, SVGProps } from "react";
+import { DISCORD_URL, GITHUB_URL, RELEASES_URL } from "@/components/homepage/links";
 import { useOpenOnboarding } from "@/components/onboarding/onboarding-dialog";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useRead } from "@/data/client";
 import { version } from "@/data/resources/version";
-import { changelogEntries, formatChangelogDate } from "@/lib/changelog";
 import { SettingsGroup } from "./settings-group";
 import type { SettingId } from "./settings-registry";
 import { SettingsRow } from "./settings-row";
 import { ExternalIcon } from "@/lib/icons";
 
-const REPOSITORY = "https://github.com/ryanside/myakiba";
-const DISCORD = "https://discord.gg/VKHVvhcC2z";
 const COMMIT = /^[\da-f]{7,40}$/i;
 
 export function About() {
@@ -25,7 +22,12 @@ export function About() {
     <>
       <SettingsGroup title="This version">
         <VersionRow />
-        <ChangelogRow />
+        <ExternalRow
+          setting="changelog"
+          href={RELEASES_URL}
+          logo={GitHubLogo}
+          label="Read on GitHub"
+        />
       </SettingsGroup>
       <SettingsGroup title="Help">
         <SettingsRow setting="getting-started" inline>
@@ -33,8 +35,8 @@ export function About() {
             Open
           </Button>
         </SettingsRow>
-        <ExternalRow setting="discord" href={DISCORD} logo={DiscordLogo} label="Join Discord" />
-        <ExternalRow setting="github" href={REPOSITORY} logo={GitHubLogo} label="Open GitHub" />
+        <ExternalRow setting="discord" href={DISCORD_URL} logo={DiscordLogo} label="Join Discord" />
+        <ExternalRow setting="github" href={GITHUB_URL} logo={GitHubLogo} label="Open GitHub" />
       </SettingsGroup>
     </>
   );
@@ -44,7 +46,7 @@ function BuildId({ id }: { readonly id: string }) {
   if (!COMMIT.test(id)) return <span className="text-sm tabular-nums">{id}</span>;
   return (
     <a
-      href={`${REPOSITORY}/commit/${id}`}
+      href={`${GITHUB_URL}/commit/${id}`}
       target="_blank"
       rel="noopener noreferrer"
       className="-mx-1 rounded-sm px-1 text-sm tabular-nums underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -82,28 +84,6 @@ function VersionRow() {
           </Button>
         </>
       ) : null}
-    </SettingsRow>
-  );
-}
-
-function ChangelogRow() {
-  const latest = changelogEntries[0];
-
-  return (
-    <SettingsRow
-      setting="changelog"
-      inline
-      status={
-        latest ? (
-          <span className="text-xs text-muted-foreground">
-            Updated {formatChangelogDate(latest.date)}
-          </span>
-        ) : null
-      }
-    >
-      <Button variant="outline" size="sm" render={<Link to="/changelog" />} nativeButton={false}>
-        Read
-      </Button>
     </SettingsRow>
   );
 }

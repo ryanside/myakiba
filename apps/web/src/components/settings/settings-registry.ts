@@ -221,7 +221,7 @@ export const SETTINGS = {
     section: "about",
     title: "Changelog",
     description: "New features, improvements and fixes.",
-    keywords: ["what's new", "release notes", "updates", "news"],
+    keywords: ["what's new", "release notes", "github releases", "updates", "news"],
   },
   "getting-started": {
     section: "about",
