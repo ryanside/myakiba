@@ -2952,10 +2952,10 @@
       ],
       "testAt": "327e62640e5759672721c06b1096aa2c3e55cf39",
       "atHead": [
-        "an Owned order without dates shows three completed undated steps: Ordered, Shipped, Owned",
-        "only future undated steps show Pending"
+        "an Order with no dates lists none and draws no steps",
+        "a Shipped Order with no Shipping Date shows no Pending step"
       ],
-      "reason": "The change that made Paid its own yes/no rewrote this file for a three-step stepper with the payment shown apart, which does not exist at this fix, so its harness stays at the fix."
+      "reason": "The change that made Paid its own yes/no rewrote this file for a three-step stepper with the payment shown apart, which does not exist at this fix, so its harness stays at the fix. The Order page has since replaced the stepper with a list of entered dates; atHead names HEAD's tests that an undated or unreached date shows no Pending."
     },
     {
       "fix": "c083f8ad",
@@ -5731,7 +5731,13 @@
       "fixed": [
         "the steps are Ordered, Shipped and Owned, with no Paid or Unpaid badge and no Payment line without a Payment Date",
         "a Payment Date shows on its own beside the steps, with no Paid badge"
-      ]
+      ],
+      "testAt": "2ad81c8bd2215abb5805c49c10abfc92e666196c",
+      "atHead": [
+        "an Owned card with only an Order Date lists that date and no steps",
+        "a card with every date lists all four, with no Paid or Unpaid badge"
+      ],
+      "reason": "A later fix replaced the card's stepper and Payment line with a list of entered dates, so HEAD's tests assert the list. The entry keeps the file as it stood on main at 2ad81c8bd, which matches this fix; atHead names HEAD's tests that the card shows no Paid or Unpaid badge and lists a Payment Date only when one is entered."
     },
     {
       "fix": "2f891693334018192a5ef47163c9b1bae9534f1e",
