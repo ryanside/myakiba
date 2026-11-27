@@ -26,16 +26,15 @@ type Status = "Ordered" | "Shipped" | "Owned";
 
 const STATUSES: readonly Status[] = ["Ordered", "Shipped", "Owned"];
 
-const DATES = {
+const PICKER_DATES = {
   order: "Mar 2, 2026",
   payment: "Jul 14, 2026",
   shipping: "Aug 30, 2026",
   collection: "Sep 6, 2026",
 } as const;
-type DateField = keyof typeof DATES;
+type DateField = keyof typeof PICKER_DATES;
 const DATE_FILL_ORDER: readonly DateField[] = ["order", "payment", "shipping", "collection"];
 
-/** The Order page's dates, in the user's MM/DD/YYYY */
 const PAGE_DATES: readonly {
   readonly field: DateField;
   readonly label: string;
@@ -83,8 +82,7 @@ const poster: S = {
   formDates: 4,
 };
 
-// Where the cursor waits: empty page between the dates and the costs
-const REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies Record<
+const CURSOR_REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies Record<
   Layout,
   Point
 >;
@@ -359,7 +357,7 @@ function DateValue({ s, field }: { readonly s: S; readonly field: DateField }) {
   return (
     <span className="mk-order-lifecycle-date" data-empty={!set || undefined}>
       <HugeiconsIcon icon={Calendar01Icon} size={16} strokeWidth={1.5} />
-      <Roll variant="fade">{set ? DATES[field] : "Select date"}</Roll>
+      <Roll variant="fade">{set ? PICKER_DATES[field] : "Select date"}</Roll>
     </span>
   );
 }
@@ -657,7 +655,7 @@ export function OrderLifecycleDemo({ theme }: DemoProps) {
             <span
               data-target="rest"
               className="mk-order-lifecycle-rest"
-              style={{ left: REST[layout].x, top: REST[layout].y }}
+              style={{ left: CURSOR_REST[layout].x, top: CURSOR_REST[layout].y }}
             />
           </>
         );
