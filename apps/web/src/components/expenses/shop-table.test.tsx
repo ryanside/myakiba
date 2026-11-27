@@ -1,10 +1,51 @@
 import { afterEach, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import type { ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import { expenses } from "@/data/resources/expenses";
 import { ShopTable } from "./shop-table";
 
-afterEach(cleanup);
+const realFetch = globalThis.fetch;
+
+afterEach(() => {
+  cleanup();
+  globalThis.fetch = realFetch;
+});
+
+test("the Shops table shows all 20 shops with no pager and no search", async () => {
+  const shops: ExpenseShopRow[] = Array.from({ length: 20 }, (_, index) => ({
+    scope: "collection",
+    id: `shop:Shop ${index + 1}`,
+    shop: `Shop ${index + 1}`,
+    spend: 1000 * (20 - index),
+    share: 5,
+    itemCount: 1,
+    averageItemCost: 1000 * (20 - index),
+  }));
+  globalThis.fetch = Object.assign(async () => Response.json({ items: shops }), {
+    preconnect: realFetch.preconnect,
+  });
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <ShopTable
+        scope="collection"
+        filters={{}}
+        currency="USD"
+        locale="en-US"
+        dateFormat="MM/DD/YYYY"
+      />
+    </QueryClientProvider>,
+  );
+
+  expect(Boolean(await screen.findByText("Shop 20"))).toBe(true);
+  const shown = shops.filter((row) => screen.queryByText(row.shop) !== null);
+  expect(shown.length).toBe(20);
+  expect(screen.queryByRole("navigation", { name: "pagination" }) === null).toBe(true);
+  expect(screen.queryByRole("textbox") === null).toBe(true);
+  expect(screen.queryByText(/^Showing/) === null).toBe(true);
+});
 
 // The rows rise 3 px as they fade in, and a box that scrolls sideways also scrolls down, so a
 // scroller that let them overflow showed a vertical scrollbar that shifted the table for a moment.
