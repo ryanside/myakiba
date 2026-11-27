@@ -187,7 +187,7 @@ export default function OrdersDataGrid() {
     [selectedOrderIdByCollectionId],
   );
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
-  const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
+  const [savedColumnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     TABLE_LAYOUTS.orders.visibility,
     DEFAULT_VISIBILITY,
   );
@@ -225,6 +225,17 @@ export default function OrdersDataGrid() {
         dateFormat,
       }),
     [handleEditItem, deleteItem, handleEditOrder, handleSetOrderPaid, currency, locale, dateFormat],
+  );
+  const columnVisibility = useMemo(
+    () => ({
+      ...savedColumnVisibility,
+      ...Object.fromEntries(
+        columns.flatMap(({ id, enableHiding }) =>
+          enableHiding === false && id !== undefined ? [[id, true] as const] : [],
+        ),
+      ),
+    }),
+    [savedColumnVisibility, columns],
   );
 
   const handlePaginationChange = useCallback(

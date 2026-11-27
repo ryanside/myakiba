@@ -183,7 +183,7 @@ export function createOrdersColumns({
         </div>
       )),
       enableSorting: true,
-      enableHiding: true,
+      enableHiding: false,
       enableResizing: true,
       size: 240,
       meta: {
