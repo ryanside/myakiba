@@ -1,9 +1,7 @@
 import type { ComponentProps } from "react";
-import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { ThemedBadge } from "@/components/reui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
 
 export function PaymentBadge({
   paid,
@@ -43,26 +41,6 @@ export function PaidCheckbox({
       disabled={disabled}
       onCheckedChange={() => onPaidChange(!paid)}
     />
-  );
-}
-
-export function PaymentLine({
-  paid,
-  paymentDate,
-  dateFormat,
-}: {
-  readonly paid?: boolean;
-  readonly paymentDate: string | null;
-  readonly dateFormat: DateFormat;
-}) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-muted-foreground">Payment</span>
-      {paid === undefined ? null : <PaymentBadge paid={paid} />}
-      {paymentDate ? (
-        <span className="tabular-nums">{formatDateOnlyForDisplay(paymentDate, dateFormat)}</span>
-      ) : null}
-    </div>
   );
 }
 

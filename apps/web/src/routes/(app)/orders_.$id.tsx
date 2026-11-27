@@ -8,14 +8,12 @@ import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar"
 import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { RecordTitle } from "@/components/record-title";
-import { Skeleton } from "@/components/ui/skeleton";
 import { preload, preloadPage, useRead } from "@/data/client";
 import { orderItemsInput, orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { withoutOrderItems } from "@/hooks/use-selection";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { ORDER_LOAD_FAILED } from "@/queries/orders";
-import { formatTimestampForDisplay } from "@/lib/date-display";
 import type { Saving } from "@/data/client";
 import { shownMessageOf } from "@/data/api";
 
@@ -148,45 +146,14 @@ function RouteComponent(): ReactNode {
         />
       </OrderPendingContext>
 
-      <div className="flex flex-col gap-4 pb-2">
-        {order?.notes ? (
-          <section className="animate-data-in flex flex-col gap-1.5">
-            <h2 className="text-base font-medium text-foreground">Notes</h2>
-            <p className="max-w-prose text-sm leading-relaxed text-pretty wrap-break-word whitespace-pre-wrap text-muted-foreground">
-              {order.notes}
-            </p>
-          </section>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {isPending ? (
-            <>
-              <span className="flex items-center gap-1">
-                Created <Skeleton className="h-3 w-24" />
-              </span>
-              <span className="flex items-center gap-1">
-                Updated <Skeleton className="h-3 w-24" />
-              </span>
-            </>
-          ) : null}
-          {!isPending && order ? (
-            <>
-              <span>
-                Created{" "}
-                <span className="animate-data-in inline-block">
-                  {formatTimestampForDisplay(order.createdAt, dateFormat)}
-                </span>
-              </span>
-              <span>
-                Updated{" "}
-                <span className="animate-data-in inline-block">
-                  {formatTimestampForDisplay(order.updatedAt, dateFormat)}
-                </span>
-              </span>
-            </>
-          ) : null}
-        </div>
-      </div>
+      {order?.notes ? (
+        <section className="animate-data-in flex flex-col gap-1.5 pb-2">
+          <h2 className="text-base font-medium text-foreground">Notes</h2>
+          <p className="max-w-prose text-sm leading-relaxed text-pretty wrap-break-word whitespace-pre-wrap text-muted-foreground">
+            {order.notes}
+          </p>
+        </section>
+      ) : null}
 
       <OrderItemsActionBar
         selectedItems={selectedItems}

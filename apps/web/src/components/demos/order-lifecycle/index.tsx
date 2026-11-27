@@ -24,20 +24,7 @@ type S = {
 
 type Status = "Ordered" | "Shipped" | "Owned";
 
-type Step = {
-  readonly status: Status;
-  /** As the stepper writes it (the user's MM/DD/YYYY) */
-  readonly date: string;
-};
-
-const STEPS: readonly Step[] = [
-  { status: "Ordered", date: "03/02/2026" },
-  { status: "Shipped", date: "08/30/2026" },
-  { status: "Owned", date: "09/06/2026" },
-];
-const STATUSES: readonly Status[] = STEPS.map((step) => step.status);
-
-const PAYMENT_DATE = "07/14/2026";
+const STATUSES: readonly Status[] = ["Ordered", "Shipped", "Owned"];
 
 const DATES = {
   order: "Mar 2, 2026",
@@ -47,6 +34,18 @@ const DATES = {
 } as const;
 type DateField = keyof typeof DATES;
 const DATE_FILL_ORDER: readonly DateField[] = ["order", "payment", "shipping", "collection"];
+
+/** The Order page's dates, in the user's MM/DD/YYYY */
+const PAGE_DATES: readonly {
+  readonly field: DateField;
+  readonly label: string;
+  readonly date: string;
+}[] = [
+  { field: "order", label: "Order Date", date: "03/02/2026" },
+  { field: "payment", label: "Payment Date", date: "07/14/2026" },
+  { field: "shipping", label: "Shipping Date", date: "08/30/2026" },
+  { field: "collection", label: "Collection Date", date: "09/06/2026" },
+];
 
 const statusOf = (step: number): Status => STATUSES.at(step - 1) ?? "Ordered";
 
@@ -84,7 +83,7 @@ const poster: S = {
   formDates: 4,
 };
 
-// Where the cursor waits: empty page between the stepper and the costs
+// Where the cursor waits: empty page between the dates and the costs
 const REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies Record<
   Layout,
   Point
@@ -248,43 +247,22 @@ function Hero({ s, compact }: { readonly s: S; readonly compact: boolean }) {
   );
 }
 
-function Progress({ s, compact }: { readonly s: S; readonly compact: boolean }) {
-  const step = s.step;
+function Dates({ s }: { readonly s: S }) {
+  const saved = {
+    order: true,
+    payment: s.paid,
+    shipping: s.step >= 2,
+    collection: s.step >= 3,
+  } satisfies Record<DateField, boolean>;
   return (
-    <section className="mk-order-lifecycle-progress">
-      <div className="mk-order-lifecycle-heading">Progress</div>
-      <div className="mk-order-lifecycle-steps">
-        {STEPS.map((st, i) => {
-          const n = i + 1;
-          return (
-            <div
-              key={st.status}
-              className="mk-order-lifecycle-step"
-              data-done={n <= step || undefined}
-              data-active={n === step || undefined}
-            >
-              <span className="mk-order-lifecycle-indicator" />
-              {n < STEPS.length ? (
-                <span className="mk-order-lifecycle-sep" data-done={n + 1 <= step || undefined} />
-              ) : null}
-              <span className="mk-order-lifecycle-step-title">{st.status}</span>
-              <span className="mk-order-lifecycle-step-date">
-                <Roll>{n <= step ? st.date : "Pending"}</Roll>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      {compact ? null : (
-        <div className="mk-order-lifecycle-payment">
-          <span className="mk-order-lifecycle-payment-label">Payment</span>
-          <PaymentBadge paid={s.paid} />
-          <span className="mk-order-lifecycle-payment-date" data-show={s.paid || undefined}>
-            {PAYMENT_DATE}
-          </span>
+    <dl className="mk-order-lifecycle-dates">
+      {PAGE_DATES.filter(({ field }) => saved[field]).map(({ field, label, date }) => (
+        <div key={field} className="mk-order-lifecycle-date-entry">
+          <dt>{label}</dt>
+          <dd>{date}</dd>
         </div>
-      )}
-    </section>
+      ))}
+    </dl>
   );
 }
 
@@ -641,7 +619,7 @@ export function OrderLifecycleDemo({ theme }: DemoProps) {
         const page = (
           <div className="mk-order-lifecycle-page">
             <Hero s={s} compact={compact} />
-            <Progress s={s} compact={compact} />
+            <Dates s={s} />
             <div className="mk-order-lifecycle-lower">
               <Items s={s} />
               {compact ? null : <Costs />}

@@ -269,127 +269,31 @@
     }
   }
 
-  .mk-order-lifecycle-payment {
+  /* The Order page's entered dates; a date appears once it is saved */
+  .mk-order-lifecycle-dates {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 20px;
-    margin-top: 16px;
+    flex-wrap: wrap;
+    gap: 12px 32px;
+    min-height: 40px;
+    margin: 0;
   }
 
-  .mk-order-lifecycle-payment-label {
-    color: var(--muted-foreground);
-  }
-
-  .mk-order-lifecycle-payment-date {
-    font-variant-numeric: tabular-nums;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-  }
-
-  .mk-order-lifecycle-payment-date[data-show] {
-    opacity: 1;
-  }
-
-  /* Progress: the app's horizontal Timeline. A step is reached when its
-     ring fills; the line to it fills first, from the step before */
-  .mk-order-lifecycle-steps {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-top: 16px;
-  }
-
-  .mk-order-lifecycle-step {
-    position: relative;
+  .mk-order-lifecycle-date-entry {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding-top: 30px;
-  }
-
-  .mk-order-lifecycle-indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    box-sizing: border-box;
-    width: 16px;
-    height: 16px;
-    border: 2px solid color-mix(in oklab, var(--primary) 20%, transparent);
-    border-radius: 50%;
-    background: var(--card);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 15%, transparent);
-    transition:
-      border-color 0.2s ease 0.5s,
-      background-color 0.2s ease 0.5s,
-      box-shadow 0.35s ease 0.5s;
-  }
-
-  .mk-order-lifecycle-step[data-done] .mk-order-lifecycle-indicator {
-    border-color: var(--primary);
-    background: var(--primary);
-  }
-
-  .mk-order-lifecycle-step[data-active] .mk-order-lifecycle-indicator {
-    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 15%, transparent);
-  }
-
-  /* The ring leaving the step before goes at once, as the line sets off */
-  .mk-order-lifecycle-step[data-done]:not([data-active]) .mk-order-lifecycle-indicator {
-    transition:
-      border-color 0.2s ease 0.5s,
-      background-color 0.2s ease 0.5s,
-      box-shadow 0.25s ease;
-  }
-
-  .mk-order-lifecycle-sep {
-    position: absolute;
-    top: 7px;
-    left: 20px;
-    right: 4px;
-    height: 2px;
-    overflow: hidden;
-    border-radius: 1px;
-    background: color-mix(in oklab, var(--primary) 10%, transparent);
-  }
-
-  .mk-order-lifecycle-sep::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--primary);
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform 0.55s cubic-bezier(0.45, 0, 0.1, 1);
-  }
-
-  .mk-order-lifecycle-sep[data-done]::after {
-    transform: none;
-  }
-
-  .mk-order-lifecycle-step-title {
     font-size: 14px;
-    font-weight: 500;
     line-height: 20px;
-    color: var(--muted-foreground);
-    transition: color 0.3s ease 0.5s;
-  }
+    animation: mk-order-lifecycle-date-in 0.3s ease both;
 
-  .mk-order-lifecycle-step[data-done] .mk-order-lifecycle-step-title {
-    color: var(--foreground);
-  }
+    & dt {
+      color: var(--muted-foreground);
+    }
 
-  .mk-order-lifecycle-step-date {
-    height: 16px;
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 16px;
-    font-variant-numeric: tabular-nums;
-    color: var(--muted-foreground);
-  }
-
-  .mk-order-lifecycle-step-date .ss-roll__mid,
-  .mk-order-lifecycle-step-date .ss-roll__char {
-    vertical-align: top;
+    & dd {
+      margin: 0;
+      font-variant-numeric: tabular-nums;
+    }
   }
 
   /* The order's item beside its cost breakdown */
@@ -990,26 +894,9 @@
       line-height: 20px;
     }
 
-    .mk-order-lifecycle-steps {
-      margin-top: 12px;
-    }
-
-    .mk-order-lifecycle-step {
-      padding-top: 26px;
-    }
-
-    .mk-order-lifecycle-sep {
-      left: 19px;
-      right: 3px;
-    }
-
-    .mk-order-lifecycle-step-title {
+    .mk-order-lifecycle-date-entry {
       font-size: 13px;
       line-height: 18px;
-    }
-
-    .mk-order-lifecycle-step-date {
-      font-size: 11px;
     }
 
     .mk-order-lifecycle-lower {
@@ -1077,5 +964,12 @@
     .mk-order-lifecycle-kpi-sub {
       font-size: 12px;
     }
+  }
+}
+
+@keyframes mk-order-lifecycle-date-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
   }
 }

@@ -15,19 +15,10 @@ import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Timeline,
-  TimelineItem,
-  TimelineHeader,
-  TimelineDate,
-  TimelineTitle,
-  TimelineIndicator,
-  TimelineSeparator,
-} from "@/components/reui/timeline";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
-import { PaymentLine } from "@/components/orders/payment";
+import { EnteredDates } from "@/components/entered-dates";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -92,12 +83,6 @@ export function CollectionItemCard({
   readonly className?: string;
 }): ReactNode {
   const release = item?.releases.find((r) => r.id === collectionItem?.releaseId);
-  const timelineSteps = [
-    { step: 1, title: "Ordered", date: collectionItem?.orderDate },
-    { step: 2, title: "Shipped", date: collectionItem?.shippingDate },
-    { step: 3, title: "Owned", date: collectionItem?.collectionDate },
-  ] as const;
-  const activeStep = timelineSteps.findLast(({ date }) => date)?.step ?? 0;
   const hasScore =
     collectionItem &&
     Boolean(collectionItem.score) &&
@@ -276,31 +261,11 @@ export function CollectionItemCard({
         </DetailRow>
       </div>
 
-      {(!collectionItem || activeStep > 0) && (
-        <Timeline orientation="horizontal" value={activeStep} className="animate-data-in">
-          {timelineSteps.map(({ step, title, date }) => (
-            <TimelineItem key={step} step={step}>
-              <TimelineIndicator />
-              <TimelineSeparator />
-              <TimelineHeader>
-                <TimelineTitle>{title}</TimelineTitle>
-                {collectionItem ? (
-                  <TimelineDate>{formatDateOnlyForDisplay(date, dateFormat)}</TimelineDate>
-                ) : (
-                  <Skeleton className="mb-1 h-4 w-16" />
-                )}
-              </TimelineHeader>
-            </TimelineItem>
-          ))}
-        </Timeline>
+      {collectionItem ? (
+        <EnteredDates dates={collectionItem} dateFormat={dateFormat} className="animate-data-in" />
+      ) : (
+        <Skeleton className="h-10 w-48" />
       )}
-
-      {collectionItem ? null : <Skeleton className="h-5 w-32" />}
-      {collectionItem?.paymentDate ? (
-        <div className="animate-data-in">
-          <PaymentLine paymentDate={collectionItem.paymentDate} dateFormat={dateFormat} />
-        </div>
-      ) : null}
 
       {hasExtras && (
         <div className="flex flex-col gap-3">

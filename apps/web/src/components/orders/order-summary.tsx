@@ -1,41 +1,9 @@
 import type { ReactNode } from "react";
 import type { Order } from "@myakiba/contracts/orders/types";
-import type { DateFormat, Currency, OrderStatus } from "@myakiba/contracts/shared/types";
+import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyValue } from "@/components/cells/empty-value";
-import { cn } from "@/lib/utils";
-import { PaymentLine } from "./payment";
-import {
-  Timeline,
-  TimelineItem,
-  TimelineIndicator,
-  TimelineSeparator,
-  TimelineHeader,
-  TimelineTitle,
-  TimelineDate,
-} from "@/components/reui/timeline";
-
-const STATUS_TO_STEP = {
-  Ordered: 1,
-  Shipped: 2,
-  Owned: 3,
-} satisfies Record<OrderStatus, number>;
-
-function StepDate({
-  date,
-  dateFormat,
-  reached,
-}: {
-  readonly date: string | null | undefined;
-  readonly dateFormat: DateFormat;
-  readonly reached: boolean;
-}): ReactNode {
-  if (date) return formatDateOnlyForDisplay(date, dateFormat);
-  if (reached) return <EmptyValue />;
-  return <span className="text-muted-foreground">Pending</span>;
-}
+import { EnteredDates } from "@/components/entered-dates";
 
 function CostRow({
   label,
@@ -79,8 +47,6 @@ export function OrderSummary({
   readonly locale: string;
   readonly dateFormat: DateFormat;
 }): ReactNode {
-  const activeStep = order ? STATUS_TO_STEP[order.status] : 0;
-
   const shippingFee = order?.shippingFee ?? 0;
   const taxes = order?.taxes ?? 0;
   const duties = order?.duties ?? 0;
@@ -88,12 +54,6 @@ export function OrderSummary({
   const miscFees = order?.miscFees ?? 0;
   const totalAmount = order?.total ?? 0;
   const itemsTotal = totalAmount - shippingFee - taxes - duties - tariffs - miscFees;
-
-  const timelineSteps = [
-    { step: 1, title: "Ordered", date: order?.orderDate },
-    { step: 2, title: "Shipped", date: order?.shippingDate },
-    { step: 3, title: "Owned", date: order?.collectionDate },
-  ] as const;
 
   const costRows = [
     { label: "Items", amount: itemsTotal },
@@ -108,51 +68,13 @@ export function OrderSummary({
 
   return (
     <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[3fr_2fr]" aria-busy={isLoading}>
-      <section className="flex flex-col gap-4">
-        <h2 className="text-base font-medium text-foreground">Progress</h2>
-        <Timeline orientation="horizontal" value={isLoading ? 0 : activeStep}>
-          {timelineSteps.map(({ step, title, date }) => (
-            <TimelineItem key={step} step={step}>
-              <TimelineIndicator
-                className={cn(
-                  "group-data-completed/timeline-item:bg-primary",
-                  !isLoading && step === activeStep && "ring-4 ring-primary/15",
-                )}
-              />
-              <TimelineSeparator />
-              <TimelineHeader>
-                <TimelineTitle
-                  className={cn(!isLoading && step > activeStep && "text-muted-foreground")}
-                >
-                  {title}
-                </TimelineTitle>
-              </TimelineHeader>
-              <TimelineDate>
-                {isLoading ? (
-                  <Skeleton className="h-3 w-12 max-w-full" />
-                ) : (
-                  <span className="animate-data-in">
-                    <StepDate date={date} dateFormat={dateFormat} reached={step <= activeStep} />
-                  </span>
-                )}
-              </TimelineDate>
-            </TimelineItem>
-          ))}
-        </Timeline>
-        {isLoading || !order ? (
-          <Skeleton className="h-5 w-32" />
-        ) : (
-          <div className="animate-data-in">
-            <PaymentLine
-              paid={order.paid}
-              paymentDate={order.paymentDate}
-              dateFormat={dateFormat}
-            />
-          </div>
-        )}
-      </section>
+      {isLoading || !order ? (
+        <Skeleton className="h-10 w-56 max-w-full" />
+      ) : (
+        <EnteredDates dates={order} dateFormat={dateFormat} className="animate-data-in" />
+      )}
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3 lg:col-start-2">
         <h2 className="text-base font-medium text-foreground">Cost breakdown</h2>
         <div className="flex flex-col gap-2.5">
           {isLoading

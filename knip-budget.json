@@ -30,7 +30,6 @@
     "apps/web/src/components/reui/stepper.tsx StepperTitle",
     "apps/web/src/components/reui/stepper.tsx useStepItem",
     "apps/web/src/components/reui/stepper.tsx useStepper",
-    "apps/web/src/components/reui/timeline.tsx TimelineContent",
     "apps/web/src/components/ui/avatar.tsx AvatarBadge",
     "apps/web/src/components/ui/avatar.tsx AvatarGroup",
     "apps/web/src/components/ui/avatar.tsx AvatarGroupCount",
