@@ -105,22 +105,6 @@ function OrdersFiltersDraft({
         currentFilters?.totalMax === undefined
           ? ""
           : minorUnitsToMajorString(currentFilters.totalMax),
-      unpaidCostsMin:
-        currentFilters?.unpaidCostsMin === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.unpaidCostsMin),
-      unpaidCostsMax:
-        currentFilters?.unpaidCostsMax === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.unpaidCostsMax),
-      orderSpendMin:
-        currentFilters?.orderSpendMin === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.orderSpendMin),
-      orderSpendMax:
-        currentFilters?.orderSpendMax === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.orderSpendMax),
       shippingFeeMin:
         currentFilters?.shippingFeeMin === undefined
           ? ""
@@ -129,38 +113,6 @@ function OrdersFiltersDraft({
         currentFilters?.shippingFeeMax === undefined
           ? ""
           : minorUnitsToMajorString(currentFilters.shippingFeeMax),
-      taxesMin:
-        currentFilters?.taxesMin === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.taxesMin),
-      taxesMax:
-        currentFilters?.taxesMax === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.taxesMax),
-      dutiesMin:
-        currentFilters?.dutiesMin === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.dutiesMin),
-      dutiesMax:
-        currentFilters?.dutiesMax === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.dutiesMax),
-      tariffsMin:
-        currentFilters?.tariffsMin === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.tariffsMin),
-      tariffsMax:
-        currentFilters?.tariffsMax === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.tariffsMax),
-      miscFeesMin:
-        currentFilters?.miscFeesMin === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.miscFeesMin),
-      miscFeesMax:
-        currentFilters?.miscFeesMax === undefined
-          ? ""
-          : minorUnitsToMajorString(currentFilters.miscFeesMax),
     },
     onSubmit: async ({ value }) => {
       const filters: OrderFilters = {
@@ -180,20 +132,8 @@ function OrdersFiltersDraft({
         paid: PAID_CHOICES[value.paid],
         totalMin: optionalMinorUnits(value.totalMin),
         totalMax: optionalMinorUnits(value.totalMax),
-        unpaidCostsMin: optionalMinorUnits(value.unpaidCostsMin),
-        unpaidCostsMax: optionalMinorUnits(value.unpaidCostsMax),
-        orderSpendMin: optionalMinorUnits(value.orderSpendMin),
-        orderSpendMax: optionalMinorUnits(value.orderSpendMax),
         shippingFeeMin: optionalMinorUnits(value.shippingFeeMin),
         shippingFeeMax: optionalMinorUnits(value.shippingFeeMax),
-        taxesMin: optionalMinorUnits(value.taxesMin),
-        taxesMax: optionalMinorUnits(value.taxesMax),
-        dutiesMin: optionalMinorUnits(value.dutiesMin),
-        dutiesMax: optionalMinorUnits(value.dutiesMax),
-        tariffsMin: optionalMinorUnits(value.tariffsMin),
-        tariffsMax: optionalMinorUnits(value.tariffsMax),
-        miscFeesMin: optionalMinorUnits(value.miscFeesMin),
-        miscFeesMax: optionalMinorUnits(value.miscFeesMax),
       };
 
       onApplyFilters(filters);
@@ -472,64 +412,12 @@ function OrdersFiltersDraft({
         </div>
       </Field>
 
-      <Field>
-        <FieldTitle>Unpaid Costs Range</FieldTitle>
-        <div className="grid grid-cols-2 gap-2">
-          <MoneyField form={form} name="unpaidCostsMin" currency={currency} placeholder="Min" />
-          <MoneyField form={form} name="unpaidCostsMax" currency={currency} placeholder="Max" />
-        </div>
-      </Field>
-
-      <Field>
-        <FieldTitle>Order Spend Range</FieldTitle>
-        <div className="grid grid-cols-2 gap-2">
-          <MoneyField form={form} name="orderSpendMin" currency={currency} placeholder="Min" />
-          <MoneyField form={form} name="orderSpendMax" currency={currency} placeholder="Max" />
-        </div>
-      </Field>
-
       {/* Shipping Fee Range */}
       <Field>
         <FieldTitle>Shipping Fee Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
           <MoneyField form={form} name="shippingFeeMin" currency={currency} placeholder="Min" />
           <MoneyField form={form} name="shippingFeeMax" currency={currency} placeholder="Max" />
-        </div>
-      </Field>
-
-      {/* Taxes Range */}
-      <Field>
-        <FieldTitle>Taxes Range</FieldTitle>
-        <div className="grid grid-cols-2 gap-2">
-          <MoneyField form={form} name="taxesMin" currency={currency} placeholder="Min" />
-          <MoneyField form={form} name="taxesMax" currency={currency} placeholder="Max" />
-        </div>
-      </Field>
-
-      {/* Duties Range */}
-      <Field>
-        <FieldTitle>Duties Range</FieldTitle>
-        <div className="grid grid-cols-2 gap-2">
-          <MoneyField form={form} name="dutiesMin" currency={currency} placeholder="Min" />
-          <MoneyField form={form} name="dutiesMax" currency={currency} placeholder="Max" />
-        </div>
-      </Field>
-
-      {/* Tariffs Range */}
-      <Field>
-        <FieldTitle>Tariffs Range</FieldTitle>
-        <div className="grid grid-cols-2 gap-2">
-          <MoneyField form={form} name="tariffsMin" currency={currency} placeholder="Min" />
-          <MoneyField form={form} name="tariffsMax" currency={currency} placeholder="Max" />
-        </div>
-      </Field>
-
-      {/* Misc Fees Range */}
-      <Field>
-        <FieldTitle>Misc Fees Range</FieldTitle>
-        <div className="grid grid-cols-2 gap-2">
-          <MoneyField form={form} name="miscFeesMin" currency={currency} placeholder="Min" />
-          <MoneyField form={form} name="miscFeesMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
     </div>

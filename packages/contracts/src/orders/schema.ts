@@ -6,13 +6,13 @@ import {
   sortDirectionSchema,
 } from "../shared/pagination";
 import { ORDER_CASCADE_OPTIONS } from "./constants";
-import { orderSearchSortSchema } from "../search/schema";
+import { knownOrderSort, orderSearchSortSchema } from "../search/schema";
 import { WRITE_LIMITS } from "../shared/write-limits";
 
 export const orderFiltersSchema = z.object({
   limit: paginationLimitSchema.optional(),
   offset: paginationOffsetSchema.optional(),
-  sort: orderSearchSortSchema.optional(),
+  sort: knownOrderSort(orderSearchSortSchema.optional()),
   order: sortDirectionSchema.optional(),
   search: z.string().optional(),
   shop: z.array(z.string()).optional(),
@@ -33,21 +33,9 @@ export const orderFiltersSchema = z.object({
   paid: z.boolean().optional(),
   totalMin: z.coerce.number().int().optional(),
   totalMax: z.coerce.number().int().optional(),
-  unpaidCostsMin: z.coerce.number().int().optional(),
-  unpaidCostsMax: z.coerce.number().int().optional(),
-  orderSpendMin: z.coerce.number().int().optional(),
-  orderSpendMax: z.coerce.number().int().optional(),
   paidItemsMin: z.coerce.number().int().optional(),
   shippingFeeMin: z.coerce.number().int().optional(),
   shippingFeeMax: z.coerce.number().int().optional(),
-  taxesMin: z.coerce.number().int().optional(),
-  taxesMax: z.coerce.number().int().optional(),
-  dutiesMin: z.coerce.number().int().optional(),
-  dutiesMax: z.coerce.number().int().optional(),
-  tariffsMin: z.coerce.number().int().optional(),
-  tariffsMax: z.coerce.number().int().optional(),
-  miscFeesMin: z.coerce.number().int().optional(),
-  miscFeesMax: z.coerce.number().int().optional(),
 });
 
 export const searchSchema = orderFiltersSchema;
