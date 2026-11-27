@@ -247,12 +247,12 @@ test("a missing Order and an Order with no title name only the kind", async () =
   expect(tab()).toEqual(showing("Order - myakiba"));
 
   await act(() => router.navigate({ to: "/orders/$id", params: { id: "od-blank" } }));
-  await screen.findByText("Created");
+  await screen.findByRole("heading", { level: 1 });
   expect(tab()).toEqual(showing("Order - myakiba"));
 
   await act(() => router.navigate({ to: "/orders/$id", params: { id: "od-spaces" } }));
   await waitFor(() => expect(requests).toContain("GET /api/orders/od-spaces"));
-  await screen.findByText("Created");
+  await screen.findByRole("heading", { level: 1 });
   expect(tab()).toEqual(showing("Order - myakiba"));
 });
 
