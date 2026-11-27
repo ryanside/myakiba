@@ -5836,6 +5836,15 @@
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
       ]
+    },
+    {
+      "fix": "b6c008f36c257e05ad9267442e39b26d581b156d",
+      "bug": "The Edit Item sheet filled the Price of a Collection Item with no price with 0.00, and refused to save an emptied Price, so a price could not be cleared back to no price.",
+      "test": "apps/web/src/components/collection/collection-item-form.test.tsx",
+      "fixed": [
+        "an item with no price opens with an empty Price and saves no price untouched",
+        "clearing a price saves no price"
+      ]
     }
   ],
   "lint": [
