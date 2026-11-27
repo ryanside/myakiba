@@ -240,7 +240,7 @@ describe("the Orders page", () => {
     });
   });
 
-  test("drops an Order deleted from its card menu and its selected items and keeps another Order's", async () => {
+  test("drops a deleted Order and its selected items and keeps another Order's", async () => {
     const server = serveOrders();
     const user = await renderPage("/orders");
     await screen.findByText("Alpha");

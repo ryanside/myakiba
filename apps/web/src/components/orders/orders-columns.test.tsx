@@ -174,6 +174,10 @@ test("the Paid checkbox shows the Order's own Paid, never half-ticked, and a cli
   expect(edits).toEqual([]);
 });
 
+function glyph(control: HTMLElement): (string | null)[] {
+  return [...control.querySelectorAll("svg path")].map((path) => path.getAttribute("d"));
+}
+
 function OrderRow() {
   const table = useReactTable({
     data: [order("o1")],
@@ -189,7 +193,7 @@ function OrderRow() {
     ));
 }
 
-test("an Orders row links to its Order once and has no row menu", async () => {
+test("an Orders row links to its Order once, with an icon unlike its expand button, and has no row menu", async () => {
   const router = createRouter({
     routeTree: createRootRoute({
       component: () => (
@@ -207,9 +211,12 @@ test("an Orders row links to its Order once and has no row menu", async () => {
   await router.load();
   render(<RouterProvider router={router} />);
 
-  await screen.findByRole("button", { name: "Expand row" });
-  const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-  expect(links).toEqual(["/orders/o1"]);
+  const expand = await screen.findByRole("button", { name: "Expand row" });
+  const links = screen.getAllByRole("link");
+  expect(links.map((link) => link.getAttribute("href"))).toEqual(["/orders/o1"]);
+  const [open] = links;
+  if (!open) throw new Error("the row has no open-order link");
+  expect(glyph(open)).not.toEqual(glyph(expand));
   expect(screen.queryByRole("button", { name: "Open menu" })).toBeNull();
   expect(screen.getByRole("button", { name: "Edit order" })).toBeTruthy();
 });
