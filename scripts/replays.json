@@ -5862,6 +5862,12 @@
         "an Owned card with only an Order Date lists that date and no steps",
         "a card with every date lists all four, with no Paid or Unpaid badge"
       ]
+    },
+    {
+      "fix": "5f9f74612fad70a828b12a300c0d2f604c276880",
+      "bug": "The Order page ended with a Created and Updated footer, edit history for an app with one editor.",
+      "test": "apps/web/src/components/orders/order-page-footer.test.tsx",
+      "fixed": ["the Order page shows no Created or Updated footer"]
     }
   ],
   "lint": [
