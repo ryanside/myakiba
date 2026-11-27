@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MoreHorizontalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+import { Edit03Icon, MoreHorizontalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Menu, Popover, Roll, Stage, Window } from "@/components/stageshow/kit";
 import type { Act, Rect } from "@/components/stageshow/kit";
 import { DisclosureIcon, ExpandIcon } from "@/lib/icons";
@@ -143,10 +144,10 @@ function Expand({ open }: { readonly open?: boolean }) {
   );
 }
 
-function More() {
+function RowControl({ icon }: { readonly icon: IconSvgElement }) {
   return (
     <span className={cls("more")}>
-      <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
+      <HugeiconsIcon icon={icon} size={16} strokeWidth={1.5} />
     </span>
   );
 }
@@ -247,7 +248,7 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                   </span>
                   <Paid paid />
                   <span className={cls("cell-more")}>
-                    <More />
+                    <RowControl icon={Edit03Icon} />
                   </span>
                 </div>
 
@@ -278,7 +279,7 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                           </span>
                         </span>
                         <span className={cls("cell-more")}>
-                          <More />
+                          <RowControl icon={MoreHorizontalIcon} />
                         </span>
                       </div>
                     ))}
@@ -308,7 +309,7 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                     </span>
                     <Paid paid={order.paid} />
                     <span className={cls("cell-more")}>
-                      <More />
+                      <RowControl icon={Edit03Icon} />
                     </span>
                   </div>
                 ))}

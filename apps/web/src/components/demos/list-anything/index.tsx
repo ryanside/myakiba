@@ -12,7 +12,6 @@ import {
   Image01Icon,
   LeftToRightListDashIcon,
   Loading03Icon,
-  MoreHorizontalIcon,
   MoveIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -269,7 +268,7 @@ function OrderRow({ order, picked }: { readonly order: Order; readonly picked?: 
         <Check on={order.paid} />
       </span>
       <span className={cls("cell-more")}>
-        <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
+        <HugeiconsIcon icon={Edit03Icon} size={16} strokeWidth={1.5} />
       </span>
     </div>
   );
@@ -456,7 +455,7 @@ function ListPage({ s, compact }: { readonly s: S; readonly compact: boolean }) 
                   Edit
                 </span>
                 <span className={cls("button")} data-tone="outline" data-icon>
-                  <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
+                  <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={1.5} />
                 </span>
               </span>
             </span>

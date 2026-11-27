@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import {
   Add01Icon,
   DragDropVerticalIcon,
+  Edit03Icon,
   FilterIcon,
   GridViewIcon,
   Image01Icon,
   LeftToRightListDashIcon,
   Menu01Icon,
-  MoreHorizontalIcon,
   PackageIcon,
   Search01Icon,
   Tick02Icon,
@@ -422,8 +422,13 @@ function OrderTableRow({ order, now }: { readonly order: OrderRow; readonly now:
       </Cell>
       <Cell>
         <div className="flex justify-end">
-          <span className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}>
-            <HugeiconsIcon icon={MoreHorizontalIcon} />
+          <span
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon-sm" }),
+              "text-muted-foreground",
+            )}
+          >
+            <HugeiconsIcon icon={Edit03Icon} />
           </span>
         </div>
       </Cell>
