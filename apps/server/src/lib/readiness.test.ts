@@ -1,6 +1,4 @@
-import { heapStats } from "bun:jsc";
 import { afterEach, describe, expect, test } from "bun:test";
-import { initLogger } from "evlog";
 import Redis from "ioredis";
 import { readinessCheck } from "./readiness";
 
@@ -104,23 +102,44 @@ describe("readinessCheck", () => {
   });
 
   test("keeps nothing per timed-out call while the probe stays pending", async () => {
-    initLogger({ enabled: false });
-    cleanups.push(() => initLogger({}));
-    const check = readinessCheck([{ name: "redis", ping: () => new Promise<void>(() => {}) }], 1);
-    const livePromises = async () => {
-      await Bun.sleep(0);
-      Bun.gc(true);
-      return heapStats().objectTypeCounts.Promise ?? 0;
-    };
-    const timeOut = async (calls: number) => {
-      const results = await Promise.all(Array.from({ length: calls }, () => check()));
-      expect(results).toEqual(Array.from({ length: calls }, () => ["redis"]));
-    };
-    await timeOut(1);
-    const before = await livePromises();
-
-    for (let round = 0; round < 20; round += 1) await timeOut(500);
-
-    expect((await livePromises()) - before).toBeLessThan(1000);
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        "--eval",
+        `
+      import { heapStats } from "bun:jsc";
+      import { initLogger } from "evlog";
+      import { readinessCheck } from ${JSON.stringify(new URL("readiness.ts", import.meta.url).pathname)};
+      initLogger({ enabled: false });
+      const check = readinessCheck([{ name: "redis", ping: () => new Promise(() => {}) }], 1);
+      const livePromises = async () => {
+        await Bun.sleep(0);
+        Bun.gc(true);
+        return heapStats().objectTypeCounts.Promise ?? 0;
+      };
+      const answers = new Set();
+      const timeOut = async (calls) => {
+        const results = await Promise.all(Array.from({ length: calls }, () => check()));
+        for (const failed of results) answers.add(failed.join());
+      };
+      await timeOut(1);
+      const before = await livePromises();
+      for (let round = 0; round < 20; round += 1) await timeOut(500);
+      const kept = (await livePromises()) - before;
+      console.log([...answers].join(" "));
+      console.log(kept);
+    `,
+      ],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [code, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    expect({ code, stderr }).toMatchObject({ code: 0 });
+    const [answers, kept] = stdout.trim().split("\n");
+    expect(answers).toBe("redis");
+    expect(Number(kept)).toBeLessThan(1000);
   });
 });
