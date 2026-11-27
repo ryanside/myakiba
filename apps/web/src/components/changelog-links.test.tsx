@@ -11,7 +11,6 @@ import type { ReactNode } from "react";
 import { HomeFooter } from "@/components/homepage/footer";
 import { HomeHeader } from "@/components/homepage/header";
 
-// The real hook needs the signed-in app route above it, and this test renders no app.
 await mock.module("@/components/onboarding/onboarding-dialog", () => ({
   useOpenOnboarding: () => () => {},
 }));
