@@ -5043,7 +5043,7 @@
           "fixed": [
             "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's Paid and Unpaid filters keep the Orders its money totals count"
           ],
-          "reason": "The owner cut the Unpaid Costs range from the Orders filters, so only the Paid and Unpaid filters that keep the Orders behind each money total run at the head."
+          "reason": "PR #303 cut the Unpaid Costs range from the Orders filters, so only the Paid and Unpaid filters that keep the Orders behind each money total run at the head."
         }
       ]
     },
@@ -5116,7 +5116,7 @@
           "fixed": [
             "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's Paid and Unpaid filters keep the Orders its money totals count"
           ],
-          "reason": "The owner cut the Order Spend range from the Orders filters, so only the Paid and Unpaid filters that keep the Orders behind each money total run at the head."
+          "reason": "PR #303 cut the Order Spend range from the Orders filters, so only the Paid and Unpaid filters that keep the Orders behind each money total run at the head."
         }
       ]
     },
@@ -5731,7 +5731,7 @@
             "an Owned item removed from an Unpaid Order > leaves Unpaid Costs and becomes Collection Spend, since it is now outside any Order",
             "a Collection Item edit from a tab opened before Paid left the items > still sends paid, so the strict contract answers 422 and the item keeps its price"
           ],
-          "reason": "The owner cut the Unpaid Costs and Order Spend ranges from the Orders filters, so their test is gone and the money filter test checks only Paid and Unpaid at the head."
+          "reason": "PR #303 cut the Unpaid Costs and Order Spend ranges from the Orders filters, so their test is gone and the money filter test checks only Paid and Unpaid at the head."
         }
       ]
     },
@@ -5867,6 +5867,19 @@
         "the edit-order sheet > starts with the matching-items box ticked, and a Shop change copies it to the items that held the old Shop",
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
+      ]
+    },
+    {
+      "fix": "10a8e6d4c6574e6450d0266c3c858c54d979b917",
+      "bug": "An Orders URL bookmarked before the filters were trimmed kept its cut filter key in the page's search, so Reset Filters showed on an unfiltered list, an Order's Paid waited for the server as on a filtered list, and the key stayed in the URL; a cut sort kept its order.",
+      "test": "apps/web/src/components/orders-trimmed-filters.test.tsx",
+      "fixed": [
+        "a bookmark holding only tariffsMin=100 loads the default list, unfiltered, and drops it from the URL",
+        "a bookmark holding only unpaidCostsMin=1 loads the default list, unfiltered, and drops it from the URL",
+        "a bookmark holding only orderSpendMax=0 loads the default list, unfiltered, and drops it from the URL",
+        "a bookmark holding only sort=taxes&order=asc loads the default list, unfiltered, and drops it from the URL",
+        "a bookmark that mixes cut keys with a kept filter keeps only the kept filter",
+        "on a bookmark holding only a cut filter, marking an Order paid shows at once, as on an unfiltered list"
       ]
     }
   ],
