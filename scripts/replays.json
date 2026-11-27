@@ -5845,6 +5845,15 @@
         "an item with no price opens with an empty Price and saves no price untouched",
         "clearing a price saves no price"
       ]
+    },
+    {
+      "fix": "cc0453ab8db418790101620f7d1e9ec12fa02f44",
+      "bug": "The Collection and Order Item grids' Price cell opened a Collection Item with no price with 0.00 in its editor, and an emptied Price saved nothing, so a price could not be cleared back to no price there.",
+      "test": "apps/web/src/components/cells/inline-currency-cell.test.tsx",
+      "fixed": [
+        "a Price with no price opens an empty editor, and leaving it empty saves nothing",
+        "clearing a Price saves no price"
+      ]
     }
   ],
   "lint": [
