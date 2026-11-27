@@ -9,8 +9,8 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import type { ColumnDef } from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
