@@ -18,13 +18,6 @@ await mock.module("@/lib/auth-redirect-url", () => ({
   getAuthRedirectUrl: (path: string) => `http://localhost:3001${path}`,
 }));
 
-// The changelog collects its entries with Vite's import.meta.glob, which bun cannot run.
-await mock.module("@/lib/changelog", () => ({
-  changelogEntries: [],
-  formatChangelogDate: (value: string) => value,
-  loadChangelogEntry: () => null,
-}));
-
 const UNREACHABLE = [
   "/send-verification-email",
   "/link-social",

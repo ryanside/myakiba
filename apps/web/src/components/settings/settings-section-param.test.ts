@@ -1,19 +1,11 @@
-import { expect, mock, test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-
-// The changelog collects its entries with Vite's import.meta.glob, which bun cannot run.
-await mock.module("@/lib/changelog", () => ({
-  changelogEntries: [],
-  formatChangelogDate: (value: string) => value,
-  loadChangelogEntry: () => null,
-}));
-
-const { Route } = await import("@/routes/(app)/settings");
+import { Route } from "@/routes/(app)/settings";
 
 /** Opens a Settings URL in a router that reads its search the way the Settings route does. */
 async function openSettings(url: string) {

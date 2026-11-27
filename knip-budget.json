@@ -159,7 +159,6 @@
     "apps/web/src/components/ui/form-section.tsx FormSectionProps",
     "apps/web/src/components/ui/mask-input.tsx MaskInputProps",
     "apps/web/src/components/ui/mask-input.tsx MaskPattern",
-    "apps/web/src/lib/changelog-content.ts ChangelogFrontmatter",
     "apps/web/src/lib/utils.ts ClassValue",
     "apps/web/src/queries/calendar.ts CalendarItemsResponse",
     "apps/web/src/queries/calendar.ts CalendarOrdersResponse",

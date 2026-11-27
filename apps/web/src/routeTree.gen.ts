@@ -27,13 +27,10 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
-import { Route as changelogChangelogRouteImport } from './routes/(changelog)/changelog'
 import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/analytics_.$sectionName'
 import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
 import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
-import { Route as changelogChangelogIndexRouteImport } from './routes/(changelog)/changelog.index'
-import { Route as changelogChangelogSlugRouteImport } from './routes/(changelog)/changelog.$slug'
 import { Route as appItemCustomIdRouteImport } from './routes/(app)/item_.custom.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -125,11 +122,6 @@ const authSignupRoute = authSignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const changelogChangelogRoute = changelogChangelogRouteImport.update({
-  id: '/(changelog)/changelog',
-  path: '/changelog',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const appAnalyticsSectionNameRoute = appAnalyticsSectionNameRouteImport.update({
   id: '/analytics_/$sectionName',
   path: '/analytics/$sectionName',
@@ -149,16 +141,6 @@ const appOrdersIdRoute = appOrdersIdRouteImport.update({
   id: '/orders_/$id',
   path: '/orders/$id',
   getParentRoute: () => appRouteRoute,
-} as any)
-const changelogChangelogIndexRoute = changelogChangelogIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => changelogChangelogRoute,
-} as any)
-const changelogChangelogSlugRoute = changelogChangelogSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => changelogChangelogRoute,
 } as any)
 const appItemCustomIdRoute = appItemCustomIdRouteImport.update({
   id: '/item_/custom/$id',
@@ -184,13 +166,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signup': typeof authSignupRoute
-  '/changelog': typeof changelogChangelogRouteWithChildren
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
-  '/changelog/$slug': typeof changelogChangelogSlugRoute
-  '/changelog/': typeof changelogChangelogIndexRoute
   '/item/custom/$id': typeof appItemCustomIdRoute
 }
 export interface FileRoutesByTo {
@@ -215,8 +194,6 @@ export interface FileRoutesByTo {
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
-  '/changelog/$slug': typeof changelogChangelogSlugRoute
-  '/changelog': typeof changelogChangelogIndexRoute
   '/item/custom/$id': typeof appItemCustomIdRoute
 }
 export interface FileRoutesById {
@@ -239,13 +216,10 @@ export interface FileRoutesById {
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signup': typeof authSignupRoute
-  '/(changelog)/changelog': typeof changelogChangelogRouteWithChildren
   '/(app)/analytics_/$sectionName': typeof appAnalyticsSectionNameRoute
   '/(app)/item_/$externalId': typeof appItemExternalIdRoute
   '/(app)/lists_/$listId': typeof appListsListIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
-  '/(changelog)/changelog/$slug': typeof changelogChangelogSlugRoute
-  '/(changelog)/changelog/': typeof changelogChangelogIndexRoute
   '/(app)/item_/custom/$id': typeof appItemCustomIdRoute
 }
 export interface FileRouteTypes {
@@ -268,13 +242,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
-    | '/changelog'
     | '/analytics/$sectionName'
     | '/item/$externalId'
     | '/lists/$listId'
     | '/orders/$id'
-    | '/changelog/$slug'
-    | '/changelog/'
     | '/item/custom/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -299,8 +270,6 @@ export interface FileRouteTypes {
     | '/item/$externalId'
     | '/lists/$listId'
     | '/orders/$id'
-    | '/changelog/$slug'
-    | '/changelog'
     | '/item/custom/$id'
   id:
     | '__root__'
@@ -322,13 +291,10 @@ export interface FileRouteTypes {
     | '/(auth)/login'
     | '/(auth)/reset-password'
     | '/(auth)/signup'
-    | '/(changelog)/changelog'
     | '/(app)/analytics_/$sectionName'
     | '/(app)/item_/$externalId'
     | '/(app)/lists_/$listId'
     | '/(app)/orders_/$id'
-    | '/(changelog)/changelog/$slug'
-    | '/(changelog)/changelog/'
     | '/(app)/item_/custom/$id'
   fileRoutesById: FileRoutesById
 }
@@ -340,7 +306,6 @@ export interface RootRouteChildren {
   authLoginRoute: typeof authLoginRoute
   authResetPasswordRoute: typeof authResetPasswordRoute
   authSignupRoute: typeof authSignupRoute
-  changelogChangelogRoute: typeof changelogChangelogRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -471,13 +436,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(changelog)/changelog': {
-      id: '/(changelog)/changelog'
-      path: '/changelog'
-      fullPath: '/changelog'
-      preLoaderRoute: typeof changelogChangelogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(app)/analytics_/$sectionName': {
       id: '/(app)/analytics_/$sectionName'
       path: '/analytics/$sectionName'
@@ -505,20 +463,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/orders/$id'
       preLoaderRoute: typeof appOrdersIdRouteImport
       parentRoute: typeof appRouteRoute
-    }
-    '/(changelog)/changelog/': {
-      id: '/(changelog)/changelog/'
-      path: '/'
-      fullPath: '/changelog/'
-      preLoaderRoute: typeof changelogChangelogIndexRouteImport
-      parentRoute: typeof changelogChangelogRoute
-    }
-    '/(changelog)/changelog/$slug': {
-      id: '/(changelog)/changelog/$slug'
-      path: '/$slug'
-      fullPath: '/changelog/$slug'
-      preLoaderRoute: typeof changelogChangelogSlugRouteImport
-      parentRoute: typeof changelogChangelogRoute
     }
     '/(app)/item_/custom/$id': {
       id: '/(app)/item_/custom/$id'
@@ -572,19 +516,6 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
   appRouteRouteChildren,
 )
 
-interface changelogChangelogRouteChildren {
-  changelogChangelogSlugRoute: typeof changelogChangelogSlugRoute
-  changelogChangelogIndexRoute: typeof changelogChangelogIndexRoute
-}
-
-const changelogChangelogRouteChildren: changelogChangelogRouteChildren = {
-  changelogChangelogSlugRoute: changelogChangelogSlugRoute,
-  changelogChangelogIndexRoute: changelogChangelogIndexRoute,
-}
-
-const changelogChangelogRouteWithChildren =
-  changelogChangelogRoute._addFileChildren(changelogChangelogRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
@@ -593,7 +524,6 @@ const rootRouteChildren: RootRouteChildren = {
   authLoginRoute: authLoginRoute,
   authResetPasswordRoute: authResetPasswordRoute,
   authSignupRoute: authSignupRoute,
-  changelogChangelogRoute: changelogChangelogRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

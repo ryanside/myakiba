@@ -56,7 +56,6 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^21.0.3",
-    "@mdx-js/rollup": "^3.1.1",
     "@myakiba/config": "workspace:*",
     "@tanstack/react-query-devtools": "^5.101.4",
     "@tanstack/react-router-devtools": "^1.167.1",
@@ -65,15 +64,12 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/bun": "catalog:",
-    "@types/mdx": "^2.0.14",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "elysia": "catalog:",
     "playwright": "1.64.1",
-    "remark-frontmatter": "^5.0.0",
-    "remark-mdx-frontmatter": "^6.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "catalog:",
     "vite": "^8.2.2"

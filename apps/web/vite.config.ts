@@ -1,10 +1,7 @@
-import mdx from "@mdx-js/rollup";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
-import remarkFrontmatter from "remark-frontmatter";
-import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 
@@ -42,15 +39,9 @@ const preloadFont = (fileName: string): Plugin => ({
 
 export default defineConfig({
   plugins: [
-    {
-      enforce: "pre",
-      ...mdx({
-        remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
-      }),
-    },
     tailwindcss(),
     tanstackRouter({ autoCodeSplitting: true }),
-    react({ include: /\.(js|jsx|mdx|ts|tsx)$/ }),
+    react(),
     preloadFont("inter-latin-opsz-normal.woff2"),
   ],
   resolve: {
