@@ -5836,6 +5836,26 @@
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
       ]
+    },
+    {
+      "fix": "5f9f74612fad70a828b12a300c0d2f604c276880",
+      "bug": "The Order page drew a package stepper that labelled every step past the Order's status Pending, so a Shipped Order with no Shipping Date showed an undated Shipped step and a Pending Owned step.",
+      "test": "apps/web/src/components/orders/order-summary.test.tsx",
+      "fixed": [
+        "an Order with no dates lists none and draws no steps",
+        "an Order lists only the dates entered, in the order they happen",
+        "an Order with every date lists all four",
+        "a Shipped Order with no Shipping Date shows no Pending step"
+      ]
+    },
+    {
+      "fix": "5f9f74612fad70a828b12a300c0d2f604c276880",
+      "bug": "A Collection Item card took its stepper's step from the last date filled, so an Owned item with only an Order Date sat on step 1 beside its Owned badge.",
+      "test": "apps/web/src/components/item/collection-item-card.test.tsx",
+      "fixed": [
+        "an Owned card with only an Order Date lists that date and no steps",
+        "a card with every date lists all four, with no Paid or Unpaid badge"
+      ]
     }
   ],
   "lint": [
