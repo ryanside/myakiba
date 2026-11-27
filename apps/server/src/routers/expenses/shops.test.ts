@@ -59,7 +59,6 @@ beforeAll(async () => {
       itemId: `item-${n}`,
       orderId: `order-${n}`,
       status: "Owned" as const,
-      paid: true,
       price: 1000 * n,
       shop: `Shop ${n}`,
     })),
