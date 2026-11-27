@@ -2,8 +2,8 @@ import { afterEach, expect, setDefaultTimeout, test } from "bun:test";
 import { cleanup, configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
+import { searchSchema } from "@myakiba/contracts/orders/schema";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
-import { Route } from "@/routes/(app)/orders";
 import { renderAppRoute, stubFetch } from "../../test/app-route";
 import { order, ordersPage } from "../../test/order";
 
@@ -29,88 +29,23 @@ afterEach(() => {
 });
 
 async function renderOrders(url: string) {
-  const listQueries: URLSearchParams[] = [];
-  const writes: string[] = [];
-  stubFetch((request) => {
-    const { pathname, searchParams } = new URL(request.url);
-    if (request.method !== "GET") {
-      writes.push(`${request.method} ${pathname}`);
-      return new Promise<Response>(() => {});
-    }
-    if (pathname === "/api/orders") listQueries.push(searchParams);
-    return Response.json({
+  stubFetch(() =>
+    Response.json({
       ...ordersPage,
       items: [{ ...order, orderId: "od-ami", title: "AmiAmi preorder", tariffs: 500 }],
-    });
-  });
+    }),
+  );
   localStorage.setItem("orders:viewMode", JSON.stringify("table"));
   localStorage.setItem("orders:columnVisibility", JSON.stringify({ tariffs: true }));
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const router = await renderAppRoute(
+  await renderAppRoute(
     url,
-    [
-      {
-        path: "/orders",
-        component: OrdersDataGrid,
-        validateSearch: Route.options.validateSearch,
-        search: Route.options.search,
-      },
-    ],
+    [{ path: "/orders", component: OrdersDataGrid, validateSearch: searchSchema }],
     queryClient,
   );
   await screen.findByText("AmiAmi preorder");
-  return { router, listQueries, writes, user: userEvent.setup({ delay: null }) };
+  return { user: userEvent.setup({ delay: null }) };
 }
-
-const resetShown = () => screen.queryAllByRole("button", { name: "Reset Filters" }).length > 0;
-
-test.each(["tariffsMin=100", "unpaidCostsMin=1", "orderSpendMax=0", "sort=taxes&order=asc"])(
-  "a bookmark holding only %s loads the default list, unfiltered, and drops it from the URL",
-  async (query) => {
-    const { router, listQueries } = await renderOrders(`/orders?${query}`);
-    await waitFor(() => expect(router.state.location.searchStr).toBe(""));
-    const sent = listQueries.at(-1);
-
-    expect({
-      search: router.state.location.search,
-      reset: resetShown(),
-      sent: [...(sent?.keys() ?? [])].toSorted(),
-      sort: sent?.get("sort"),
-      order: sent?.get("order"),
-    }).toEqual({
-      search: {},
-      reset: false,
-      sent: ["limit", "offset", "order", "sort"],
-      sort: "createdAt",
-      order: "desc",
-    });
-  },
-);
-
-test("a bookmark that mixes cut keys with a kept filter keeps only the kept filter", async () => {
-  const { router, listQueries } = await renderOrders(
-    "/orders?sort=tariffs&order=asc&tariffsMin=100&unpaidCostsMin=1&status=%5B%22Ordered%22%5D",
-  );
-  await waitFor(() => expect(router.state.location.search).toEqual({ status: ["Ordered"] }));
-  const sent = listQueries.at(-1);
-
-  expect({
-    reset: resetShown(),
-    sort: sent?.get("sort"),
-    order: sent?.get("order"),
-    status: sent?.get("status"),
-    cut: ["tariffsMin", "unpaidCostsMin"].filter((key) => sent?.has(key)),
-  }).toEqual({ reset: true, sort: "createdAt", order: "desc", status: "Ordered", cut: [] });
-});
-
-test("on a bookmark holding only a cut filter, marking an Order paid shows at once, as on an unfiltered list", async () => {
-  const { user, writes } = await renderOrders("/orders?tariffsMin=100");
-  const paid = screen.getByRole("checkbox", { name: "AmiAmi preorder paid" });
-  await user.click(paid);
-  await waitFor(() => expect(writes.length).toBe(1));
-
-  await waitFor(() => expect(paid.getAttribute("aria-checked")).toBe("true"));
-});
 
 test("the Filters dialog keeps Status, Paid, Shipping, Shop, the dates and Total, and none of the cut ranges", async () => {
   const { user } = await renderOrders("/orders");

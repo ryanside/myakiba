@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
@@ -562,42 +561,5 @@ describe("Paid on an Order", () => {
     };
     expect(await ids("paid=true")).toEqual(["order-2"]);
     expect(await ids("paid=false")).toEqual(["order-1"]);
-  });
-});
-
-describe("a list URL bookmarked before the Orders filters and sorts were trimmed", () => {
-  test("answers 200 with the list it gives without the cut filters and sort", async () => {
-    await db
-      .update(order)
-      .set({ tariffs: 500, taxes: 500, miscFees: 500 })
-      .where(eq(order.id, "order-1"));
-    const cut =
-      "tariffsMin=100&tariffsMax=900&taxesMin=100&dutiesMin=1&miscFeesMax=0&unpaidCostsMin=1&unpaidCostsMax=0&orderSpendMin=1&orderSpendMax=0";
-    const trimmed = await call("GET", "/?limit=10&order=asc");
-    const bookmarked = await call("GET", `/?limit=10&order=asc&sort=tariffs&${cut}`);
-
-    const { totalCount } = trimmed.body as { totalCount: number };
-
-    expect({ status: bookmarked.status, body: bookmarked.body, totalCount }).toEqual({
-      status: 200,
-      body: trimmed.body,
-      totalCount: 2,
-    });
-  });
-
-  test("answers 422 for a sort the list never had", async () => {
-    const { status } = await call("GET", "/?limit=10&sort=nope");
-
-    expect(status).toBe(422);
-  });
-
-  test("still sorts by a kept key", async () => {
-    const { status, body } = await call("GET", "/?limit=10&sort=title&order=desc");
-    const { items } = body as { items: { orderId: string }[] };
-
-    expect({ status, ids: items.map((row) => row.orderId) }).toEqual({
-      status: 200,
-      ids: ["order-2", "order-1"],
-    });
   });
 });

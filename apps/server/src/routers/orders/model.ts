@@ -5,7 +5,7 @@ import {
   commaSeparatedStringArraySchema,
 } from "@myakiba/contracts/search/query-params";
 import { searchSchema } from "@myakiba/contracts/orders/schema";
-import { bookmarkedOrderSortSchema, orderSearchSortSchema } from "@myakiba/contracts/search/schema";
+import { orderSearchSortSchema } from "@myakiba/contracts/search/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
 import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 
@@ -14,7 +14,6 @@ const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STAT
 
 export const ordersQuerySchema = searchSchema.extend({
   ...pageFields(orderSearchSortSchema, "createdAt"),
-  sort: bookmarkedOrderSortSchema.optional().transform((sort) => sort ?? "createdAt"),
   shop: commaSeparatedStringArraySchema,
   shipMethod: commaSeparatedShipMethodArray,
   status: commaSeparatedStatusArray,

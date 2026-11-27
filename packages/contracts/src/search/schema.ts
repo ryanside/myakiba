@@ -23,12 +23,6 @@ export const orderSearchSortSchema = z.enum([
   "createdAt",
 ]);
 
-export const cutOrderSortSchema = z.enum(["taxes", "duties", "tariffs", "miscFees"]);
-
-export const bookmarkedOrderSortSchema = z
-  .enum([...orderSearchSortSchema.options, ...cutOrderSortSchema.options])
-  .transform((sort) => orderSearchSortSchema.safeParse(sort).data);
-
 export const collectionSearchSortSchema = z.enum([
   "itemTitle",
   "itemCategory",

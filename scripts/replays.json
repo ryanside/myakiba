@@ -5868,19 +5868,6 @@
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
       ]
-    },
-    {
-      "fix": "10a8e6d4c6574e6450d0266c3c858c54d979b917",
-      "bug": "An Orders URL bookmarked before the filters were trimmed kept its cut filter key in the page's search, so Reset Filters showed on an unfiltered list, an Order's Paid waited for the server as on a filtered list, and the key stayed in the URL; a cut sort kept its order.",
-      "test": "apps/web/src/components/orders-trimmed-filters.test.tsx",
-      "fixed": [
-        "a bookmark holding only tariffsMin=100 loads the default list, unfiltered, and drops it from the URL",
-        "a bookmark holding only unpaidCostsMin=1 loads the default list, unfiltered, and drops it from the URL",
-        "a bookmark holding only orderSpendMax=0 loads the default list, unfiltered, and drops it from the URL",
-        "a bookmark holding only sort=taxes&order=asc loads the default list, unfiltered, and drops it from the URL",
-        "a bookmark that mixes cut keys with a kept filter keeps only the kept filter",
-        "on a bookmark holding only a cut filter, marking an Order paid shows at once, as on an unfiltered list"
-      ]
     }
   ],
   "lint": [

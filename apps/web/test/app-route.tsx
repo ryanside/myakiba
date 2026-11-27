@@ -10,7 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import type { AnyRoute, AnyRouter, AnyValidator, RouteComponent } from "@tanstack/react-router";
+import type { AnyValidator, RouteComponent } from "@tanstack/react-router";
 import { signedInSession } from "./session";
 
 const realFetch = globalThis.fetch;
@@ -36,15 +36,14 @@ export type AppPage = {
   readonly path: `/${string}`;
   readonly component: RouteComponent;
   readonly validateSearch: AnyValidator;
-  readonly search?: AnyRoute["options"]["search"];
 };
 
-/** Renders `url` among `pages` inside the signed-in `(app)` layout and returns its router. */
+/** Renders `url` among `pages` inside the signed-in `(app)` layout. */
 export async function renderAppRoute(
   url: string,
   pages: readonly AppPage[],
   queryClient: QueryClient,
-): Promise<AnyRouter> {
+): Promise<void> {
   const root = createRootRoute({ component: Outlet });
   const app = createRoute({
     getParentRoute: () => root,
@@ -64,5 +63,4 @@ export async function renderAppRoute(
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  return router;
 }

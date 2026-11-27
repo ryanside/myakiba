@@ -1,8 +1,6 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import type { SearchSchemaInput } from "@tanstack/react-router";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
-import { clearCutOrderKeys, searchSchema } from "@myakiba/contracts/orders/schema";
-import type { OrderFiltersInput } from "@myakiba/contracts/orders/schema";
+import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useOrdersQuery } from "@/hooks/use-orders";
@@ -16,10 +14,7 @@ import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
-  validateSearch: (search: OrderFiltersInput & SearchSchemaInput) => ({
-    ...searchSchema.parse(search),
-    ...clearCutOrderKeys(search),
-  }),
+  validateSearch: searchSchema,
   loaderDeps: ({ search }) => search,
   loader: ({ context: { queryClient }, cause, deps }) =>
     preloadPage(cause, () => [preload(queryClient, orders.list, deps)]),
