@@ -80,25 +80,48 @@ function card(collectionItem: ItemCollectionEntry) {
   );
 }
 
+const dates = () =>
+  [...document.querySelectorAll("dt")].map(
+    (term) => `${term.textContent} ${term.nextElementSibling?.textContent ?? ""}`,
+  );
+
 const steps = () =>
-  [...document.querySelectorAll('[data-slot="timeline-title"]')].map((title) => title.textContent);
+  ["Ordered", "Shipped", "Owned"].filter((text) =>
+    screen.queryAllByText(text).some((element) => !element.closest('[data-slot="badge"]')),
+  );
 
-test("the steps are Ordered, Shipped and Owned, with no Paid or Unpaid badge and no Payment line without a Payment Date", () => {
-  card(entry({}));
+test("a card with no dates lists none and draws no steps", () => {
+  card(entry({ status: "Owned", orderDate: null, shippingDate: null }));
 
-  expect(steps()).toEqual(["Ordered", "Shipped", "Owned"]);
-  expect({
-    unpaid: screen.queryByText("Unpaid") === null,
-    paid: screen.queryByText("Paid") === null,
-    payment: screen.queryByText("Payment") === null,
-  }).toEqual({ unpaid: true, paid: true, payment: true });
+  expect({ dates: dates(), steps: steps() }).toEqual({ dates: [], steps: [] });
 });
 
-test("a Payment Date shows on its own beside the steps, with no Paid badge", () => {
-  card(entry({ paymentDate: "2026-01-05" }));
-  const payment = screen.getByText("Payment").parentElement;
-  if (!payment) throw new Error("no payment line");
+test("an Owned card with only an Order Date lists that date and no steps", () => {
+  card(entry({ status: "Owned", shippingDate: null }));
 
-  expect(steps()).toEqual(["Ordered", "Shipped", "Owned"]);
-  expect(payment.textContent).toBe("Payment01/05/2026");
+  expect({ dates: dates(), steps: steps() }).toEqual({
+    dates: ["Order Date 01/02/2026"],
+    steps: [],
+  });
+});
+
+test("a card with every date lists all four, with no Paid or Unpaid badge", () => {
+  card(entry({ paymentDate: "2026-01-05", collectionDate: "2026-03-04" }));
+
+  expect({
+    dates: dates(),
+    steps: steps(),
+    unpaid: screen.queryByText("Unpaid") === null,
+    paid: screen.queryByText("Paid") === null,
+  }).toEqual({
+    dates: [
+      "Order Date 01/02/2026",
+      "Payment Date 01/05/2026",
+      "Shipping Date 02/03/2026",
+      "Collection Date 03/04/2026",
+    ],
+    steps: [],
+    unpaid: true,
+    paid: true,
+  });
 });
