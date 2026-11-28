@@ -30,7 +30,12 @@ import { ViewToggle } from "@/components/ui/view-toggle";
 import { DataToolbar } from "@/components/ui/data-toolbar";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
-import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
+import {
+  useOrdersFilters,
+  useOrdersListInput,
+  useOrdersQuery,
+  useOrdersMutations,
+} from "@/hooks/use-orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { withNewColumns } from "@/lib/column-order";
 import { TABLE_LAYOUTS, VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
@@ -81,6 +86,7 @@ export default function OrdersDataGrid() {
   );
   const isTableView = viewMode === "compact" || viewMode === "table";
   const { filters, setFilters } = useOrdersFilters();
+  const list = useOrdersListInput();
   const { orders, totalCount, isPending } = useOrdersQuery();
   const tableData = useMemo(() => [...orders], [orders]);
   const {
@@ -104,7 +110,7 @@ export default function OrdersDataGrid() {
     isMovingItems,
     isFillingOrders,
     isFillingItems,
-  } = useOrdersMutations({ filters });
+  } = useOrdersMutations({ filters: list });
   const { currency, locale, dateFormat } = useUserPreferences();
 
   const limit = filters.limit ?? DEFAULT_LIMIT;

@@ -40,6 +40,12 @@ export const orderFiltersSchema = z.object({
 
 export const searchSchema = orderFiltersSchema;
 
+export const RELEASE_MONTHS = ["this", "next"] as const;
+
+export const ordersPageSearchSchema = orderFiltersSchema.extend({
+  releaseMonth: z.enum(RELEASE_MONTHS).optional(),
+});
+
 export const orderItemsQuerySchema = z.object({
   limit: paginationLimitSchema.default(6),
   offset: paginationOffsetSchema.default(0),
@@ -78,6 +84,8 @@ export const cascadeOptionSchema = z.enum(ORDER_CASCADE_OPTIONS);
 export const cascadeOptionsSchema = z.array(cascadeOptionSchema).max(ORDER_CASCADE_OPTIONS.length);
 
 export type OrderFilters = z.infer<typeof orderFiltersSchema>;
+export type ReleaseMonth = (typeof RELEASE_MONTHS)[number];
+export type OrdersPageSearch = z.infer<typeof ordersPageSearchSchema>;
 export type OrderItemsQuery = z.infer<typeof orderItemsQuerySchema>;
 export type NewOrder = z.infer<typeof newOrderSchema>;
 export type OrderEdit = z.infer<typeof orderEditSchema>;

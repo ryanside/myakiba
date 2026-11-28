@@ -6,12 +6,14 @@ import type {
   NewOrder,
   OrderFilters,
   OrderItemsQuery,
+  OrdersPageSearch,
 } from "@myakiba/contracts/orders/schema";
 import type { OrderFill } from "@myakiba/contracts/orders/fill";
 import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
 import { shownMessageOf } from "../api";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
+import { releaseMonthRange } from "@/lib/release-month";
 import { updateCollectionItem } from "@/queries/collection";
 import {
   deleteOrderItem,
@@ -40,6 +42,15 @@ const orderItemsOf = (orderId: string) => ["orderItems", orderId] as const;
 
 export const ORDER_ITEM_PAGE_SIZE = 12;
 const FIRST_ORDER_ITEMS_PAGE = { pageIndex: 0, pageSize: ORDER_ITEM_PAGE_SIZE } as const;
+
+export function ordersListInput(
+  { releaseMonth, ...filters }: OrdersPageSearch,
+  today: string,
+): OrderFilters {
+  if (releaseMonth === undefined) return filters;
+  const { start, end } = releaseMonthRange(releaseMonth, today);
+  return { ...filters, releaseDateStart: start, releaseDateEnd: end };
+}
 
 export function orderItemsInput(
   orderId: string,

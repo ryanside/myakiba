@@ -13,10 +13,12 @@ import {
   mergeOrdersCommand,
   moveOrderItemsCommand,
   orders as ordersResource,
+  ordersListInput,
   splitOrdersCommand,
 } from "@/data/resources/orders";
 import { fillCollectionItemsCommand } from "@/data/resources/collection";
 import { useFilters } from "@/hooks/use-filters";
+import { useToday } from "@/hooks/use-today";
 import { holdRowsPendingThroughFill } from "@/hooks/hold-rows-pending-through-fill";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import type {
@@ -48,11 +50,16 @@ export function useOrdersFilters() {
   return useFilters("/(app)/orders", { resetOffsetOnFilterChange: true });
 }
 
-export function useOrdersQuery() {
+export function useOrdersListInput(): OrderFilters {
   const { filters } = useOrdersFilters();
-  const filtersActive = hasActiveFiltersOrSorting(filters);
+  return ordersListInput(filters, useToday());
+}
 
-  const { data, isPending, isError, error, status } = useRead(ordersResource.list, filters);
+export function useOrdersQuery() {
+  const list = useOrdersListInput();
+  const filtersActive = hasActiveFiltersOrSorting(list);
+
+  const { data, isPending, isError, error, status } = useRead(ordersResource.list, list);
 
   return {
     orders: data?.items ?? [],
