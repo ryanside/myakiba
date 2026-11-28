@@ -648,6 +648,19 @@ describe("parseMfcItemPage stored values", () => {
 });
 
 describe("parseMfcItemPage release dates", () => {
+  test.each([
+    ["11/15/2018", "2018-11-15", "day"],
+    ["11/2018", "2018-11-01", "month"],
+    ["2018", "2018-01-01", "year"],
+  ])("a release MFC dates %p is stored as %p with %p precision", (printed, date, datePrecision) => {
+    const page = parsedPage(
+      edit(item98777, 'class="time">11/15/2018</a>', `class="time">${printed}</a>`),
+    );
+    const release = { ...RELEASE_98777, date, datePrecision };
+    expect(page.releases).toEqual([release]);
+    expect(page.warnings).toEqual([]);
+  });
+
   test("a release in the year 0000 is skipped and warns", () => {
     const page = parsedPage(
       edit(item98777, 'class="time">11/15/2018</a>', 'class="time">11/15/0000</a>'),
