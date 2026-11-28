@@ -109,7 +109,7 @@ export function DeleteAccount() {
                 <form.Field
                   name="password"
                   validators={{
-                    onChange: z.string().min(8, "Password must be at least 8 characters"),
+                    onChange: z.string().min(1, "Enter your current password"),
                   }}
                 >
                   {(field) => (
