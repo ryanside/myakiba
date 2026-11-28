@@ -11,6 +11,8 @@ export const SHIPPING_METHODS = [
   "Domestic",
 ] as const;
 
+export const DASHBOARD_CHART_MONTHS_BACK = 2;
+
 export const ORDER_STATUSES = ["Ordered", "Shipped", "Owned"] as const;
 
 export const COLLECTION_STATUSES = ["Ordered", "Shipped", "Owned"] as const;

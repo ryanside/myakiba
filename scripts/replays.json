@@ -5889,6 +5889,14 @@
       "fixed": [
         "a saved layout that hid the Title column still shows it, with its link, and the Columns picker never offers it"
       ]
+    },
+    {
+      "fix": "fa10e40d5def71bd6a320895fd71be9e80e1b865",
+      "bug": "With a device clock more than a month off the server's, no Dashboard Orders chart month matched the browser's month, so no bar held the tab stop and the heading read \"0 orders releasing in\" with no month.",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "when no month is the browser's month, the third month is highlighted and holds the tab stop"
+      ]
     }
   ],
   "lint": [

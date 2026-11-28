@@ -39,7 +39,7 @@ An order can hold several items, each with its own price, plus shipping, taxes, 
 
 ### Dashboard
 
-The dashboard shows your total items, total spend, active orders, and unpaid costs. It includes a collection breakdown, the year's order activity, and a release calendar. Switch to the monthly view for one month's order totals, fees, shop breakdown, and order board.
+The dashboard shows your total items, total spend, active orders, and unpaid costs. It includes a collection breakdown, orders by release month, and a release calendar. Switch to the monthly view for one month's order totals, fees, shop breakdown, and order board.
 
 ![Dashboard](apps/web/public/dashboard-light.webp)
 

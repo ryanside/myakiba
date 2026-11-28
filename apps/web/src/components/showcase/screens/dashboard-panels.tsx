@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { format, setDate, startOfMonth } from "date-fns";
+import { addMonths, format, setDate, startOfMonth, subMonths } from "date-fns";
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { NextIcon, PreviousIcon } from "@/lib/icons";
@@ -27,7 +27,6 @@ const CATEGORIES = [
 /** The legend rows above the list's clipped edge. */
 const VISIBLE_LEGEND_ROWS = 8;
 
-/** Orders releasing in each month of this year, January first. */
 const MONTHLY_ORDERS: readonly number[] = [4, 6, 3, 5, 4, 8, 5, 6, 6, 6, 5, 8];
 
 type Release = {
@@ -166,9 +165,11 @@ function barPath(x: number, y: number, width: number, height: number): string {
   ].join(" ");
 }
 
+const CURRENT_MONTH_INDEX = 2;
+
 export function OrdersBarChart({ now }: { readonly now: Date }) {
-  const activeMonth = now.getMonth();
-  const activeCount = MONTHLY_ORDERS[activeMonth] ?? 0;
+  const firstMonth = startOfMonth(subMonths(now, CURRENT_MONTH_INDEX));
+  const activeCount = MONTHLY_ORDERS[CURRENT_MONTH_INDEX] ?? 0;
   const band = (CHART.width - CHART.left) / MONTHLY_ORDERS.length;
   const plotHeight = CHART.bottom - CHART.top;
   const lineY = CHART.bottom - (activeCount / CHART_MAX) * plotHeight;
@@ -197,7 +198,7 @@ export function OrdersBarChart({ now }: { readonly now: Date }) {
               <path
                 key={index}
                 fill="var(--primary)"
-                opacity={index === activeMonth ? 1 : 0.32}
+                opacity={index === CURRENT_MONTH_INDEX ? 1 : 0.32}
                 d={barPath(x, CHART.bottom - height, CHART.barWidth, height)}
               />
             );
@@ -249,7 +250,7 @@ export function OrdersBarChart({ now }: { readonly now: Date }) {
                 fill="var(--muted-foreground)"
               >
                 <tspan x={x} dy="0.71em">
-                  {format(new Date(2000, index, 1), "MMM")}
+                  {format(addMonths(firstMonth, index), "MMM")}
                 </tspan>
               </text>
             );

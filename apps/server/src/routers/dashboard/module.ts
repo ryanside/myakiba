@@ -1,6 +1,7 @@
 import { eq, count, and, sum, asc, sql, desc, ne, gte, lt, lte, exists, or } from "drizzle-orm";
 import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import type { ReadTx } from "@myakiba/db/tx";
+import { DASHBOARD_CHART_MONTHS_BACK } from "@myakiba/contracts/shared/constants";
 import type { Category } from "@myakiba/contracts/shared/types";
 import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-only";
 import { orderPreviewImagesSql, orderPreviewItemIdsSql } from "@/lib/order-preview";
@@ -19,6 +20,7 @@ import {
 } from "@/lib/order-money";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
+const CHART_MONTH_COUNT = 12;
 
 type MonthQuery = { readonly month: number; readonly year: number };
 
@@ -185,6 +187,7 @@ const unpaidSummaryRead = prepared("unpaid_summary", (tx) =>
 const monthlyOrdersRead = prepared("monthly_orders", (tx) =>
   tx
     .select({
+      year: sql<number>`EXTRACT(YEAR FROM ${order.releaseDate})`.mapWith(Number),
       month: sql<number>`EXTRACT(MONTH FROM ${order.releaseDate})`.mapWith(Number),
       orderCount: count(),
     })
@@ -192,12 +195,14 @@ const monthlyOrdersRead = prepared("monthly_orders", (tx) =>
     .where(
       and(
         eq(order.userId, sql.placeholder("userId")),
-        gte(order.releaseDate, sql.placeholder("startOfYear")),
-        lt(order.releaseDate, sql.placeholder("startOfNextYear")),
+        gte(order.releaseDate, sql.placeholder("chartStart")),
+        lt(order.releaseDate, sql.placeholder("chartEnd")),
       ),
     )
-    .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
-    .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`),
+    .groupBy(
+      sql`EXTRACT(YEAR FROM ${order.releaseDate})`,
+      sql`EXTRACT(MONTH FROM ${order.releaseDate})`,
+    ),
 );
 
 const releaseCalendarRead = prepared("release_calendar", (tx) =>
@@ -339,8 +344,14 @@ export const Dashboard = {
       const overviewEndDate = toDateOnlyString(
         new Date(Date.UTC(currentYear, currentMonthIndex + 3, 0)),
       );
-      const startOfYear = `${currentYear}-01-01`;
-      const startOfNextYear = `${currentYear + 1}-01-01`;
+      const chartMonthStart = (offset: number) =>
+        new Date(
+          Date.UTC(currentYear, currentMonthIndex - DASHBOARD_CHART_MONTHS_BACK + offset, 1),
+        );
+      const chartMonths = Array.from({ length: CHART_MONTH_COUNT }, (_, offset) => {
+        const start = chartMonthStart(offset);
+        return { year: start.getUTCFullYear(), month: start.getUTCMonth() + 1 };
+      });
 
       const [
         collectionStatsRows,
@@ -348,7 +359,7 @@ export const Dashboard = {
         orders,
         ordersSummaryRows,
         unpaidSummaryRows,
-        monthlyOrders,
+        monthlyOrderRows,
       ] = await Promise.all([
         scope.read(collectionStatsRead, { userId }),
 
@@ -368,8 +379,8 @@ export const Dashboard = {
 
         scope.read(monthlyOrdersRead, {
           userId,
-          startOfYear,
-          startOfNextYear,
+          chartStart: toDateOnlyString(chartMonthStart(0)),
+          chartEnd: toDateOnlyString(chartMonthStart(CHART_MONTH_COUNT)),
         }),
       ]);
 
@@ -389,6 +400,15 @@ export const Dashboard = {
         unpaidOrderCount: 0,
         unpaidCosts: 0,
       };
+
+      const orderCounts = new Map(
+        monthlyOrderRows.map((row) => [`${row.year}-${row.month}`, row.orderCount]),
+      );
+      const monthlyOrders = chartMonths.map(({ year, month }) => ({
+        year,
+        month,
+        orderCount: orderCounts.get(`${year}-${month}`) ?? 0,
+      }));
 
       return Result.ok({
         collectionStats,
