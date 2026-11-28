@@ -22,7 +22,6 @@ const ORDERS = [
 const MIGRATED_REPORT =
   'Release date precision migration: {"status":"migrated","releases":{"day":2,"month":1,"year":1},"orders":{"day":1,"month":1,"year":1}}';
 
-/** A database pushed from main's schema, which has no precision columns. */
 async function databaseOnMain() {
   const database = await databases.create();
   const pushed = await dbPush(database.url);
@@ -102,10 +101,9 @@ test(
 );
 
 test(
-  "a failing backfill rolls the step back, and db-push stops before the push",
+  "a step that fails after changing item_release rolls it back, and db-push stops before the push",
   async () => {
     const { sql, url } = await databaseOnMain();
-    // The step adds this column after it has changed item_release, so its ADD COLUMN fails there.
     await sql`ALTER TABLE "order" ADD COLUMN release_date_precision text`;
     const before = await snapshot(sql);
 

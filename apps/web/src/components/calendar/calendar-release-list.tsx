@@ -11,7 +11,6 @@ import { releaseDateKey } from "@myakiba/contracts/shared/release-date";
 import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import type { CalendarResponse } from "@/queries/calendar";
 
-/** Only a release that names its day falls on a day the user picked. */
 function onSelectedDay(date: ReleaseDate, selectedDays: ReadonlySet<number>): boolean {
   return date.precision === "day" && selectedDays.has(Number(date.start.slice(8, 10)));
 }

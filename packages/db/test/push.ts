@@ -15,7 +15,6 @@ export const PICTURE_LEDGER = [
   `CREATE UNIQUE INDEX "picture_owner_id_key_idx" ON "picture" USING btree ("owner_id","key")`,
 ];
 
-/** What push adds to a database from before release dates had a precision. */
 export const RELEASE_PRECISION = [
   `ALTER TABLE "item_release" ADD COLUMN "date_precision" text NOT NULL`,
   `ALTER TABLE "order" ADD COLUMN "release_date_precision" text DEFAULT 'day' NOT NULL`,

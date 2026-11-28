@@ -10,12 +10,7 @@ export type ReleasePrecisionReport =
 
 type PrecisionCounts = { readonly day: number; readonly month: number; readonly year: number };
 
-/**
- * MFC pages are not at hand, and the parser stored a month-only date as its 1st and a year-only date
- * as January 1, so a stored date says no more than this. It errs toward less: a real release on the
- * 1st reads as its month, and a month-only January release as its year, until an Item Refresh.
- */
-const PRECISION_OF = (column: string) => `CASE
+const GUESSED_PRECISION_OF = (column: string) => `CASE
     WHEN extract(day FROM ${column}) <> 1 THEN 'day'
     WHEN extract(month FROM ${column}) <> 1 THEN 'month'
     ELSE 'year'
@@ -40,7 +35,7 @@ export async function migrateReleasePrecision(sql: SQL): Promise<ReleasePrecisio
     // The DDL drizzle-kit emits for the two columns and checks, so the push that follows finds them
     // as the schema declares them.
     await tx.unsafe(`ALTER TABLE "item_release" ADD COLUMN "date_precision" text`);
-    await tx.unsafe(`UPDATE "item_release" SET date_precision = ${PRECISION_OF("date")}`);
+    await tx.unsafe(`UPDATE "item_release" SET date_precision = ${GUESSED_PRECISION_OF("date")}`);
     await tx.unsafe(`ALTER TABLE "item_release" ALTER COLUMN "date_precision" SET NOT NULL`);
     await tx.unsafe(`ALTER TABLE "item_release" ADD CONSTRAINT "item_release_date_precision_check"
       CHECK ("item_release"."date_precision" IN ('day', 'month', 'year'))`);
@@ -48,7 +43,7 @@ export async function migrateReleasePrecision(sql: SQL): Promise<ReleasePrecisio
     await tx.unsafe(
       `ALTER TABLE "order" ADD COLUMN "release_date_precision" text DEFAULT 'day' NOT NULL`,
     );
-    await tx.unsafe(`UPDATE "order" SET release_date_precision = ${PRECISION_OF("release_date")}
+    await tx.unsafe(`UPDATE "order" SET release_date_precision = ${GUESSED_PRECISION_OF("release_date")}
       WHERE release_date IS NOT NULL`);
     await tx.unsafe(`ALTER TABLE "order" ADD CONSTRAINT "order_release_date_precision_check"
       CHECK ("order"."release_date_precision" IN ('day', 'month', 'year'))`);

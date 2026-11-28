@@ -11,17 +11,12 @@ const OWNERSHIP_MIGRATION_FILES = new Set([
   "packages/db/src/item-ownership/seed.ts",
 ]);
 
-/**
- * One-time db-push steps that may make one write to an Item table, named by exact path with the
- * one write each makes. Any other write from such a file, or a second one, is a stray.
- */
 const ONE_TIME_WRITES: ReadonlyMap<string, Write> = new Map([
   ["packages/db/src/release-precision/migrate.ts", { verb: "update", table: "item_release" }],
 ]);
 
 type Write = { readonly verb: string; readonly table: string };
 
-/** The writes a file makes that no rule allows it. */
 function strayWrites<T extends Write>(file: string, found: readonly T[]): readonly T[] {
   if (file === WRITER) return found.filter(({ verb }) => verb === "re-export");
   const allowed = ONE_TIME_WRITES.get(file);

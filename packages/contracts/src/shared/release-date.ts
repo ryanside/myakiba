@@ -30,12 +30,10 @@ export function latestReleaseDate(values: readonly (ReleaseDate | null)[]): Rele
   return latest;
 }
 
-/** A release date a user picked on a calendar, which always names its day. */
 export function releaseDateOnDay(start: string | null): ReleaseDate | null {
   return start === null ? null : { start, precision: "day" };
 }
 
-/** A key that tells release dates apart by start and precision, for grouping and select values. */
 export function releaseDateKey(date: ReleaseDate): string {
   return `${date.start} ${date.precision}`;
 }

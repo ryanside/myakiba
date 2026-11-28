@@ -104,10 +104,6 @@ function realizedOrderDateSql(): ReturnType<typeof sql> {
   return sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
 }
 
-/**
- * An Order's Realized Expense Date with how much of it is known: a day, unless it falls back to an
- * Order Release Date known only to its month or year.
- */
 export function realizedOrderDateWithPrecisionSql() {
   const dated = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate})`;
   return sql<ReleaseDate | null>`CASE

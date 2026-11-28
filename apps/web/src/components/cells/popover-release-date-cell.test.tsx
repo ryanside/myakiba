@@ -27,7 +27,6 @@ afterEach(() => {
   cleanup();
 });
 
-/** The cell as Edit Order holds it: it shows what it last saved. */
 function EditOrderCell({
   initial,
   saved,
@@ -62,9 +61,9 @@ function renderCell(initial: ReleaseDate | null) {
   return { saved, trigger: () => screen.getByRole("button") };
 }
 
-/** The release list above the calendar, whose own month and year menus are comboboxes too. */
 async function releaseList() {
-  const [list] = await screen.findAllByRole("combobox");
+  const boxes = await screen.findAllByRole("combobox");
+  const list = boxes.find((box) => box.getAttribute("aria-haspopup") === "listbox");
   if (!list) throw new Error("the picker has no release list");
   return list;
 }

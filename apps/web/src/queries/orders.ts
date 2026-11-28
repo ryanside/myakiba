@@ -221,7 +221,6 @@ export type OrderDateField =
   | "shippingDate"
   | "collectionDate";
 
-/** One date of an Order, set or cleared; a Release Date carries its precision. */
 export type OrderDateChange =
   | { readonly field: "releaseDate"; readonly date: ReleaseDate | null }
   | { readonly field: Exclude<OrderDateField, "releaseDate">; readonly date: string | null };

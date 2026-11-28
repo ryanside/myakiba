@@ -51,16 +51,11 @@ const WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-/** How a day-precise release reads: the user's date format, "June 18th, 2026", or "Thu, Jun 18". */
 type ReleaseDayStyle = DateFormat | "long" | "weekday";
 
-/**
- * A release date as far as it is known: a month reads "Jun 2026" and a year "2026" whatever the
- * date format setting, and only a day uses `day`.
- */
 export function formatReleaseDate(
   value: ReleaseDate | null | undefined,
-  day: ReleaseDayStyle = "MM/DD/YYYY",
+  dayStyle: ReleaseDayStyle = "MM/DD/YYYY",
 ): string {
   if (!value) return "n/a";
   const date = parseDateOnly(value.start);
@@ -68,22 +63,20 @@ export function formatReleaseDate(
   if (value.precision !== "day") {
     return formatDateFns(date, RELEASE_PATTERN_BY_PRECISION[value.precision]);
   }
-  switch (day) {
+  switch (dayStyle) {
     case "long":
       return formatDateFns(date, "PPP");
     case "weekday":
       return WEEKDAY_FORMATTER.format(date);
     default:
-      return formatDateFns(date, DATE_PATTERN_BY_FORMAT[day]);
+      return formatDateFns(date, DATE_PATTERN_BY_FORMAT[dayStyle]);
   }
 }
 
-/** Calendar order: by start, and a release known only to its month or year heads that period. */
+const breadth = (date: ReleaseDate) => RELEASE_DATE_PRECISIONS.indexOf(date.precision);
+
 export function releaseCalendarOrder(a: ReleaseDate, b: ReleaseDate): number {
-  return (
-    a.start.localeCompare(b.start) ||
-    RELEASE_DATE_PRECISIONS.indexOf(b.precision) - RELEASE_DATE_PRECISIONS.indexOf(a.precision)
-  );
+  return a.start.localeCompare(b.start) || breadth(b) - breadth(a);
 }
 
 export function formatTimestampForDisplay(

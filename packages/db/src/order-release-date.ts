@@ -2,7 +2,6 @@ import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-
 import { collection, item_release, order } from "./schema/figure";
 import type { Tx } from "./tx";
 
-/** Of two releases on one date, the less precise ranks later, since it shows no day. */
 const precisionRank = sql`CASE ${item_release.datePrecision} WHEN 'year' THEN 2 WHEN 'month' THEN 1 ELSE 0 END`;
 
 export async function advanceOrderReleaseDatesForCollectionItems(

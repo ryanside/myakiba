@@ -44,7 +44,6 @@ const routers = await Promise.all(
 const app = routers.reduce((built, router) => built.use(router), new Elysia({ prefix: "/api" }));
 
 const JUNE = "2026-06-01";
-/** The Dashboard's board shows the Orders releasing this month. */
 const THIS_MONTH = format(new Date(), "yyyy-MM-01");
 const RELEASE = "b0000000-0000-4000-8000-000000000001";
 

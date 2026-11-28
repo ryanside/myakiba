@@ -265,7 +265,6 @@ function buildBuckets<TItem>(
   const map = new Map<string, CalendarDayBucket["thumbs"][number][]>();
   for (const item of items) {
     const { date, thumb } = project(item);
-    // A release known only to its month or year has no day cell to sit in.
     if (date?.precision !== "day") continue;
     const existing = map.get(date.start);
     if (existing) {
