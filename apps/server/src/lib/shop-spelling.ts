@@ -1,5 +1,6 @@
 import { and, eq, ne, not, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import { collection, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import { shopKey } from "@myakiba/utils/shop-key";
@@ -7,9 +8,6 @@ import { shopKey } from "@myakiba/utils/shop-key";
 /** Rows a save rewrites itself, so their spellings do not count as existing ones. */
 type Rewritten = { readonly orders?: SQL; readonly collectionItems?: SQL };
 
-type Spelling = { shop: string; uses: number; lastUsedAt: Date };
-
-const uses = sql<number>`COUNT(*)::integer`;
 const notRewritten = (rows: SQL | undefined) => rows && not(sql`COALESCE(${rows}, FALSE)`);
 
 /**
@@ -26,16 +24,13 @@ export async function shopSpellings(
   const keys = new Set(typed.map(shopKey).filter((key) => key !== ""));
   if (keys.size === 0) return (shop) => shop;
 
-  const lastUsedAt = (updatedAt: typeof order.updatedAt | typeof collection.updatedAt) =>
-    sql<Date>`MAX(${updatedAt})`.mapWith(updatedAt);
-  const [orderShops, collectionShops] = await Promise.all([
+  const saved = unionAll(
     tx
-      .select({ shop: order.shop, uses, lastUsedAt: lastUsedAt(order.updatedAt) })
+      .select({ shop: order.shop, usedAt: order.updatedAt })
       .from(order)
-      .where(and(eq(order.userId, userId), ne(order.shop, ""), notRewritten(rewritten.orders)))
-      .groupBy(order.shop),
+      .where(and(eq(order.userId, userId), ne(order.shop, ""), notRewritten(rewritten.orders))),
     tx
-      .select({ shop: collection.shop, uses, lastUsedAt: lastUsedAt(collection.updatedAt) })
+      .select({ shop: collection.shop, usedAt: collection.updatedAt })
       .from(collection)
       .where(
         and(
@@ -43,27 +38,26 @@ export async function shopSpellings(
           ne(collection.shop, ""),
           notRewritten(rewritten.collectionItems),
         ),
-      )
-      .groupBy(collection.shop),
-  ]);
+      ),
+  ).as("saved");
+  const rows = await tx
+    .select({
+      shop: saved.shop,
+      uses: sql<number>`COUNT(*)::integer`,
+      lastUsedAt: sql<Date>`MAX(${saved.usedAt})`.mapWith(order.updatedAt),
+    })
+    .from(saved)
+    .groupBy(saved.shop);
 
-  const spellings = new Map<string, Spelling>();
-  for (const row of [...orderShops, ...collectionShops]) {
-    if (!keys.has(shopKey(row.shop))) continue;
-    const known = spellings.get(row.shop);
-    spellings.set(row.shop, {
-      shop: row.shop,
-      uses: (known?.uses ?? 0) + row.uses,
-      lastUsedAt: known && known.lastUsedAt > row.lastUsedAt ? known.lastUsedAt : row.lastUsedAt,
-    });
-  }
   const winners = new Map<string, string>();
-  const ranked = [...spellings.values()].toSorted(
-    (a, b) =>
-      b.uses - a.uses ||
-      b.lastUsedAt.getTime() - a.lastUsedAt.getTime() ||
-      Number(a.shop > b.shop) - Number(a.shop < b.shop),
-  );
+  const ranked = rows
+    .filter((row) => keys.has(shopKey(row.shop)))
+    .toSorted(
+      (a, b) =>
+        b.uses - a.uses ||
+        b.lastUsedAt.getTime() - a.lastUsedAt.getTime() ||
+        Number(a.shop > b.shop) - Number(a.shop < b.shop),
+    );
   for (const { shop } of ranked) {
     const key = shopKey(shop);
     if (!winners.has(key)) winners.set(key, shop);
