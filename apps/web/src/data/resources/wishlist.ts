@@ -8,6 +8,7 @@ import { call } from "../api";
 import type { ApiFailure } from "../api";
 import { defineCommand, defineResource, infiniteRead } from "../client";
 import { positionOrderCommand } from "../position-order";
+import { refetchAddItems } from "./add";
 import { items } from "./item";
 
 type ItemQueryData = InferOk<Awaited<ReturnType<typeof getItem>>>;
@@ -49,6 +50,7 @@ export const setWishlistMembership = defineCommand({
     return written.map((): void => undefined);
   },
   saved: async (queryClient, { itemExternalId, wishlisted }) => {
+    await refetchAddItems(queryClient);
     if (itemExternalId === null) return;
     await queryClient.cancelQueries({ queryKey: items.detail.key(itemExternalId), exact: true });
     queryClient.setQueryData<ItemQueryData>(items.detail.key(itemExternalId), (current) =>

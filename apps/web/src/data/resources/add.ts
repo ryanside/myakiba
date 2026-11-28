@@ -1,4 +1,5 @@
 import type { MfcItemId } from "@myakiba/mfc/page";
+import type { QueryClient } from "@tanstack/react-query";
 import { Result } from "better-result";
 import { useEffect, useEffectEvent, useMemo, useSyncExternalStore } from "react";
 import * as z from "zod";
@@ -24,10 +25,12 @@ export type AddChoices = Omit<AddCommit, "commitId">;
 
 const COMMIT_BUSY = "You've added a lot of items this hour. Try again in a few minutes.";
 
+const ADD_ITEMS = ["item-database-items", "add"] as const;
+
 export const add = {
   /** Row details and badges for the draft's Items. Ids the server no longer has are left out. */
   items: rootedRead("itemDatabase", {
-    key: (itemIds: readonly string[]) => ["item-database-items", "add", itemIds] as const,
+    key: (itemIds: readonly string[]) => [...ADD_ITEMS, itemIds] as const,
     load: async (itemIds: readonly string[]) =>
       itemIds.length === 0
         ? Result.ok({ items: [] })
@@ -39,6 +42,9 @@ export const add = {
   }),
   search: searches.itemDatabase,
 };
+
+export const refetchAddItems = (queryClient: QueryClient) =>
+  queryClient.invalidateQueries({ queryKey: ADD_ITEMS, refetchType: "all" });
 
 /** The commit's own text for a server answer, except that a full hourly budget gets Add's wording. */
 function commitFailureText(failure: ApiFailure): string {
