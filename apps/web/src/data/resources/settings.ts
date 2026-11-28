@@ -2,7 +2,6 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { useIsMutating } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { Result } from "better-result";
-import { toast } from "@/components/ui/toast";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { AuthRequestFailed } from "@/lib/errors/auth-request-failed";
 import { getAccountType } from "@/queries/settings";
@@ -166,8 +165,6 @@ export const settings = {
   unlinkGoogle: defineCommand({
     invalidates: ["linkedAccounts", "accountType"],
     persist: (accountId: string) => unlinkGoogle(accountId),
-    successTitle: (_input, unlink) =>
-      unlink.kind === "unlinked" ? "Google disconnected" : undefined,
     failureToast: messageAs("title", () => "Couldn't disconnect Google"),
   }),
   /** The session holds the user, so a screen reloads the router once this saves. */
@@ -192,10 +189,7 @@ export function usePreferencesSave() {
   const saving = useIsMutating({ mutationKey: SAVE_PREFERENCES }) > 0;
   const { run } = useResourceMutation(settings.updateUser, {
     mutationKey: SAVE_PREFERENCES,
-    onSaved: async () => {
-      await router.invalidate();
-      toast.add({ type: "success", title: "Preferences updated successfully" });
-    },
+    onSaved: () => router.invalidate(),
   });
   const save = (changes: Partial<Formats>) => run({ changes, fallback: PREFERENCES_FAILED });
 
