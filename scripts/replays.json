@@ -5838,6 +5838,19 @@
       ]
     },
     {
+      "fix": "e5f8fda63062da249d4c235fe6501e8b8893bb3f",
+      "bug": "Every Item menu offered Copy MFC ID, which copied a bare number and, on a custom Item, only said it had none, instead of linking to the Item's MFC page.",
+      "test": "apps/web/src/components/open-on-mfc-menu-item.test.tsx",
+      "fixed": [
+        "a collection card's menu opens an MFC Item's page on MFC in a new tab",
+        "a collection card's menu has no MFC entry for a custom Item",
+        "a collection table row's menu opens an MFC Item's page on MFC in a new tab",
+        "a collection table row's menu has no MFC entry for a custom Item",
+        "an order item row's menu opens an MFC Item's page on MFC in a new tab",
+        "an order item row's menu has no MFC entry for a custom Item"
+      ]
+    },
+    {
       "fix": "ff5f6978557cc6053ca4a69f8d619786983e6473",
       "bug": "A saved Orders layout that hid the Title column kept it hidden after the column stopped being hideable, with no way to show it again.",
       "test": "apps/web/src/components/orders-title-column.test.tsx",
