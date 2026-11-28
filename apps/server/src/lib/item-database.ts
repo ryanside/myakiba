@@ -349,7 +349,6 @@ async function applyReleases(
             ),
           )
           .returning({ id: collection.id });
-  await advanceOrderReleaseDatesForCollectionItems(tx, moved);
 
   if (plan.staleReleaseIds.length > 0) {
     await tx
@@ -358,6 +357,7 @@ async function applyReleases(
         and(eq(item_release.itemId, itemId), inArray(item_release.id, [...plan.staleReleaseIds])),
       );
   }
+  await advanceOrderReleaseDatesForCollectionItems(tx, moved);
   return { moved: moved.length, cleared: cleared.length };
 }
 
