@@ -252,7 +252,7 @@ const alphaWithShippingFee = (shippingFee: number) =>
   }) as EditedOrder;
 
 describe("an Order write on the orders page", () => {
-  test("an unfiltered delete hides the Order before the server answers", async () => {
+  test("an unfiltered delete hides the Order before the server answers, and no toast says so", async () => {
     const orders = renderOrdersPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -267,11 +267,11 @@ describe("an Order write on the orders page", () => {
     await waitFor(() => expect(server.listReads).toBe(readsBeforeWrite + 1));
     expect({ shown: shown(), toasts: toastTitles() }).toEqual({
       shown: { count: "2", orders: ["Alpha 1000", "Charlie 200"] },
-      toasts: ["success: Order deleted"],
+      toasts: [],
     });
   });
 
-  test("a filtered delete marks the Order as saving until the server answers", async () => {
+  test("a filtered delete marks the Order as saving until the server answers, and no toast says it landed", async () => {
     const orders = renderOrdersPage({ shop: ["AmiAmi"] });
     await loaded();
 
@@ -291,7 +291,7 @@ describe("an Order write on the orders page", () => {
       expect(shown()).toEqual({ count: "2", orders: ["Alpha 1000", "Charlie 200"] }),
     );
     expect({ toasts: toastTitles(), closed: toastClose.mock.calls.length }).toEqual({
-      toasts: ["loading: Deleting orders...", "success: Order deleted"],
+      toasts: ["loading: Deleting orders..."],
       closed: 1,
     });
   });
@@ -351,15 +351,12 @@ describe("an Order write on the orders page", () => {
     await waitFor(() =>
       expect(shown()).toEqual({ count: "2", orders: ["Bravo 500", "Charlie 200"] }),
     );
-    expect(toastTitles()).toEqual([
-      "error: Failed to update order. Please try again.",
-      "success: Order deleted",
-    ]);
+    expect(toastTitles()).toEqual(["error: Failed to update order. Please try again."]);
   });
 });
 
 describe("a merge from the Merge dialog", () => {
-  test("does not read the merge draft again once the merged Orders are gone", async () => {
+  test("does not read the merge draft again once the merged Orders are gone, and no toast says they merged", async () => {
     const mergedIds = [ALPHA.orderId, BRAVO.orderId];
     let actions: Actions | null = null;
     function MergeDialog() {
@@ -394,11 +391,12 @@ describe("a merge from the Merge dialog", () => {
     expect(merged?.status).toBe("ok");
     await waitFor(() => expect(server.listReads).toBe(listReadsBeforeMerge + 1));
     expect(server.draftReads).toBe(1);
+    expect(toastTitles()).toEqual([]);
   });
 });
 
 describe("a Paid click on the orders page", () => {
-  test("sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands", async () => {
+  test("sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands, with no toast", async () => {
     const orders = renderOrdersPage({ shop: ["AmiAmi"] });
     await loaded();
 
@@ -415,7 +413,7 @@ describe("a Paid click on the orders page", () => {
       toasts: toastTitles(),
     }).toEqual({
       writes: [["set paid", [ALPHA.orderId, true]]],
-      toasts: ["success: Order updated"],
+      toasts: [],
     });
   });
 });

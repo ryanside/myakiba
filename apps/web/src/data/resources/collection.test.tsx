@@ -248,7 +248,7 @@ const mikuAt = (price: number) =>
   ({ id: MIKU.id, itemTitle: MIKU.itemTitle, price }) as CollectionItemFormValues;
 
 describe("a Collection Item write on the collection page", () => {
-  test("an unfiltered delete hides the items before the server answers, and its totals follow the server's answer", async () => {
+  test("an unfiltered delete hides the items before the server answers, its totals follow the server's answer, and no toast says so", async () => {
     const collection = renderCollectionPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -269,7 +269,7 @@ describe("a Collection Item write on the collection page", () => {
     await waitFor(() => expect(server.listReads).toBe(readsBeforeWrite + 1));
     expect({ shown: shown(), toasts: toastTitles() }).toEqual({
       shown: { totals: "1 items worth 500", items: ["Rin 500"], itemPage: "" },
-      toasts: ["success: Collection item(s) deleted"],
+      toasts: [],
     });
   });
 
@@ -336,7 +336,7 @@ describe("a Collection Item write on the collection page", () => {
     });
   });
 
-  test("a filtered edit leaves the list alone and still patches the Item page's copy", async () => {
+  test("a filtered edit leaves the list alone, still patches the Item page's copy, and no toast says so", async () => {
     const collection = renderCollectionPage({ shop: ["AmiAmi"] });
     await loaded();
 
@@ -347,7 +347,7 @@ describe("a Collection Item write on the collection page", () => {
     await answer(0, "finish");
     expect(await editing).toBe("ok");
     await waitFor(() => expect(shown().items).toEqual(["Miku 1500", "Rin 500", "Len 200"]));
-    expect(toastTitles()).toEqual(["success: Collection updated"]);
+    expect(toastTitles()).toEqual([]);
   });
 });
 

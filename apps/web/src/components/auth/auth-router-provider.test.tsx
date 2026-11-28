@@ -433,7 +433,7 @@ test("saved preferences reach the route context without a page reload", async ()
 
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
   fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
-  await screen.findByText("Preferences updated successfully");
+  await screen.findByRole("button", { name: "Saved" });
   await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
   check.resolve(null);
 
@@ -491,12 +491,11 @@ test.each(["signing out", "deleting an account"])(
     const unsubscribe = router.history.subscribe(({ location }) => visited.push(location.pathname));
 
     await endCurrentSession();
-    await screen.findByText(
-      deletingAccount ? "Account deleted successfully" : "Signed out successfully",
-    );
+    if (deletingAccount) await screen.findByText("Account deleted successfully");
     await waitFor(() => expect(endingSession).toBe(true));
     await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
     await screen.findByRole("heading", { name: "Login" });
+    expect(screen.queryByText("Signed out successfully")).toBeNull();
     check.resolve(null);
     await waitFor(() => expect(screen.queryByTestId("app-shell")).toBeNull());
     expect(router.state.location.pathname).toBe("/login");
@@ -531,9 +530,7 @@ test.each([
 
     try {
       await endCurrentSession();
-      await screen.findByText(
-        deletingAccount ? "Account deleted successfully" : "Signed out successfully",
-      );
+      if (deletingAccount) await screen.findByText("Account deleted successfully");
       await waitFor(() => expect(endingSession).toBe(true));
       await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
       await screen.findByRole("heading", { name: "Login" });
@@ -586,9 +583,7 @@ test.each(["signing out", "deleting an account"])(
     });
     try {
       await endCurrentSession();
-      await screen.findByText(
-        deletingAccount ? "Account deleted successfully" : "Signed out successfully",
-      );
+      if (deletingAccount) await screen.findByText("Account deleted successfully");
       await act(() => checking);
       await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
       await screen.findByRole("heading", { name: "Login" });

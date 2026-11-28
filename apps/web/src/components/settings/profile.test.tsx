@@ -74,13 +74,14 @@ test("a taken username says so and is not saved", async () => {
   expect(savedChanges).toEqual([]);
 });
 
-test("an available username saves and says so", async () => {
+test("an available username saves and shows Saved on the button, with no toast", async () => {
   renderProfile();
   await typeUsername("New.Name");
 
   expect(await screen.findByText("Available")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-  expect(await screen.findByText("Profile updated successfully")).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Saved" })).toBeTruthy();
+  expect(screen.queryByText("Profile updated successfully")).toBeNull();
   await waitFor(() => expect(savedChanges).toEqual([{ username: "new.name" }]));
 });
