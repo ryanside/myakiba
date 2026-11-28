@@ -14,7 +14,9 @@
         "picks past the row cap wait on the page and come in as rows are committed",
         "a full page says how many wait, in a status region too, and a removed row lets one in",
         "Items waiting past the row cap survive a reload, before and after a commit"
-      ]
+      ],
+      "testAt": "926741710d51bba456a577e77139f0a93e28b022",
+      "reason": "This PR made the head's test send release dates as date-and-precision pairs, which this fix's Add page cannot read, so the test file and harness stay at 926741710, which added the last of the three tests this entry names."
     },
     {
       "fix": "e4d32b679fda3f47958fdf4f17cb766518111566",
@@ -51,7 +53,9 @@
       "fixed": [
         "parseMfcItemPage release prices > a price after a type that ends in a period reads",
         "parseMfcItemPage release prices > a price after a type that ends in a digit reads"
-      ]
+      ],
+      "testAt": "e057efc4168586f0fd7657f4ea27445d24fec189",
+      "reason": "This PR made the head's parser tests expect every release to carry its date's precision, which this fix's parser does not report, so the test file and harness stay at the fix."
     },
     {
       "fix": "a677c0651b8f4a641785fa7cdd87304303e7b735",
@@ -84,7 +88,9 @@
         "parseMfcItemPage release prices > a price with one decimal reads whole",
         "parseMfcItemPage release prices > a price with three decimals reads as no price and warns",
         "parseMfcItemPage release prices > a price with misplaced commas reads as no price and warns"
-      ]
+      ],
+      "testAt": "7a70baa4be0cc2026b8e5717a50b2659d481bf7d",
+      "reason": "This PR made the head's parser tests expect every release to carry its date's precision, which this fix's parser does not report, so the test file and harness stay at the fix."
     },
     {
       "fix": "4b0aded5d2fc1daed6c70d77fffc1bb8aaba0ad0",
@@ -3473,7 +3479,9 @@
       "test": "apps/web/src/components/calendar/calendar-release-list.test.tsx",
       "fixed": [
         "the calendar's release list > fades in around its scroll area, so the scrollbar appears with the rows instead of ahead of them"
-      ]
+      ],
+      "testAt": "073dd62264dc6d261893f9280cf6e5d3e70ea5ea",
+      "reason": "This PR made the head's calendar releases carry their dates as date-and-precision pairs, which this fix's calendar cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "bdd9a415",
@@ -3657,7 +3665,9 @@
       "fix": "beaaa113",
       "bug": "a release tile kept saying Releases after midnight until something else re-rendered it",
       "test": "apps/web/src/components/release-item-tile.test.tsx",
-      "fixed": ["a tile releasing today reads Released after midnight passes with no other update"]
+      "fixed": ["a tile releasing today reads Released after midnight passes with no other update"],
+      "testAt": "beaaa113d2cc48d895ccf88a826a239d843d67d9",
+      "reason": "This PR made the head's tile release carry its date as a date-and-precision pair, which this fix's tile cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "784fafee5d72bc4da0a68e4c0fe2af9976fd59a4",
@@ -4887,7 +4897,9 @@
       "test": "packages/mfc/src/parse.test.ts",
       "fixed": [
         "parseMfcItemPage release prices > a year and capitals in the release type are not its price"
-      ]
+      ],
+      "testAt": "f0677dee2996a74e770e6d8dfa4c9cc0c3552502",
+      "reason": "This PR made the head's parser tests expect every release to carry its date's precision, which this fix's parser does not report, so the test file and harness stay at the fix."
     },
     {
       "fix": "b938cdc4002e827e6eb2131ee3de937feed2dec8",
@@ -5537,7 +5549,9 @@
       "test": "apps/web/src/components/orders/order-submit.test.tsx",
       "fixed": [
         "the merge dialog > holds the merge on Notes while the merged Orders' notes pass the limit, until they are shortened"
-      ]
+      ],
+      "testAt": "bf39a935f1edcd768a3c181854fc45ffb6bb75a7",
+      "reason": "This PR made the head's Order fixture carry its release date as a date-and-precision pair, which this fix's Order forms cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "cc3fdfd5bc81f1dfbc846ad3630a8c82a8b5243c",
@@ -5568,7 +5582,9 @@
       "fixed": [
         "the merge dialog's Notes > keeps Merge held and says why after the Notes section is collapsed",
         "the merge dialog's Notes > takes a paste past 1,000 characters, as the server does"
-      ]
+      ],
+      "testAt": "fb0bc89511fb94558bc59cdf13e2155016d21c01",
+      "reason": "This PR made the head's Order fixture carry its release date as a date-and-precision pair, which this fix's Order forms cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "a6ebe9f081eeff6928c2c98f979ca1f3f6c56276",
@@ -5576,7 +5592,9 @@
       "test": "apps/web/src/components/orders/order-submit.test.tsx",
       "fixed": [
         "the merge dialog reads its Orders fresh on every open > waits for the new draft after a source Order changed, then shows its fees"
-      ]
+      ],
+      "testAt": "a6ebe9f081eeff6928c2c98f979ca1f3f6c56276",
+      "reason": "This PR made the head's Order fixture carry its release date as a date-and-precision pair, which this fix's Order forms cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "e5014c0f28290a4266c873617f82bbee094d9b41",
@@ -5586,7 +5604,9 @@
         "the merge dialog's Notes > keeps Merge held and its reason tied to it after a blur on another field and a collapse",
         "the merge dialog reads its Orders fresh on every open > a reopen while the first read is still pending waits for its own read",
         "the merge dialog reads its Orders fresh on every open > a reopen in the same tick as the close reads the Orders again"
-      ]
+      ],
+      "testAt": "e5014c0f28290a4266c873617f82bbee094d9b41",
+      "reason": "This PR made the head's Order fixture carry its release date as a date-and-precision pair, which this fix's Order forms cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "e2840f8dfe309923f3506b6ba9ee8dbf0e08782f",
@@ -5685,7 +5705,9 @@
       "fix": "6d999470d49afd76c9e14eabca1213fae069f9eb",
       "bug": "The New Order form cut Notes at 1,000 characters while Merge, Edit Order and the server take 10,000.",
       "test": "apps/web/src/components/orders/order-submit.test.tsx",
-      "fixed": ["moving items to a New Order > takes 10,000 characters of Notes and saves them"]
+      "fixed": ["moving items to a New Order > takes 10,000 characters of Notes and saves them"],
+      "testAt": "6d999470d49afd76c9e14eabca1213fae069f9eb",
+      "reason": "This PR made the head's Order fixture carry its release date as a date-and-precision pair, which this fix's Order forms cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "bee538fa5be066ccaa26060141a93522a81ab7b3",
@@ -5849,7 +5871,9 @@
       "test": "apps/web/src/queries/orders.test.ts",
       "fixed": [
         "a date changed on a Dashboard card names its field, so its Order Items that held the old date follow it"
-      ]
+      ],
+      "testAt": "9394323cc24319019b9a521983482aa166f94396",
+      "reason": "This PR made updateOrderDate take one field-and-date argument, which this fix's updateOrderDate does not, so the test file and harness stay at the fix."
     },
     {
       "fix": "9394323cc24319019b9a521983482aa166f94396",
@@ -5857,7 +5881,9 @@
       "test": "apps/web/src/components/orders/order-edit-cascade.test.tsx",
       "fixed": [
         "a Shipping Date change sends the same Cascade to Items from the Dashboard, the Orders table and the Edit Order sheet"
-      ]
+      ],
+      "testAt": "9394323cc24319019b9a521983482aa166f94396",
+      "reason": "This PR made updateOrderDate take one field-and-date argument, which this fix's updateOrderDate does not, so the test file and harness stay at the fix."
     },
     {
       "fix": "9394323cc24319019b9a521983482aa166f94396",
@@ -5867,7 +5893,9 @@
         "the edit-order sheet > starts with the matching-items box ticked, and a Shop change copies it to the items that held the old Shop",
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
-      ]
+      ],
+      "testAt": "9394323cc24319019b9a521983482aa166f94396",
+      "reason": "This PR made the head's Order fixture carry its release date as a date-and-precision pair, which this fix's Order forms cannot read, so the test file and harness stay at the fix."
     },
     {
       "fix": "e5f8fda63062da249d4c235fe6501e8b8893bb3f",
