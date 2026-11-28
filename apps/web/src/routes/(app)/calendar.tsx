@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { preload, preloadPage, useRead } from "@/data/client";
@@ -12,24 +12,14 @@ import type {
 import { CalendarMonthGrid } from "@/components/calendar/calendar-month-grid";
 import { CalendarReleasePanel } from "@/components/calendar/calendar-release-list";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PageHeader } from "@/components/page-header";
 import { shownMessageOf } from "@/data/api";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
-const TAILWIND_MD_QUERY = "(min-width: 48rem)";
 const NO_DAYS: ReadonlySet<number> = new Set();
-
-function subscribeToDayGridWidth(onStoreChange: () => void): () => void {
-  const mediaQuery = window.matchMedia(TAILWIND_MD_QUERY);
-  mediaQuery.addEventListener("change", onStoreChange);
-  return () => mediaQuery.removeEventListener("change", onStoreChange);
-}
-
-function fitsDayGrid(): boolean {
-  return window.matchMedia(TAILWIND_MD_QUERY).matches;
-}
 
 function calendarViewOf(search: CalendarSearch, now: Date): CalendarQuery {
   const current = monthOf(now);
@@ -67,7 +57,7 @@ function RouteComponent(): ReactNode {
   const days = useMemo<readonly number[]>(() => searchDays ?? [], [searchDays]);
 
   const selectedDaysSet = useMemo<ReadonlySet<number>>(() => new Set(days), [days]);
-  const showsDayGrid = useSyncExternalStore(subscribeToDayGridWidth, fitsDayGrid, () => true);
+  const showsDayGrid = !useIsMobile();
 
   const updateSearch = useCallback(
     (patch: {

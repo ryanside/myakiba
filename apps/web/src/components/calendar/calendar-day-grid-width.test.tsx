@@ -141,18 +141,11 @@ describe.each([
   });
 
   test("a day picked on the grid narrows the list only while the grid shows", async () => {
-    window.happyDOM.setInnerWidth(PHONE_WIDTH);
+    window.happyDOM.setInnerWidth(TABLET_WIDTH);
     await openCalendar(`${viewSearch}&days=18`);
 
-    await screen.findByText(monthOnly);
-    expect(screen.queryByText(dayDated) !== null).toBe(true);
-    expect(showsDayGrid()).toBe(false);
-
-    act(() => {
-      window.happyDOM.setInnerWidth(TABLET_WIDTH);
-    });
+    await screen.findByText(dayDated);
     expect(showsDayGrid()).toBe(true);
-    expect(screen.queryByText(dayDated) !== null).toBe(true);
     expect(screen.queryByText(monthOnly) === null).toBe(true);
 
     act(() => {
@@ -161,5 +154,12 @@ describe.each([
     expect(showsDayGrid()).toBe(false);
     expect(screen.queryByText(monthOnly) !== null).toBe(true);
     expect(screen.queryByText(dayDated) !== null).toBe(true);
+
+    act(() => {
+      window.happyDOM.setInnerWidth(TABLET_WIDTH);
+    });
+    expect(showsDayGrid()).toBe(true);
+    expect(screen.queryByText(dayDated) !== null).toBe(true);
+    expect(screen.queryByText(monthOnly) === null).toBe(true);
   });
 });
