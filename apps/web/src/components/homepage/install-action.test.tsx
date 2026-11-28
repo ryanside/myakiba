@@ -12,10 +12,12 @@ const { InstallAction } = await import("./kit");
 
 afterEach(cleanup);
 
-function installLink() {
-  const link = screen.queryByRole("button", { name: /^Install the extension/u });
+function action(name: RegExp) {
+  const link = screen.queryByRole("button", { name });
   return { href: link?.getAttribute("href"), target: link?.getAttribute("target") };
 }
+
+const installLink = () => action(/^Install the extension/u);
 
 test.each(SUPPORTED_BROWSERS)("$name opens $storeName", (browser) => {
   listIn("chromeWebStore", "firefoxAddons");
@@ -42,5 +44,5 @@ test.each([
   listIn("chromeWebStore", "firefoxAddons");
   browseWith(userAgent);
   render(<InstallAction />);
-  expect(installLink()).toEqual({ href: "#how-it-works", target: null });
+  expect(action(/^How it works$/u)).toEqual({ href: "#how-it-works", target: null });
 });
