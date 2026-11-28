@@ -9,7 +9,6 @@ export function releaseDateOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<ReleaseDate>`${pair(start, precision)}`;
 }
 
-/** The day an Order still Ordered counts as overdue: the 1st after its release month, or January 1 after a year-only date. */
 export function overdueFromOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<string>`(date_trunc(CASE ${precision} WHEN 'year' THEN 'year' ELSE 'month' END, ${start}) + CASE ${precision} WHEN 'year' THEN interval '1 year' ELSE interval '1 month' END)::date`;
 }

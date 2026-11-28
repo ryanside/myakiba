@@ -21,7 +21,7 @@ import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import type { OrderItemRelease } from "@/queries/orders";
-import { addMonths, format, startOfMonth } from "date-fns";
+import { addMonths, format, parseISO, startOfMonth } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
@@ -157,10 +157,9 @@ function MonthSelect({
   readonly value: ReleaseDate | null;
   readonly onSelect: (date: ReleaseDate) => void;
 }) {
-  const today = parseDateOnly(useToday());
-  if (!today) return null;
+  const thisMonth = startOfMonth(parseISO(useToday()));
   const months = Array.from({ length: MONTHS_OFFERED }, (_, offset): ReleaseDate => ({
-    start: format(addMonths(startOfMonth(today), offset), "yyyy-MM-dd"),
+    start: format(addMonths(thisMonth, offset), "yyyy-MM-dd"),
     precision: "month",
   }));
   const items = months.map((month) => ({ label: formatReleaseDate(month), value: month.start }));

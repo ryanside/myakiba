@@ -20,7 +20,6 @@ import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-/** The Overdue filter needs the viewer's local day, so the list's input carries it. */
 export type OrdersListInput = OrderFilters & { readonly today?: string };
 
 export function getOrders(filters: OrdersListInput): Promise<Result<OrdersPage, ApiFailure>> {

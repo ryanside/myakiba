@@ -39,7 +39,6 @@ import { defineCommand, messageAs, rootedRead } from "../client";
 
 const orderItemsOf = (orderId: string) => ["orderItems", orderId] as const;
 
-/** Keys the list by day only while Overdue is on, since only that filter reads today. */
 export function ordersListInput(filters: OrderFilters, today: string): OrdersListInput {
   return filters.overdue === true ? { ...filters, today } : filters;
 }

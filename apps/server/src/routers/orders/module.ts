@@ -63,7 +63,7 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.colDateEnd ? lte(order.collectionDate, filters.colDateEnd) : undefined,
     filters.status ? inArray(order.status, filters.status) : undefined,
     filters.paid === undefined ? undefined : eq(order.paid, filters.paid),
-    filters.overdue === true && filters.today !== undefined
+    filters.overdue && filters.today
       ? and(
           eq(order.status, "Ordered"),
           lte(overdueFromOf(order.releaseDate, order.releaseDatePrecision), filters.today),
