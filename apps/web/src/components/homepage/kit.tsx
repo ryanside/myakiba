@@ -162,9 +162,15 @@ export function InstallAction() {
       nativeButton={false}
       className="lg:-mr-4"
     >
-      <HugeiconsIcon icon={PuzzleIcon} data-icon="inline-start" className="size-4" />
-      Install the extension
-      {listing === null ? null : <span className="sr-only"> (opens in a new tab)</span>}
+      {listing === null ? (
+        "How it works"
+      ) : (
+        <>
+          <HugeiconsIcon icon={PuzzleIcon} data-icon="inline-start" className="size-4" />
+          Install the extension
+          <span className="sr-only"> (opens in a new tab)</span>
+        </>
+      )}
     </Button>
   );
 }
