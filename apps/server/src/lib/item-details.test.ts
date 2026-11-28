@@ -16,13 +16,17 @@ describe("releaseKey is a release's identity within its Item", () => {
 
   test.each([
     ["date", { date: { start: "2018-12-20", precision: "day" } }],
-    ["date precision", { date: { start: "2018-11-15", precision: "month" } }],
     ["type", { type: "Limited (Japan)" }],
     ["price", { price: 1_480_000 }],
     ["priceCurrency", { priceCurrency: "USD" }],
     ["barcode", { barcode: "4582292609999" }],
   ] as const)("a different %s is a different release", (_field, change) => {
     expect(releaseKey({ ...release, ...change })).not.toBe(releaseKey(release));
+  });
+
+  test("a date read to another precision is the same release", () => {
+    const month = { ...release, date: { start: "2018-11-15", precision: "month" as const } };
+    expect(releaseKey(month)).toBe(releaseKey(release));
   });
 });
 

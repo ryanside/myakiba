@@ -35,7 +35,6 @@ type ReleaseContent = {
 export function releaseKey(release: ReleaseContent): string {
   return JSON.stringify([
     release.date.start,
-    release.date.precision,
     release.type,
     release.price,
     release.priceCurrency,
