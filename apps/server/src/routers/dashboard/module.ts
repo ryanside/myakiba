@@ -344,8 +344,10 @@ export const Dashboard = {
       const overviewEndDate = toDateOnlyString(
         new Date(Date.UTC(currentYear, currentMonthIndex + 3, 0)),
       );
+      const chartMonthStart = (offset: number) =>
+        new Date(Date.UTC(currentYear, currentMonthIndex - 2 + offset, 1));
       const chartMonths = Array.from({ length: CHART_MONTH_COUNT }, (_, offset) => {
-        const start = new Date(Date.UTC(currentYear, currentMonthIndex - 2 + offset, 1));
+        const start = chartMonthStart(offset);
         return { year: start.getUTCFullYear(), month: start.getUTCMonth() + 1 };
       });
 
@@ -375,8 +377,8 @@ export const Dashboard = {
 
         scope.read(monthlyOrdersRead, {
           userId,
-          chartStart: toDateOnlyString(new Date(Date.UTC(currentYear, currentMonthIndex - 2, 1))),
-          chartEnd: toDateOnlyString(new Date(Date.UTC(currentYear, currentMonthIndex + 10, 1))),
+          chartStart: toDateOnlyString(chartMonthStart(0)),
+          chartEnd: toDateOnlyString(chartMonthStart(CHART_MONTH_COUNT)),
         }),
       ]);
 
