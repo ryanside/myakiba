@@ -77,3 +77,49 @@ test("the same choices after a commit that answered start a new commitId", async
   const [first, second] = commitIds();
   expect(second).not.toBe(first);
 });
+
+test("a reload after a lost commit that took an Item off the Wishlist sends its commitId and choices again", async () => {
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, wishlisted: true }));
+  await loseTheAnswer(`/add?item=${ITEM_ID}&to=order-new`, "Create order with 1");
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, wishlisted: false }));
+
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await user.click(await screen.findByRole("button", { name: "Create order with 1" }));
+
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+  const [lost, retried] = server.commits;
+  expect(retried?.commitId).toBe(lost?.commitId ?? "");
+  expect<unknown>(retried).toEqual(lost);
+  expect<unknown>(lost?.rows).toEqual([{ itemId: ITEM_ID, price: null }]);
+});
+
+test("after a lost commit, unticking Remove from Wishlist starts a new commitId", async () => {
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, wishlisted: true }));
+  await loseTheAnswer(`/add?item=${ITEM_ID}&to=order-new`, "Create order with 1");
+
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await user.click(await screen.findByRole("checkbox", { name: "Remove from Wishlist" }));
+  await user.click(screen.getByRole("button", { name: "Create order with 1" }));
+
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+  const [lost, next] = server.commits;
+  expect(next?.commitId).not.toBe(lost?.commitId);
+  expect<unknown>(next?.rows).toEqual([{ itemId: ITEM_ID, price: null, keepOnWishlist: true }]);
+});
+
+test("a reload after a lost commit whose Item has since joined the Wishlist sends its commitId and choices again", async () => {
+  await loseTheAnswer(`/add?item=${ITEM_ID}&to=order-new`, "Create order with 1");
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, wishlisted: true }));
+
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await screen.findByRole("checkbox", { name: "Remove from Wishlist" });
+  await user.click(screen.getByRole("button", { name: "Create order with 1" }));
+
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+  const [lost, retried] = server.commits;
+  expect(retried?.commitId).toBe(lost?.commitId ?? "");
+  expect<unknown>(retried).toEqual(lost);
+});

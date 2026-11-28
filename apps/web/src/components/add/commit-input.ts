@@ -99,6 +99,15 @@ export type CommitRow = {
   readonly title: string;
 };
 
+export const offersWishlistRemoval = (
+  wishlisted: boolean,
+  { ownership, wishlist }: Pick<Destination, "ownership" | "wishlist">,
+): boolean =>
+  wishlisted &&
+  !wishlist &&
+  ownership?.kind === "order" &&
+  (ownership.order.kind === "new" || ownership.order.order !== null);
+
 export const DEFAULT_SHARED: SharedFields = {
   collectionDate: null,
   shop: "",
@@ -260,7 +269,10 @@ export function buildCommitChoices(
           return null;
         }
         return {
-          rows: rows.map(({ row }) => ownedRow(row, issues)),
+          rows: rows.map(({ row }) => ({
+            ...ownedRow(row, issues),
+            ...(row.overrides.keepOnWishlist && !wishlist && { keepOnWishlist: true as const }),
+          })),
           ownership: {
             kind: "order",
             order:

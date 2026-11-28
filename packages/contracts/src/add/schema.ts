@@ -57,6 +57,7 @@ const addRowSchema = z.strictObject({
   collectionDate: dateOrNull.optional(),
   shippingMethod: z.enum(SHIPPING_METHODS).optional(),
   releaseId: z.uuid().optional(),
+  keepOnWishlist: z.literal(true).optional(),
 });
 
 const BARE_ROW_FIELDS: ReadonlySet<string> = new Set(["itemId", "price"]);
@@ -85,7 +86,12 @@ export const addOwnershipSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("none") }),
 ]);
 
-/** One Add click. A retry of the same click sends the same `commitId`, so the server answers it once. */
+/**
+ * One Add click. The request leaves out Wishlist membership; unchanged choices keep their
+ * `commitId` within the retry window, so a retry replays a saved answer and removes nothing. A
+ * fresh write to an Order that does not also add to the Wishlist removes every committed Item from
+ * the Wishlist, except rows marked `keepOnWishlist`, even an Item that joined after the last read.
+ */
 export const addCommitSchema = z
   .strictObject({
     commitId: z.uuidv4(),
@@ -112,6 +118,11 @@ export const addCommitSchema = z
   .refine(
     (commit) => commit.ownership.kind !== "none" || commit.wishlist || commit.listIds.length > 0,
     "Choose where these items go",
+  )
+  .refine(
+    (commit) =>
+      (commit.ownership.kind === "order" && !commit.wishlist) ||
+      !commit.rows.some((row) => row.keepOnWishlist),
   );
 
 export const addCommitResponseSchema = z.object({

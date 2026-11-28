@@ -204,6 +204,17 @@ await mock.module("@/lib/treaty-client", () => ({
           return ok({ id: `created-${server.createdLists.length}`, title });
         },
       },
+      wishlist: ({ itemId }: { readonly itemId: string }) => {
+        const setWishlisted = (wishlisted: boolean) => {
+          const seeded = server.items.get(itemId);
+          if (seeded) server.items.set(itemId, { ...seeded, wishlisted });
+          return ok({ addedCount: 1 });
+        };
+        return {
+          put: async () => setWishlisted(true),
+          delete: async () => setWishlisted(false),
+        };
+      },
       "mfc-items": {
         post: async ({ mfcItemId }: { readonly mfcItemId: number }) => {
           server.uploads.push(mfcItemId);

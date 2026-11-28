@@ -124,7 +124,7 @@ One user's private, manually arranged set of Items they plan to get. Each user h
 _Avoid_: Saved list, reading list, release watchlist
 
 **Wishlist Item**:
-One Item included in a Wishlist. An Item can appear only once and stays until the user removes it, even if the user adds a Collection Item or Order Item for that Item.
+One Item included in a Wishlist. An Item can appear only once and stays until the user removes it, even if the user adds a Collection Item for that Item. A fresh Add Page commit to an Order that does not also add to the Wishlist removes it unless "Remove from Wishlist" is unticked, even with no box shown if the Item joined the Wishlist after the page read its summary; a replay removes nothing.
 _Avoid_: Wishlist Entry, List Member, wished Item
 
 **Wishlist Release Filter**:

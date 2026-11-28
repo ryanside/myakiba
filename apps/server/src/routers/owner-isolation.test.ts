@@ -342,6 +342,20 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       NOT_IN_DATABASE,
     ],
     [
+      "an Add commit to an Order that takes her Item off her Wishlist",
+      (held) =>
+        call(
+          BOB,
+          "POST",
+          "/add/commit",
+          addCommit([{ itemId: held.itemId }], [], {
+            kind: "order",
+            order: { kind: "existing", orderId: "order-bob" },
+          }),
+        ),
+      NOT_IN_DATABASE,
+    ],
+    [
       "a Wishlist add of her Item",
       (held) => call(BOB, "PUT", `/wishlist/${held.itemId}`),
       { status: 404, body: "Item not found" },

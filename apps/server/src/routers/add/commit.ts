@@ -5,12 +5,12 @@ import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
 import type { ListTarget } from "@myakiba/contracts/lists/schema";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
-import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
+import { collection, item, item_release, order, wishlistItem } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
 import { latestRelease } from "@/lib/latest-release";
 import { addListMembers, lockOwnedLists } from "@/lib/list-members";
-import { appendToWishlist } from "@/lib/wishlist-append";
+import { appendToWishlist, lockWishlist } from "@/lib/wishlist-append";
 import { OrderNotFound } from "@/routers/orders/errors/order-not-found";
 import { ItemsMissing } from "./errors/items-missing";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
@@ -207,6 +207,17 @@ export async function writeCommit(
         collectionItems.map(({ id }) => id),
       );
     }
+  }
+
+  const offWishlist =
+    choices.ownership.kind === "order" && !choices.wishlist
+      ? choices.rows.flatMap((row) => (row.keepOnWishlist ? [] : [row.itemId]))
+      : [];
+  if (offWishlist.length > 0) {
+    await lockWishlist(tx, userId);
+    await tx
+      .delete(wishlistItem)
+      .where(and(eq(wishlistItem.userId, userId), inArray(wishlistItem.itemId, offWishlist)));
   }
 
   let wishlistAdded = 0;

@@ -24,6 +24,7 @@ const rowOverridesSchema = z.object({
   releaseId: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  keepOnWishlist: z.boolean().optional(),
 });
 
 export type RowOverrides = z.infer<typeof rowOverridesSchema>;

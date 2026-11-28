@@ -155,6 +155,35 @@ describe("an Add commit", () => {
     ]);
   });
 
+  test("to an Order may take a row's Item off the Wishlist", () => {
+    const toOrder = {
+      ownership: { kind: "order", order: { kind: "existing", orderId: "order-1" } },
+    };
+    const ticked = [{ ...bareRow("item-1"), keepOnWishlist: true as const }, bareRow("item-2")];
+
+    expect(addCommitSchema.parse(commit({ ...toOrder, rows: ticked })).rows).toEqual(ticked);
+    expect(
+      addCommitSchema.safeParse(
+        commit({ ...toOrder, rows: [{ ...bareRow("item-1"), keepOnWishlist: false }] }),
+      ).success,
+    ).toBe(false);
+  });
+
+  test.each([
+    ["the Collection", {}],
+    ["Not owned", { ownership: { kind: "none" }, wishlist: true }],
+    [
+      "an Order that also adds to the Wishlist",
+      { ownership: { kind: "order", order: { kind: "new", fields: newOrder } }, wishlist: true },
+    ],
+  ])("to %s refuses a row taken off the Wishlist", (_, overrides) => {
+    const parsed = addCommitSchema.safeParse(
+      commit({ ...overrides, rows: [{ ...bareRow("item-1"), keepOnWishlist: true }] }),
+    );
+
+    expect(parsed.success).toBe(false);
+  });
+
   test("adds each Item once", () => {
     const parsed = addCommitSchema.safeParse(
       commit({ rows: [bareRow("item-1"), bareRow("item-1")] }),
