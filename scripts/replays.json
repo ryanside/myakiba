@@ -5867,6 +5867,12 @@
         "a Price with no price opens an empty editor, and leaving it empty saves nothing",
         "clearing a Price saves no price"
       ]
+    },
+    {
+      "fix": "f51aab6e846972036536bc39d0dce76b6ad8497e",
+      "bug": "The Item page's Collection Item card read $0.00 for a Collection Item with no price, while the Collection cards read No price and the Edit Item sheet it opens starts blank.",
+      "test": "apps/web/src/components/item/collection-item-card.test.tsx",
+      "fixed": ["a Collection Item with no price reads No price, and a priced one its amount"]
     }
   ],
   "lint": [
