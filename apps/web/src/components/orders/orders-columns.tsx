@@ -197,7 +197,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 240,
+      size: 224,
       meta: {
         skeleton: <Skeleton className="h-6 my-1" />,
       },
