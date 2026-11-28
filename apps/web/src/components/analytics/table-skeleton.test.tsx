@@ -41,7 +41,7 @@ async function renderInApp(ui: ReactNode) {
 const sectionTable = (rows: readonly AnalyticsSectionRow[], isLoading: boolean) => (
   <SectionTable
     rows={rows}
-    sectionName="characters"
+    sectionName="shops"
     offset={0}
     pageSize={PAGE_SIZE}
     isLoading={isLoading}

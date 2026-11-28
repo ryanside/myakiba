@@ -49,6 +49,7 @@ const { default: listsRouter } = await import("./lists/index");
 const { default: collectionRouter } = await import("./collection/index");
 const { default: ordersRouter } = await import("./orders/index");
 const { default: analyticsRouter } = await import("./analytics/index");
+const { default: entriesRouter } = await import("./entries/index");
 const app = new Elysia({ prefix: "/api" })
   .use(itemRouter)
   .use(mfcItemsRouter)
@@ -58,7 +59,8 @@ const app = new Elysia({ prefix: "/api" })
   .use(listsRouter)
   .use(collectionRouter)
   .use(ordersRouter)
-  .use(analyticsRouter);
+  .use(analyticsRouter)
+  .use(entriesRouter);
 
 const ALICE = "user-alice";
 const BOB = "user-bob";
@@ -596,6 +598,18 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
         ),
       { status: 200, body: { items: [], totalCount: 0 } },
     ],
+    [
+      "the page of her Item Entry",
+      (held) => call(BOB, "GET", `/entries/${held.entryId}`),
+      { status: 404, body: "Item Entry not found" },
+    ],
+    ...(["owned", "ordered", "wishlist"] as const).map(
+      (state): [string, (held: Held) => ReturnType<typeof call>, object] => [
+        `the ${state} Items of her Item Entry`,
+        (held) => call(BOB, "GET", `/entries/${held.entryId}/items?state=${state}`),
+        { status: 200, body: { items: [], totalCount: 0 } },
+      ],
+    ),
   ];
 
   type Bobs = Awaited<ReturnType<typeof bobHolds>>;

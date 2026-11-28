@@ -5,23 +5,21 @@ import { useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SectionRelationships } from "@/components/analytics/section-relationships";
-import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
+import { ItemPicturePages } from "@/components/item-picture-pages";
 import { Button } from "@/components/ui/button";
-import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
-import { cn } from "@/lib/utils";
-import { itemDestination } from "@/lib/item-destination";
-import { shownMessageOf } from "@/data/api";
+import type { AnalyticsSectionRow } from "@/queries/analytics";
 
 const SECTION_ITEM_PAGE_SIZE = 6;
+
+export type ExpandingSection = Extract<AnalyticsSection, "shops" | "scales">;
 
 export function ExpandedRowContent({
   row,
   sectionName,
 }: {
   readonly row: AnalyticsSectionRow;
-  readonly sectionName: AnalyticsSection;
+  readonly sectionName: ExpandingSection;
 }): ReactNode {
   const [offset, setOffset] = useState(0);
   const collectionSearch = getCollectionSearch(sectionName, row);
@@ -49,14 +47,20 @@ export function ExpandedRowContent({
           </Button>
         </div>
 
-        <ExpandedRowItems
+        <ItemPicturePages
           data={data}
           isPending={isPending}
           isError={isError}
           error={error}
           isFetching={isFetching}
+          pageSize={SECTION_ITEM_PAGE_SIZE}
           offset={offset}
           onOffsetChange={setOffset}
+          empty={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">No owned items found for this row.</p>
+            </div>
+          }
         />
 
         <SectionRelationships
@@ -69,127 +73,18 @@ export function ExpandedRowContent({
   );
 }
 
-function ExpandedRowItems({
-  data,
-  isPending,
-  isError,
-  error,
-  isFetching,
-  offset,
-  onOffsetChange,
-}: {
-  readonly data: AnalyticsSectionItemsData | undefined;
-  readonly isPending: boolean;
-  readonly isError: boolean;
-  readonly error: Error | null;
-  readonly isFetching: boolean;
-  readonly offset: number;
-  readonly onOffsetChange: (offset: number) => void;
-}): ReactNode {
-  if (isPending) {
-    return (
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {Array.from({ length: SECTION_ITEM_PAGE_SIZE }, (_, idx) => (
-          <MediaGallerySkeleton key={idx} />
-        ))}
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <p className="text-xs text-destructive">Failed to load items: {shownMessageOf(error)}</p>
-    );
-  }
-
-  if (!data || data.items.length === 0) {
-    const canRecover = offset > 0;
-
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          {canRecover
-            ? "This item page is no longer available."
-            : "No owned items found for this row."}
-        </p>
-        {canRecover ? (
-          <Button type="button" variant="outline" size="xs" onClick={() => onOffsetChange(0)}>
-            Return to first page
-          </Button>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div
-        className={cn(
-          "grid grid-cols-3 sm:grid-cols-6 gap-2 transition-opacity duration-150",
-          isFetching && "opacity-60",
-        )}
-      >
-        {data.items.map((item, idx) => (
-          <MediaGalleryTile key={`${item.id}-${offset + idx}`} className="animate-data-in">
-            <MediaGalleryLink
-              destination={itemDestination(item.id, item.externalId)}
-              title={item.title}
-              tooltip
-            >
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt=""
-                  className="size-full object-cover object-top"
-                  loading="lazy"
-                />
-              ) : (
-                <div
-                  aria-hidden="true"
-                  className="flex size-full items-center justify-center text-[10px] text-muted-foreground"
-                >
-                  No image
-                </div>
-              )}
-            </MediaGalleryLink>
-          </MediaGalleryTile>
-        ))}
-      </div>
-
-      {data.totalCount > SECTION_ITEM_PAGE_SIZE ? (
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-            Showing{" "}
-            {pageRange({ totalCount: data.totalCount, limit: SECTION_ITEM_PAGE_SIZE, offset })}
-          </p>
-          <DataTablePagination
-            totalCount={data.totalCount}
-            limit={SECTION_ITEM_PAGE_SIZE}
-            offset={offset}
-            onOffsetChange={onOffsetChange}
-          />
-        </div>
-      ) : null}
-    </>
-  );
-}
-
 function getCollectionSearch(
-  sectionName: AnalyticsSection,
+  sectionName: ExpandingSection,
   row: AnalyticsSectionRow,
-): Pick<CollectionFilters, "shop" | "scale" | "entries" | "category"> {
+): Pick<CollectionFilters, "shop" | "scale" | "category"> {
   const value = row.id ?? row.name;
 
   if (sectionName === "shops") {
     return { shop: [value] };
   }
 
-  if (sectionName === "scales") {
-    return {
-      scale: [value],
-      category: ["Prepainted"],
-    };
-  }
-
-  return { entries: [value] };
+  return {
+    scale: [value],
+    category: ["Prepainted"],
+  };
 }
