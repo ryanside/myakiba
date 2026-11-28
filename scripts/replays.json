@@ -5836,6 +5836,19 @@
         "the edit-order sheet > with the matching-items box unticked, the edit writes the Order and copies nothing to its items",
         "the edit-order sheet > offers the matching-items box only on an Order that has items"
       ]
+    },
+    {
+      "fix": "e5f8fda63062da249d4c235fe6501e8b8893bb3f",
+      "bug": "Every Item menu offered Copy MFC ID, which copied a bare number and, on a custom Item, only said it had none, instead of linking to the Item's MFC page.",
+      "test": "apps/web/src/components/open-on-mfc-menu-item.test.tsx",
+      "fixed": [
+        "a collection card's menu opens an MFC Item's page on MFC in a new tab",
+        "a collection card's menu has no MFC entry for a custom Item",
+        "a collection table row's menu opens an MFC Item's page on MFC in a new tab",
+        "a collection table row's menu has no MFC entry for a custom Item",
+        "an order item row's menu opens an MFC Item's page on MFC in a new tab",
+        "an order item row's menu has no MFC entry for a custom Item"
+      ]
     }
   ],
   "lint": [
