@@ -46,129 +46,109 @@ test("pressing the chosen Paid chip again stops narrowing by Paid", async () => 
 });
 
 const RELEASING = "Releasing this month";
-const pressed = (name: string): boolean =>
-  screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
+const lit = (): string[] =>
+  screen
+    .getAllByRole("button")
+    .filter((button) => button.getAttribute("aria-pressed") === "true")
+    .map((button) => button.textContent ?? "");
 
-test("Releasing this month narrows to this month's Ordered and Shipped Orders", async () => {
+async function pressAndApply(name: string): Promise<Partial<OrdersPageSearch> | undefined> {
+  const { rerender } = render(<OrdersQuickFilters />);
+  await userEvent.click(screen.getByRole("button", { name }));
+  const [update] = applied;
+  filters = { ...filters, ...update };
+  rerender(<OrdersQuickFilters />);
+  return update;
+}
+
+test("Releasing this month narrows to this month's Orders and leaves status and Paid as they were", async () => {
   filters = { status: ["Owned"], paid: true, releaseDateStart: "2026-01-01" };
 
-  expect(await press(RELEASING)).toStrictEqual([
-    {
-      status: ["Ordered", "Shipped"],
-      paid: true,
-      releaseMonth: "this",
-      releaseDateStart: undefined,
-      releaseDateEnd: undefined,
-      offset: 0,
-    },
-  ]);
+  expect(await pressAndApply(RELEASING)).toStrictEqual({
+    status: ["Owned"],
+    paid: true,
+    releaseMonth: "this",
+    releaseDateStart: undefined,
+    releaseDateEnd: undefined,
+    offset: 0,
+  });
+  expect(lit()).toStrictEqual(["Owned", "Paid", RELEASING]);
 });
 
-test("Releasing this month lights Ordered and Shipped with it, and not All", () => {
-  filters = { status: ["Ordered", "Shipped"], releaseMonth: "this" };
+test("This month from the Filters dialog lights Releasing this month", () => {
+  filters = { releaseMonth: "this" };
   render(<OrdersQuickFilters />);
 
-  expect([RELEASING, "Ordered", "Shipped", "Owned", "All"].map(pressed)).toEqual([
-    true,
-    true,
-    true,
-    false,
-    false,
-  ]);
+  expect(lit()).toStrictEqual([RELEASING]);
 });
 
 test("next month from the Filters dialog does not light Releasing this month", () => {
   filters = { status: ["Ordered", "Shipped"], releaseMonth: "next" };
   render(<OrdersQuickFilters />);
 
-  expect(pressed(RELEASING)).toBe(false);
+  expect(lit()).toStrictEqual(["Ordered", "Shipped"]);
 });
 
-test("Ordered and Shipped without a month leave Releasing this month dark", () => {
-  filters = { status: ["Ordered", "Shipped"] };
-  render(<OrdersQuickFilters />);
+test("pressing Releasing this month again lifts only the month", async () => {
+  filters = { status: ["Ordered"], paid: false, releaseMonth: "this" };
 
-  expect(pressed(RELEASING)).toBe(false);
+  expect(await pressAndApply(RELEASING)).toStrictEqual({
+    status: ["Ordered"],
+    paid: false,
+    releaseMonth: undefined,
+    releaseDateStart: undefined,
+    releaseDateEnd: undefined,
+    offset: 0,
+  });
+  expect(lit()).toStrictEqual(["Ordered", "Unpaid"]);
 });
 
-test("pressing Releasing this month again lifts the month and its two statuses", async () => {
-  filters = { status: ["Ordered", "Shipped"], paid: true, releaseMonth: "this" };
+test("a status chip keeps the month", async () => {
+  filters = { status: ["Ordered"], releaseMonth: "this" };
 
-  expect(await press(RELEASING)).toStrictEqual([
-    {
-      status: undefined,
-      paid: true,
-      releaseMonth: undefined,
-      releaseDateStart: undefined,
-      releaseDateEnd: undefined,
-      offset: 0,
-    },
-  ]);
-});
-
-test("This month from the Filters dialog alone leaves Releasing this month dark", () => {
-  filters = { releaseMonth: "this" };
-  render(<OrdersQuickFilters />);
-
-  expect(pressed(RELEASING)).toBe(false);
-});
-
-test("Releasing this month goes dark once another status joins Ordered and Shipped", () => {
-  filters = { status: ["Ordered", "Shipped", "Owned"], releaseMonth: "this" };
-  render(<OrdersQuickFilters />);
-
-  expect(pressed(RELEASING)).toBe(false);
-});
-
-test("pressing Releasing this month over a dialog month adds its two statuses", async () => {
-  filters = { status: ["Owned"], releaseMonth: "this" };
-
-  expect(await press(RELEASING)).toStrictEqual([
-    {
-      status: ["Ordered", "Shipped"],
-      paid: undefined,
-      releaseMonth: "this",
-      releaseDateStart: undefined,
-      releaseDateEnd: undefined,
-      offset: 0,
-    },
-  ]);
+  expect(await pressAndApply("Owned")).toStrictEqual({
+    status: ["Ordered", "Owned"],
+    paid: undefined,
+    offset: 0,
+  });
+  expect(lit()).toStrictEqual(["Ordered", "Owned", RELEASING]);
 });
 
 test("All lifts Releasing this month with every chip", async () => {
-  filters = { status: ["Ordered", "Shipped"], paid: false, releaseMonth: "this" };
+  filters = { status: ["Owned"], paid: false, releaseMonth: "this" };
 
-  expect(await press("All")).toStrictEqual([
-    {
-      status: undefined,
-      paid: undefined,
-      releaseMonth: undefined,
-      releaseDateStart: undefined,
-      releaseDateEnd: undefined,
-      offset: 0,
-    },
-  ]);
+  expect(await pressAndApply("All")).toStrictEqual({
+    status: undefined,
+    paid: undefined,
+    releaseMonth: undefined,
+    releaseDateStart: undefined,
+    releaseDateEnd: undefined,
+    offset: 0,
+  });
+  expect(lit()).toStrictEqual(["All"]);
 });
 
-test("a status chip changes the statuses and keeps the month", async () => {
-  filters = { status: ["Ordered", "Shipped"], releaseMonth: "this" };
+test("All leaves Next month from the Filters dialog", async () => {
+  filters = { status: ["Ordered"], releaseMonth: "next" };
 
-  expect(await press("Shipped")).toStrictEqual([
-    { status: ["Ordered"], paid: undefined, offset: 0 },
-  ]);
+  expect(await pressAndApply("All")).toStrictEqual({
+    status: undefined,
+    paid: undefined,
+    offset: 0,
+  });
+  expect(filters.releaseMonth).toBe("next");
 });
 
-test("All lifts this month after Releasing this month went dark", async () => {
-  filters = { status: ["Ordered", "Shipped", "Owned"], releaseMonth: "this" };
+test("All leaves a picked Release Date range", async () => {
+  filters = { status: ["Ordered"], releaseDateStart: "2026-01-01", releaseDateEnd: "2026-01-31" };
 
-  expect(await press("All")).toStrictEqual([
-    {
-      status: undefined,
-      paid: undefined,
-      releaseMonth: undefined,
-      releaseDateStart: undefined,
-      releaseDateEnd: undefined,
-      offset: 0,
-    },
+  expect(await pressAndApply("All")).toStrictEqual({
+    status: undefined,
+    paid: undefined,
+    offset: 0,
+  });
+  expect([filters.releaseDateStart, filters.releaseDateEnd]).toStrictEqual([
+    "2026-01-01",
+    "2026-01-31",
   ]);
 });
