@@ -15,6 +15,13 @@ export const PICTURE_LEDGER = [
   `CREATE UNIQUE INDEX "picture_owner_id_key_idx" ON "picture" USING btree ("owner_id","key")`,
 ];
 
+export const RELEASE_PRECISION = [
+  `ALTER TABLE "item_release" ADD COLUMN "date_precision" text NOT NULL`,
+  `ALTER TABLE "order" ADD COLUMN "release_date_precision" text DEFAULT 'day' NOT NULL`,
+  `ALTER TABLE "item_release" ADD CONSTRAINT "item_release_date_precision_check" CHECK ("item_release"."date_precision" IN ('day', 'month', 'year'))`,
+  `ALTER TABLE "order" ADD CONSTRAINT "order_release_date_precision_check" CHECK ("order"."release_date_precision" IN ('day', 'month', 'year'))`,
+];
+
 /** Pushes the app schema as push-schema.ts does: no TTY, so any prompt fails. */
 export async function pushSchema(url: string) {
   const child = Bun.spawn(

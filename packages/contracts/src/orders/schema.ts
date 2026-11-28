@@ -8,6 +8,7 @@ import {
 import { ORDER_CASCADE_OPTIONS } from "./constants";
 import { orderSearchSortSchema } from "../search/schema";
 import { WRITE_LIMITS } from "../shared/write-limits";
+import { releaseDateSchema } from "../shared/release-date";
 
 export const orderFiltersSchema = z.object({
   limit: paginationLimitSchema.optional(),
@@ -55,7 +56,7 @@ export const newOrderSchema = z.strictObject({
   title: z.string().max(WRITE_LIMITS.title),
   shop: z.string().trim().max(WRITE_LIMITS.shop),
   orderDate: z.iso.date().nullable(),
-  releaseDate: z.iso.date().nullable(),
+  releaseDate: releaseDateSchema.nullable(),
   paymentDate: z.iso.date().nullable(),
   shippingDate: z.iso.date().nullable(),
   collectionDate: z.iso.date().nullable(),

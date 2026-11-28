@@ -26,7 +26,7 @@ const mergeDraft: OrderDraft = {
   status: "Shipped",
   paid: true,
   orderDate: "2026-01-05",
-  releaseDate: "2026-04-01",
+  releaseDate: { start: "2026-04-01", precision: "day" },
   paymentDate: "2026-01-20",
   shippingDate: null,
   collectionDate: null,

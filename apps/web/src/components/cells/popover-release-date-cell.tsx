@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { parseDateOnly } from "@myakiba/utils/date-only";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
+import { releaseDateKey, releaseDateOnDay } from "@myakiba/contracts/shared/release-date";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
@@ -29,9 +31,10 @@ import { EmptyValue } from "./empty-value";
 import { shownMessageOf } from "@/data/api";
 
 interface PopoverReleaseDateCellProps {
-  readonly value: string | null;
+  readonly id?: string;
+  readonly value: ReleaseDate | null;
   readonly dateFormat?: DateFormat;
-  readonly onSubmit: (newValue: string | null) => Saving;
+  readonly onSubmit: (newValue: ReleaseDate | null) => Saving;
   readonly disabled?: boolean;
   readonly trigger?: ReactElement;
   readonly triggerVariant?: "ghost" | "outline";
@@ -41,20 +44,18 @@ interface PopoverReleaseDateCellProps {
 }
 
 interface GroupedRelease {
-  readonly date: string;
+  readonly key: string;
+  readonly date: ReleaseDate;
   readonly image: string | null;
 }
 
 function groupReleases(releases: readonly OrderItemRelease[]): readonly GroupedRelease[] {
-  const grouped = new Map<string, { image: string | null }>();
+  const grouped = new Map<string, GroupedRelease>();
   for (const r of releases) {
-    if (!grouped.has(r.releaseDate)) {
-      grouped.set(r.releaseDate, { image: r.itemImage });
-    }
+    const key = releaseDateKey(r.releaseDate);
+    if (!grouped.has(key)) grouped.set(key, { key, date: r.releaseDate, image: r.itemImage });
   }
-  return [...grouped.entries()]
-    .map(([date, { image }]) => ({ date, image }))
-    .toSorted((a, b) => a.date.localeCompare(b.date));
+  return [...grouped.values()];
 }
 
 const CLEAR_VALUE = "__clear__";
@@ -66,9 +67,9 @@ function ReleaseSelect({
   onSelect,
 }: {
   readonly orderId: string;
-  readonly value: string | null;
+  readonly value: ReleaseDate | null;
   readonly dateFormat: DateFormat;
-  readonly onSelect: (date: string | null) => void;
+  readonly onSelect: (date: ReleaseDate | null) => void;
 }) {
   const { data: releases, isLoading, isError, error } = useRead(orders.itemReleases, orderId);
 
@@ -93,11 +94,12 @@ function ReleaseSelect({
   if (itemReleaseDates.length === 0) return null;
 
   const selectItems = itemReleaseDates.map((r) => ({
-    label: formatDateOnlyForDisplay(r.date, dateFormat),
-    value: r.date,
+    label: formatReleaseDate(r.date, dateFormat),
+    value: r.key,
   }));
 
-  const matchedValue = value && selectItems.some((i) => i.value === value) ? value : null;
+  const valueKey = value ? releaseDateKey(value) : null;
+  const matchedValue = selectItems.some((i) => i.value === valueKey) ? valueKey : null;
 
   return (
     <div className="border-b p-2">
@@ -106,9 +108,10 @@ function ReleaseSelect({
         onValueChange={(val) => {
           if (val === CLEAR_VALUE) {
             onSelect(null);
-          } else if (val) {
-            onSelect(val);
+            return;
           }
+          const picked = itemReleaseDates.find((release) => release.key === val);
+          if (picked) onSelect(picked.date);
         }}
         items={selectItems}
       >
@@ -123,7 +126,7 @@ function ReleaseSelect({
               </SelectItem>
             )}
             {itemReleaseDates.map((release) => (
-              <SelectItem key={release.date} value={release.date}>
+              <SelectItem key={release.key} value={release.key}>
                 <div className="flex items-center gap-2">
                   {release.image && (
                     <img
@@ -132,7 +135,7 @@ function ReleaseSelect({
                       className="size-5 shrink-0 rounded object-cover object-top"
                     />
                   )}
-                  {formatDateOnlyForDisplay(release.date, dateFormat)}
+                  {formatReleaseDate(release.date, dateFormat)}
                 </div>
               </SelectItem>
             ))}
@@ -144,6 +147,7 @@ function ReleaseSelect({
 }
 
 export function PopoverReleaseDateCell({
+  id,
   value,
   dateFormat = "MM/DD/YYYY",
   onSubmit,
@@ -155,29 +159,29 @@ export function PopoverReleaseDateCell({
   orderId,
 }: PopoverReleaseDateCellProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const valueId = useId();
   const [displayValue, submit] = usePendingValue(value, onSubmit);
-  const dateValue = displayValue ? parseDateOnly(displayValue) : undefined;
+  const dateValue = displayValue ? parseDateOnly(displayValue.start) : undefined;
 
   const handleSelect = async (date: Date | undefined): Promise<void> => {
     setIsOpen(false);
-    await submit(date ? format(date, "yyyy-MM-dd") : null);
+    await submit(releaseDateOnDay(date ? format(date, "yyyy-MM-dd") : null));
   };
 
-  const handleReleaseSelect = async (dateOrNull: string | null): Promise<void> => {
+  const handleReleaseSelect = async (picked: ReleaseDate | null): Promise<void> => {
     setIsOpen(false);
-    await submit(dateOrNull);
+    await submit(picked);
   };
 
   const getDisplayValue = (): string | null => {
     if (!(displayValue && dateValue)) return null;
-    return triggerVariant === "outline"
-      ? format(dateValue, "PPP")
-      : formatDateOnlyForDisplay(displayValue, dateFormat);
+    return formatReleaseDate(displayValue, triggerVariant === "outline" ? "long" : dateFormat);
   };
   const formattedDisplay = getDisplayValue();
 
   const defaultTrigger = (
     <Button
+      id={id}
       variant={triggerVariant}
       data-empty={!dateValue}
       className={cn(
@@ -188,11 +192,12 @@ export function PopoverReleaseDateCell({
         triggerClassName,
       )}
       disabled={disabled}
+      aria-describedby={id ? valueId : undefined}
     >
       {triggerVariant === "outline" && (
         <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" />
       )}
-      {formattedDisplay ?? (placeholder ? <span>{placeholder}</span> : <EmptyValue />)}
+      <span id={valueId}>{formattedDisplay ?? (placeholder || <EmptyValue />)}</span>
     </Button>
   );
 
@@ -211,10 +216,11 @@ export function PopoverReleaseDateCell({
           )}
           <Calendar
             mode="single"
-            selected={dateValue}
+            selected={displayValue?.precision === "day" ? dateValue : undefined}
             onSelect={handleSelect}
             defaultMonth={dateValue ?? new Date()}
             captionLayout="dropdown"
+            autoFocus={!orderId}
           />
         </PopoverContent>
       )}

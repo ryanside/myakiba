@@ -1,4 +1,5 @@
 import type { Category, ShippingMethod } from "@myakiba/contracts/shared/types";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import type { ReadTx } from "@myakiba/db/tx";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { and, count, desc, eq, gte, inArray, isNotNull, lte, sql, sum } from "drizzle-orm";
@@ -99,8 +100,17 @@ export function getBucket(filters: ExpenseFilters): ExpenseBucket {
   return months <= 24 ? "month" : "year";
 }
 
-export function realizedOrderDateSql(): ReturnType<typeof sql> {
+function realizedOrderDateSql(): ReturnType<typeof sql> {
   return sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
+}
+
+export function realizedOrderDateWithPrecisionSql() {
+  const dated = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate})`;
+  return sql<ReleaseDate | null>`CASE
+    WHEN ${dated} IS NOT NULL THEN jsonb_build_object('start', ${dated}, 'precision', 'day')
+    WHEN ${order.releaseDate} IS NOT NULL
+      THEN jsonb_build_object('start', ${order.releaseDate}, 'precision', ${order.releaseDatePrecision})
+  END`;
 }
 
 function realizedItemDateSql(): ReturnType<typeof sql> {

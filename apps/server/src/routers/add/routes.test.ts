@@ -52,11 +52,18 @@ beforeEach(async () => {
     },
   ]);
   await db.insert(item_release).values([
-    { itemId: "item-1", date: "2026-01-01", price: 4000, priceCurrency: "JPY" },
+    {
+      itemId: "item-1",
+      date: "2026-01-01",
+      datePrecision: "day",
+      price: 4000,
+      priceCurrency: "JPY",
+    },
     {
       id: "00000000-0000-4000-8000-000000000002",
       itemId: "item-1",
       date: "2026-06-01",
+      datePrecision: "day",
       type: "Limited",
       barcode: "4580590174562",
       price: 4500,
@@ -107,7 +114,7 @@ test("items answers each known id in request order with its latest release and t
           category: "Prepainted",
           latestRelease: {
             id: "00000000-0000-4000-8000-000000000002",
-            date: "2026-06-01",
+            date: { start: "2026-06-01", precision: "day" },
             type: "Limited",
             barcode: "4580590174562",
             price: 4500,

@@ -93,7 +93,16 @@ function pictureToShow(picture: SavedPicture | null): ToShow {
 
 function releaseRows(itemId: string, page: MfcItemPage) {
   const unique = new Map(page.releases.map((release) => [releaseKey(release), release]));
-  return [...unique.values()].map((release) => ({ id: crypto.randomUUID(), itemId, ...release }));
+  return [...unique].map(([key, { date, ...release }]) => ({
+    key,
+    row: {
+      id: crypto.randomUUID(),
+      itemId,
+      date: date.start,
+      datePrecision: date.precision,
+      ...release,
+    },
+  }));
 }
 
 async function linkEntries(
@@ -164,7 +173,7 @@ async function createMfcItemIfAbsent(
 
   await linkEntries(tx, ownerId, created.id, page);
   if (page.releases.length > 0) {
-    await tx.insert(item_release).values(releaseRows(created.id, page));
+    await tx.insert(item_release).values(releaseRows(created.id, page).map(({ row }) => row));
   }
   return created.id;
 }
@@ -261,7 +270,7 @@ async function storedReleases(tx: Tx, itemId: string) {
   const rows = await tx
     .select({
       id: item_release.id,
-      date: item_release.date,
+      date: { start: item_release.date, precision: item_release.datePrecision },
       type: item_release.type,
       price: item_release.price,
       priceCurrency: item_release.priceCurrency,
@@ -269,11 +278,30 @@ async function storedReleases(tx: Tx, itemId: string) {
     })
     .from(item_release)
     .where(eq(item_release.itemId, itemId));
-  return rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
+  return rows.map((row) => ({ id: row.id, key: releaseKey(row), precision: row.date.precision }));
 }
 
-const sortedKeys = (releases: readonly { readonly key: string }[]) =>
-  releases.map((release) => release.key).toSorted();
+type KeyedRelease = { readonly key: string; readonly precision: string };
+
+const sortedKeys = (releases: readonly KeyedRelease[]) =>
+  releases.map((release) => `${release.key} ${release.precision}`).toSorted();
+
+/** A release the page still lists keeps its id and selections, and takes the precision it reads. */
+async function rereadPrecisions(
+  tx: Tx,
+  existing: Awaited<ReturnType<typeof storedReleases>>,
+  rows: readonly ReleaseRow[],
+) {
+  const read = new Map(rows.map(({ key, row }) => [key, row.datePrecision]));
+  for (const release of existing) {
+    const precision = read.get(release.key);
+    if (precision === undefined || precision === release.precision) continue;
+    await tx
+      .update(item_release)
+      .set({ datePrecision: precision, updatedAt: new Date() })
+      .where(eq(item_release.id, release.id));
+  }
+}
 
 async function applyReleases(
   tx: Tx,
@@ -282,7 +310,7 @@ async function applyReleases(
   rows: readonly ReleaseRow[],
 ): Promise<ReleasePlan["kind"]> {
   const added = new Set(plan.addedReleaseIds);
-  const inserts = rows.filter((row) => added.has(row.id));
+  const inserts = rows.flatMap(({ row }) => (added.has(row.id) ? [row] : []));
   if (inserts.length > 0) await tx.insert(item_release).values(inserts);
 
   switch (plan.kind) {
@@ -344,7 +372,7 @@ export async function refreshItem(
   const { legacyImageUrl, imageKey } = shown ?? fields;
   const existing = await storedReleases(tx, id);
   const rows = releaseRows(id, page);
-  const keyed = rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
+  const keyed = rows.map(({ row, key }) => ({ id: row.id, key, precision: row.datePrecision }));
   const current: Snapshot = {
     fields,
     links: await storedLinks(tx, id),
@@ -363,6 +391,7 @@ export async function refreshItem(
     .where(eq(item.id, id));
   await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, id));
   await linkEntries(tx, viewer.userId, id, page);
+  await rereadPrecisions(tx, existing, rows);
   const plan = buildReleasePlan({ existing, page: keyed });
   return Result.ok({ saved: await applyReleases(tx, id, plan, rows), picture: outcome });
 }

@@ -1,4 +1,5 @@
 import type { addItemSchema } from "@myakiba/contracts/add/schema";
+import { releaseDateOnDay } from "@myakiba/contracts/shared/release-date";
 import type {
   CONDITIONS,
   ORDER_STATUSES,
@@ -208,7 +209,7 @@ function collectionRow(row: DraftRow, issues: CommitIssue[]) {
 }
 
 function newOrderInput(fields: OrderFields, titles: readonly string[], issues: CommitIssue[]) {
-  const { title, shop, notes, ...rest } = fields;
+  const { title, shop, notes, releaseDate, ...rest } = fields;
   // A title typed and cleared again falls back to the one the page wrote.
   const orderTitle = title?.trim() || defaultOrderTitle(titles);
   const fees = Object.fromEntries(
@@ -217,6 +218,7 @@ function newOrderInput(fields: OrderFields, titles: readonly string[], issues: C
   return {
     ...rest,
     ...fees,
+    releaseDate: releaseDateOnDay(releaseDate),
     title: orderTitle,
     shop: shop.trim(),
     notes,

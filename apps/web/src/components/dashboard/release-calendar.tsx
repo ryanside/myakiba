@@ -10,7 +10,9 @@ import { useInvalidateRead, useRead } from "@/data/client";
 import { calendar, monthOf } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
-import { parseISO } from "date-fns";
+import { releaseCalendarOrder, releaseGroupCaption } from "@/lib/date-display";
+import { releaseDateKey } from "@myakiba/contracts/shared/release-date";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { shownMessageOf } from "@/data/api";
 import { NextIcon, PreviousIcon } from "@/lib/icons";
 
@@ -29,12 +31,6 @@ const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-});
-
 const RELEASE_CALENDAR_SKELETON_ROWS = [
   { id: "first", titleWidth: "w-36", detailWidth: "w-16" },
   { id: "second", titleWidth: "w-28", detailWidth: "w-20" },
@@ -42,21 +38,20 @@ const RELEASE_CALENDAR_SKELETON_ROWS = [
 
 function groupReleasesByReleaseDate(
   releases: readonly ReleaseItem[],
-): readonly (readonly [string, readonly ReleaseItem[]])[] {
-  const groups = new Map<string, ReleaseItem[]>();
+): readonly (readonly [string, ReleaseDate, readonly ReleaseItem[]])[] {
+  const groups = new Map<string, { date: ReleaseDate; items: ReleaseItem[] }>();
   for (const item of releases) {
-    const existing = groups.get(item.releaseDate);
+    const key = releaseDateKey(item.releaseDate);
+    const existing = groups.get(key);
     if (existing) {
-      existing.push(item);
+      existing.items.push(item);
     } else {
-      groups.set(item.releaseDate, [item]);
+      groups.set(key, { date: item.releaseDate, items: [item] });
     }
   }
-  const grouped = [...groups.entries()].toSorted(
-    ([a], [b]) => new Date(a).getTime() - new Date(b).getTime(),
-  );
-
-  return grouped;
+  return [...groups.entries()]
+    .toSorted(([, a], [, b]) => releaseCalendarOrder(a.date, b.date))
+    .map(([key, { date, items }]) => [key, date, items] as const);
 }
 
 function ReleaseCalendar({
@@ -149,8 +144,8 @@ function ReleaseCalendar({
             return (
               <div className="animate-data-in">
                 <div className="-mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6 scroll-fade-b">
-                  {grouped.map(([dateKey, items]) => (
-                    <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
+                  {grouped.map(([key, date, items]) => (
+                    <DateGroup key={key} date={date} items={items} currency={currency} />
                   ))}
                 </div>
               </div>
@@ -199,21 +194,22 @@ function ReleaseCalendarSkeleton(): React.ReactNode {
 }
 
 function DateGroup({
-  dateKey,
+  date,
   items,
   currency,
 }: {
-  readonly dateKey: string;
+  readonly date: ReleaseDate;
   readonly items: readonly ReleaseItem[];
   readonly currency: Currency;
 }): React.ReactNode {
+  const caption = releaseGroupCaption(date);
   return (
     <div>
-      <div className="flex items-center gap-2 px-(--frame-panel-p) pb-1">
-        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-          {RELEASE_DATE_GROUP_LABEL_FORMATTER.format(parseISO(dateKey))}
-        </span>
-      </div>
+      {caption === null ? null : (
+        <div className="flex items-center gap-2 px-(--frame-panel-p) pb-1">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">{caption}</span>
+        </div>
+      )}
       <div className="px-(--frame-panel-p)">
         {items.map((item) => (
           <CalendarItemRow key={item.releaseId} item={item} currency={currency} />

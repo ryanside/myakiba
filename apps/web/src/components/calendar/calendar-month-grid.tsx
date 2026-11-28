@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import type { CalendarResponse } from "@/queries/calendar";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 
 const MAX_THUMBS = 3;
 const THUMB_STACK_SIZE = "size-9";
@@ -257,19 +258,19 @@ function CalendarDayThumbStack({
 function buildBuckets<TItem>(
   items: readonly TItem[],
   project: (item: TItem) => {
-    readonly date: string | null;
+    readonly date: ReleaseDate | null;
     readonly thumb: CalendarDayBucket["thumbs"][number];
   },
 ): readonly CalendarDayBucket[] {
   const map = new Map<string, CalendarDayBucket["thumbs"][number][]>();
   for (const item of items) {
     const { date, thumb } = project(item);
-    if (!date) continue;
-    const existing = map.get(date);
+    if (date?.precision !== "day") continue;
+    const existing = map.get(date.start);
     if (existing) {
       existing.push(thumb);
     } else {
-      map.set(date, [thumb]);
+      map.set(date.start, [thumb]);
     }
   }
   return [...map.entries()].map(([date, thumbs]) => ({ date, thumbs }));

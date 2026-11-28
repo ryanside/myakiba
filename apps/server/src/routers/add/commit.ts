@@ -17,6 +17,7 @@ import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
 import { guardedWrite } from "@/lib/owner-guard";
 import type { AddChoices, AddOwnership, AddRow } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { withOrderReleaseColumns } from "@/lib/release-date";
 
 type CollectionInsert = typeof collection.$inferInsert;
 
@@ -52,7 +53,7 @@ async function orderTermsOf(
   }
   const [created] = await tx
     .insert(order)
-    .values({ userId, ...target.fields })
+    .values({ userId, ...withOrderReleaseColumns(target.fields) })
     .returning(orderTerms);
   if (!created)
     panic("Inserting the new order returned no row, so add.commit has no order to add to");

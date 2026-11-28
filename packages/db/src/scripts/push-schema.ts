@@ -5,6 +5,7 @@ import { installOwnerGuards } from "../item-ownership/guards";
 import { migrateItemOwnership } from "../item-ownership/migrate";
 import { migratePaid } from "../paid/migrate";
 import { markOrderPaid, migrateOrderPaid } from "../paid/order-paid";
+import { migrateReleasePrecision } from "../release-precision/migrate";
 
 dotenv.config({
   path: "../../apps/server/.env",
@@ -55,8 +56,13 @@ const orderPaidMigration = await attempt(
   () => migrateOrderPaid(database),
   "PAID-ON-ORDER MIGRATION FAILED. It rolled back, so every Order keeps its Paid and Collection Items keep their paid column. The steps reported above have committed.",
 );
-await database.close();
 console.log(`Paid-on-Order migration: ${JSON.stringify(orderPaidMigration)}`);
+const precisionMigration = await attempt(
+  () => migrateReleasePrecision(database),
+  "RELEASE DATE PRECISION MIGRATION FAILED. Any transaction it started rolled back, so Item Releases and Orders are as the step found them. The steps reported above have committed.",
+);
+await database.close();
+console.log(`Release date precision migration: ${JSON.stringify(precisionMigration)}`);
 
 const child = Bun.spawn(["bunx", "drizzle-kit", "push", "--verbose"], {
   cwd: process.cwd(),
@@ -105,6 +111,11 @@ if (exitCode !== 0 || !completed) {
     orderPaidMigration.status === "readded-column-dropped"
       ? [
           "The Paid-on-Order migration above has committed, so main's server fails on every read or write of a Collection Item's paid column.",
+        ]
+      : []),
+    ...(precisionMigration.status === "migrated"
+      ? [
+          "The release date precision migration above has committed, so main's server fails on writes that insert an Item Release (saving a new Item with releases, or an Item Refresh that adds one) until the new server starts.",
         ]
       : []),
     ...(droppedTables.length > 0

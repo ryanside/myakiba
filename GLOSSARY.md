@@ -19,7 +19,7 @@ The picture an Item shows, stored by its content, so two Items with the same pic
 _Avoid_: Thumbnail when the stored picture is meant
 
 **Item Release**:
-A dated release of an Item for sale. One Item can have several Item Releases.
+A dated release of an Item for sale. One Item can have several Item Releases. Its date is known to the day, the month or the year, as MyFigureCollection printed it, and is shown only that far: a month reads "Jun 2026" and a year "2026". When dates are sorted or compared, a date known only to its month or year counts as the first day of that period, but the Calendar never places it on that day. For an Item Release saved before precision was recorded, its precision is a guess from the stored date until an Item Refresh reads the page.
 _Avoid_: Catalog Release, release when Order Release Date could also be meant
 
 **Selected Item Release**:
@@ -99,7 +99,7 @@ Moving the Order Items of several Orders into one new Order and deleting those O
 _Avoid_: Combine
 
 **Order Release Date**:
-The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
+The date the whole Order is expected to release. Like an Item Release's date, it can be known only to its month or year: a date copied from an Item Release is known as far as that release's, and a date picked on the calendar is known to the day. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:

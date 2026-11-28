@@ -13,6 +13,7 @@ import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership"
 import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
 import { migratePaid } from "../paid/migrate";
 import { migrateOrderPaid } from "../paid/order-paid";
+import { migrateReleasePrecision } from "../release-precision/migrate";
 import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
@@ -25,6 +26,7 @@ test(
     await migrateItemOwnership(migratedOnly.sql);
     await migratePaid(migratedOnly.sql);
     await migrateOrderPaid(migratedOnly.sql);
+    await migrateReleasePrecision(migratedOnly.sql);
     const expected = await snapshot(migratedOnly.sql);
 
     const { sql, url } = await databases.create(seeded);
@@ -180,7 +182,7 @@ async function whatUsersSee(sql: SQL) {
       SELECT i.id, jsonb_build_object(
         'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id,image_key}'::text[],
         'releases', (
-          SELECT coalesce(jsonb_agg(to_jsonb(r) - '{id,item_id}'::text[] ORDER BY r.date, r.price), '[]')
+          SELECT coalesce(jsonb_agg(to_jsonb(r) - '{id,item_id,date_precision}'::text[] ORDER BY r.date, r.price), '[]')
           FROM item_release r WHERE r.item_id = i.id
         ),
         'entries', (
@@ -196,7 +198,7 @@ async function whatUsersSee(sql: SQL) {
       SELECT jsonb_build_object(
         'collection', to_jsonb(c) - '{item_id,release_id,status,paid}'::text[] || ${paidModel("to_jsonb(c)")},
         'item', v.item,
-        'release', to_jsonb(r) - '{id,item_id}'::text[]
+        'release', to_jsonb(r) - '{id,item_id,date_precision}'::text[]
       ) AS row
       FROM collection c JOIN item_view v ON v.id = c.item_id
       LEFT JOIN item_release r ON r.id = c.release_id
@@ -214,7 +216,7 @@ async function whatUsersSee(sql: SQL) {
     SELECT jsonb_agg(row ORDER BY row::text) AS rows FROM seen
   `);
   const [orders] = await sql.unsafe<[{ rows: unknown }]>(`
-    SELECT jsonb_agg(to_jsonb(o) - '{status,paid}'::text[] || ${paidModel("to_jsonb(o)")} ORDER BY o.id)
+    SELECT jsonb_agg(to_jsonb(o) - '{status,paid,release_date_precision}'::text[] || ${paidModel("to_jsonb(o)")} ORDER BY o.id)
       AS rows
     FROM "order" o
   `);

@@ -11,7 +11,7 @@ import {
 } from "@/components/media-tile";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { useToday } from "@/hooks/use-today";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import type { ItemDestination } from "@/lib/item-destination";
 import { formatReleasePrice } from "@/lib/locale";
 import { cn } from "@/lib/utils";
@@ -39,11 +39,11 @@ export function ReleaseItemTile({
   const priced = Boolean(releasePrice);
   const price = releasePrice ?? "No price";
   const date = item.latestRelease
-    ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
+    ? formatReleaseDate(item.latestRelease.date, dateFormat)
     : "No release";
   let releaseLabel = date;
   if (item.latestRelease) {
-    const upcoming = item.latestRelease.date >= today;
+    const upcoming = item.latestRelease.date.start >= today;
     releaseLabel = `${upcoming ? "Releases" : "Released"} ${date}`;
   }
   const priceTone = priced ? "font-medium text-foreground" : "text-muted-foreground";

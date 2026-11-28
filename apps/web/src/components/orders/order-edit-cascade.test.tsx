@@ -59,7 +59,7 @@ const newShippingDay = /March 20th, 2026/;
 
 async function fromDashboard(): Promise<readonly string[] | string> {
   sent.length = 0;
-  await updateOrderDate(order.orderId, "shippingDate", "2026-03-20");
+  await updateOrderDate(order.orderId, { field: "shippingDate", date: "2026-03-20" });
   const [body = ""] = sent;
   return parseJson(z.object({ cascadeOptions: z.array(z.string()) }), body)
     .map(({ cascadeOptions }) => cascadeOptions)

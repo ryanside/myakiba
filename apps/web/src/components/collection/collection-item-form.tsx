@@ -46,7 +46,7 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import type { ReactElement } from "react";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -331,7 +331,7 @@ function CollectionItemFormContent({
                               return (
                                 <div className="flex items-center gap-3 text-sm">
                                   <span className="font-medium">
-                                    {formatDateOnlyForDisplay(displayData.date, dateFormat)}
+                                    {formatReleaseDate(displayData.date, dateFormat)}
                                   </span>
                                   {displayData.type && (
                                     <span className="text-muted-foreground">
@@ -373,7 +373,7 @@ function CollectionItemFormContent({
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-sm">
-                                  {formatDateOnlyForDisplay(release.date, dateFormat)}
+                                  {formatReleaseDate(release.date, dateFormat)}
                                 </span>
                                 {release.type && (
                                   <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

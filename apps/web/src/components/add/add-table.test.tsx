@@ -28,7 +28,7 @@ setDefaultTimeout(30_000);
 
 const YEN_RELEASE = {
   id: "00000000-0000-4000-8000-000000000001",
-  date: "2027-02-01",
+  date: { start: "2027-02-01", precision: "day" as const },
   type: null,
   barcode: null,
   price: 2_500_000,

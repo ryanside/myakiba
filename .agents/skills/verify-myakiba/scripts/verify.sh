@@ -190,8 +190,8 @@ seed_items() {
       ) as v(id, external_id, title, category, scale)
       cross join (select id from \"user\" where email = '$email') u
     on conflict do nothing;
-    insert into item_release (item_id, date, type, price, price_currency)
-      select id, current_date + 20, 'Standard', 2500000, 'JPY' from item
+    insert into item_release (item_id, date, date_precision, type, price, price_currency)
+      select id, current_date + 20, 'day', 'Standard', 2500000, 'JPY' from item
       where id like 'verifyitem_' and not exists (select 1 from item_release r where r.item_id = item.id);"
   [ "$(psql_run "select count(*) from item i join \"user\" u on u.id = i.owner_id where i.id like 'verifyitem_' and u.email = '$email'")" = 3 ] ||
     die "the seeded items belong to another account in this run. seed-items serves one account per run."

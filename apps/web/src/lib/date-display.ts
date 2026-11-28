@@ -1,6 +1,8 @@
 import { format as formatDateFns, parseISO } from "date-fns";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
+import { RELEASE_DATE_PRECISIONS } from "@myakiba/contracts/shared/constants";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 
 const DATE_PATTERN_BY_FORMAT = {
   "MM/DD/YYYY": "MM/dd/yyyy",
@@ -36,6 +38,50 @@ export function formatDateOnlyForDisplay(
   if (!date) return "Invalid date";
 
   return formatDateFns(date, DATE_PATTERN_BY_FORMAT[format]);
+}
+
+const RELEASE_PATTERN_BY_PRECISION = {
+  month: "MMM yyyy",
+  year: "yyyy",
+} satisfies Readonly<Record<Exclude<ReleaseDate["precision"], "day">, string>>;
+
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
+type ReleaseDayStyle = DateFormat | "long" | "weekday";
+
+export function formatReleaseDate(
+  value: ReleaseDate | null | undefined,
+  dayStyle: ReleaseDayStyle = "MM/DD/YYYY",
+): string {
+  if (!value) return "n/a";
+  const date = parseDateOnly(value.start);
+  if (!date) return "Invalid date";
+  if (value.precision !== "day") {
+    return formatDateFns(date, RELEASE_PATTERN_BY_PRECISION[value.precision]);
+  }
+  switch (dayStyle) {
+    case "long":
+      return formatDateFns(date, "PPP");
+    case "weekday":
+      return WEEKDAY_FORMATTER.format(date);
+    default:
+      return formatDateFns(date, DATE_PATTERN_BY_FORMAT[dayStyle]);
+  }
+}
+
+/** A month view names its month already, so a release known only to that month has no caption. */
+export function releaseGroupCaption(date: ReleaseDate): string | null {
+  return date.precision === "month" ? null : formatReleaseDate(date, "weekday");
+}
+
+const breadth = (date: ReleaseDate) => RELEASE_DATE_PRECISIONS.indexOf(date.precision);
+
+export function releaseCalendarOrder(a: ReleaseDate, b: ReleaseDate): number {
+  return a.start.localeCompare(b.start) || breadth(b) - breadth(a);
 }
 
 export function formatTimestampForDisplay(

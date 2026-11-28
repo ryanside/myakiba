@@ -330,28 +330,18 @@ function OrderFormContent(
             children={(field) => (
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Release</Label>
-                {type === "edit-order" ? (
-                  <PopoverReleaseDateCell
-                    value={field.state.value ?? null}
-                    orderId={orderData?.orderId}
-                    onSubmit={async (value) => {
-                      field.handleChange(value);
-                      return Result.ok();
-                    }}
-                    triggerVariant="outline"
-                    triggerClassName="w-full justify-start"
-                    placeholder="Select release"
-                  />
-                ) : (
-                  <DatePicker
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value ?? null}
-                    onBlur={field.handleBlur}
-                    onChange={(value) => field.handleChange(value)}
-                    placeholder="Select date"
-                  />
-                )}
+                <PopoverReleaseDateCell
+                  id={field.name}
+                  value={field.state.value ?? null}
+                  orderId={type === "edit-order" ? orderData?.orderId : undefined}
+                  onSubmit={async (value) => {
+                    field.handleChange(value);
+                    return Result.ok();
+                  }}
+                  triggerVariant="outline"
+                  triggerClassName="w-full justify-start"
+                  placeholder={type === "edit-order" ? "Select release" : "Select date"}
+                />
               </div>
             )}
           />

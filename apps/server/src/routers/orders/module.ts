@@ -33,6 +33,7 @@ import {
   orderTotal,
   orderUnpaidCosts,
 } from "@/lib/order-money";
+import { optionalReleaseDateOf, releaseDateOf, withOrderReleaseColumns } from "@/lib/release-date";
 
 const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
@@ -126,7 +127,7 @@ export const Orders = {
         orderId: order.id,
         title: order.title,
         shop: order.shop,
-        releaseDate: order.releaseDate,
+        releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
         shippingMethod: order.shippingMethod,
         orderDate: order.orderDate,
         paymentDate: order.paymentDate,
@@ -239,7 +240,7 @@ export const Orders = {
           title: order.title,
           shop: order.shop,
           orderDate: order.orderDate,
-          releaseDate: order.releaseDate,
+          releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
           paymentDate: order.paymentDate,
           shippingDate: order.shippingDate,
           collectionDate: order.collectionDate,
@@ -297,7 +298,7 @@ export const Orders = {
         shippingDate: collection.shippingDate,
         collectionDate: collection.collectionDate,
         shippingMethod: collection.shippingMethod,
-        releaseDate: item_release.date,
+        releaseDate: optionalReleaseDateOf(item_release.date, item_release.datePrecision),
         releaseType: item_release.type,
         releasePrice: item_release.price,
         releaseCurrency: item_release.priceCurrency,
@@ -342,7 +343,7 @@ export const Orders = {
       scope.log.set({ order: { id: input.orderId } });
       const releases = await scope.tx
         .select({
-          releaseDate: item_release.date,
+          releaseDate: releaseDateOf(item_release.date, item_release.datePrecision),
           itemImage: itemImageSql().as("item_image"),
         })
         .from(collection)
@@ -367,7 +368,7 @@ export const Orders = {
           status: order.status,
           paid: order.paid,
           orderDate: order.orderDate,
-          releaseDate: order.releaseDate,
+          releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
           paymentDate: order.paymentDate,
           shippingDate: order.shippingDate,
           collectionDate: order.collectionDate,
@@ -397,7 +398,7 @@ export const Orders = {
           status: collection.status,
           paid: sql<boolean>`${itemIsPaid}`,
           orderDate: collection.orderDate,
-          releaseDate: item_release.date,
+          releaseDate: optionalReleaseDateOf(item_release.date, item_release.datePrecision),
           paymentDate: collection.paymentDate,
           shippingDate: collection.shippingDate,
           collectionDate: collection.collectionDate,
@@ -432,7 +433,7 @@ export const Orders = {
       await lockOrdersToDelete(scope.tx, userId, input.orderIds);
       const [inserted] = await scope.tx
         .insert(order)
-        .values({ userId, ...input.newOrder })
+        .values({ userId, ...withOrderReleaseColumns(input.newOrder) })
         .returning();
       if (!inserted)
         panic(
@@ -476,7 +477,7 @@ export const Orders = {
       scope.log.set({ split: { itemCount: input.collectionIds.length } });
       const [inserted] = await scope.tx
         .insert(order)
-        .values({ userId, ...input.newOrder })
+        .values({ userId, ...withOrderReleaseColumns(input.newOrder) })
         .returning();
       if (!inserted)
         panic(
@@ -573,7 +574,7 @@ export const Orders = {
 
       await scope.tx
         .update(order)
-        .set({ ...input.order, updatedAt: new Date() })
+        .set({ ...withOrderReleaseColumns(input.order), updatedAt: new Date() })
         .where(selected);
 
       const changed = [...new Set(input.cascadeOptions)].filter(

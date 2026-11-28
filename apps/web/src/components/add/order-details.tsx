@@ -18,7 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRead, useRootedInfiniteRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { searches } from "@/data/resources/search";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
+import { latestReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
@@ -141,9 +142,9 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
     c.setForm({ ...form, order: { kind: "new", fields: { ...fields, ...patch } } });
   const fees = feeTotal(fields);
   // The commit moves a blank Release Date to the latest of its rows' releases, so it says so first.
-  const latestRelease = c.selectedRows
-    .map(({ row, item }) => c.releaseOf(row, item)?.date ?? "")
-    .reduce((latest, date) => (date > latest ? date : latest), "");
+  const latestRelease = latestReleaseDate(
+    c.selectedRows.map(({ row, item }) => c.releaseOf(row, item)?.date ?? null),
+  );
 
   return (
     <section aria-label="New Order" className={SECTION}>
@@ -221,9 +222,9 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             id={`${id}-release-date`}
             value={fields.releaseDate}
             placeholder={
-              latestRelease === ""
+              latestRelease === null
                 ? "Select date"
-                : formatDateOnlyForDisplay(latestRelease, c.dateFormat)
+                : formatReleaseDate(latestRelease, c.dateFormat)
             }
             onChange={(releaseDate) => set({ releaseDate })}
           />

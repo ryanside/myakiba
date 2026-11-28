@@ -6,7 +6,7 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { ROW_LINK_CLASS_NAME } from "@/components/media-tile";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import type { ExpenseOrder } from "@myakiba/contracts/expenses/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -52,9 +52,7 @@ export function ExpenseOrderRow({
           <p className="flex items-center gap-2.5 text-xs text-muted-foreground">
             <span className="truncate">{order.shop}</span>
             <span className="shrink-0">
-              {order.expenseDate
-                ? formatDateOnlyForDisplay(order.expenseDate, dateFormat)
-                : "Undated"}
+              {order.expenseDate ? formatReleaseDate(order.expenseDate, dateFormat) : "Undated"}
             </span>
           </p>
         </div>

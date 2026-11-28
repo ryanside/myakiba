@@ -3,13 +3,13 @@ import type { AnyNode } from "domhandler";
 import { parseDocument } from "htmlparser2";
 import { edit, fixture, itemId } from "../test/fixtures";
 import { parseMfcItemPage, splitContentLabel } from "./parse";
-import type { MfcEntryLink, MfcItemPage, MfcPageProblem } from "./parse";
+import type { MfcEntryLink, MfcItemPage, MfcPageProblem, MfcRelease } from "./parse";
 
 const item98777 = await fixture("item-98777.html");
 const ID_98777 = itemId(98_777);
 
-const RELEASE_98777 = {
-  date: "2018-11-15",
+const RELEASE_98777: MfcRelease = {
+  date: { start: "2018-11-15", precision: "day" },
   type: "Standard (Japan)",
   price: 1_350_000,
   priceCurrency: "JPY",
@@ -145,42 +145,42 @@ describe("parseMfcItemPage on captured signed-out pages", () => {
     const result = parseMfcItemPage(await fixture("item-581731-signed-out.html"), itemId(581_731));
     expect(result.isOk() && result.value.releases).toEqual([
       {
-        date: "2024-02-07",
+        date: { start: "2024-02-07", precision: "day" },
         type: "Limited + Exclusive (Japan) «Good Smile Online Shop»",
         price: 563_600,
         priceCurrency: "JPY",
         barcode: "4580590174269",
       },
       {
-        date: "2023-10-02",
+        date: { start: "2023-10-02", precision: "day" },
         type: "Limited (China) «Wonder Festival 2022-2023 [Shanghai]»",
         price: 35_000,
         priceCurrency: "CNY",
         barcode: null,
       },
       {
-        date: "2023-09-01",
+        date: { start: "2023-09-01", precision: "day" },
         type: "Limited (Japan) «Magical Mirai 2023 TOKYO»",
         price: 563_600,
         priceCurrency: "JPY",
         barcode: "4580590174269",
       },
       {
-        date: "2023-08-11",
+        date: { start: "2023-08-11", precision: "day" },
         type: "Limited (Japan) «Magica Mirai 2023 OSAKA»",
         price: 563_600,
         priceCurrency: "JPY",
         barcode: "4580590174269",
       },
       {
-        date: "2018-02-08",
+        date: { start: "2018-02-08", precision: "day" },
         type: "Limited + Exclusive (Japan) «Good Smile Online Shop»",
         price: 463_000,
         priceCurrency: "JPY",
         barcode: "4580416903530",
       },
       {
-        date: "2017-09-01",
+        date: { start: "2017-09-01", precision: "day" },
         type: "Limited (Japan) «Magical Mirai 2017»",
         price: 463_000,
         priceCurrency: "JPY",
@@ -194,7 +194,7 @@ describe("parseMfcItemPage on captured signed-out pages", () => {
     const result = parseMfcItemPage(await fixture("item-10756-signed-out.html"), itemId(10_756));
     expect(result.isOk() && result.value.releases).toEqual([
       {
-        date: "2000-01-01",
+        date: { start: "2000-01-01", precision: "year" },
         type: "Prize (Japan)",
         price: 0,
         priceCurrency: "JPY",
@@ -648,6 +648,21 @@ describe("parseMfcItemPage stored values", () => {
 });
 
 describe("parseMfcItemPage release dates", () => {
+  test.each([
+    ["11/15/2018", "2018-11-15", "day"],
+    ["11/2018", "2018-11-01", "month"],
+    ["2018", "2018-01-01", "year"],
+  ] as const)(
+    "a release MFC dates %p is stored as %p with %p precision",
+    (printed, start, precision) => {
+      const page = parsedPage(
+        edit(item98777, 'class="time">11/15/2018</a>', `class="time">${printed}</a>`),
+      );
+      expect(page.releases).toEqual([{ ...RELEASE_98777, date: { start, precision } }]);
+      expect(page.warnings).toEqual([]);
+    },
+  );
+
   test("a release in the year 0000 is skipped and warns", () => {
     const page = parsedPage(
       edit(item98777, 'class="time">11/15/2018</a>', 'class="time">11/15/0000</a>'),
@@ -725,7 +740,12 @@ describe("parseMfcItemPage release prices", () => {
       ),
     );
     expect(page.releases).toEqual([
-      { ...RELEASE_98777, date: "2018-01-01", price: 0, barcode: null },
+      {
+        ...RELEASE_98777,
+        date: { start: "2018-01-01", precision: "year" },
+        price: 0,
+        barcode: null,
+      },
     ]);
   });
 

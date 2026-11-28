@@ -4,6 +4,7 @@ import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from
 import { ownershipMismatches } from "../../test/ownership";
 import { migratePaid } from "../paid/migrate";
 import { migrateOrderPaid } from "../paid/order-paid";
+import { migrateReleasePrecision } from "../release-precision/migrate";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
@@ -36,6 +37,7 @@ test(
     await migrateItemOwnership(sql);
     await migratePaid(sql);
     await migrateOrderPaid(sql);
+    await migrateReleasePrecision(sql);
     const before = await snapshot(sql);
     expect(before.triggers.map((trigger) => trigger.tgname)).toEqual(OWNER_GUARDS);
     expect(await pushSchema(url)).toMatchObject({
@@ -71,6 +73,7 @@ test(
     const seeded = await databases.legacyTemplate(seedSharedItems);
     const legacy = await databases.create(seeded);
     await migrateItemOwnership(legacy.sql);
+    await migrateReleasePrecision(legacy.sql);
     expect(await catalog(legacy.url, legacy.sql)).toEqual(fresh);
   },
   PUSH_TIMEOUT,

@@ -29,6 +29,8 @@ export const ENTRY_CATEGORIES = [
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
 
+export const RELEASE_DATE_PRECISIONS = ["day", "month", "year"] as const;
+
 export const CATEGORIES = [
   "Prepainted",
   "Action/Dolls",

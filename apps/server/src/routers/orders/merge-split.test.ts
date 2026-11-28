@@ -81,7 +81,7 @@ const newOrder = {
   title: "Combined shipment",
   shop: "AmiAmi",
   orderDate: "2026-01-05",
-  releaseDate: "2026-03-01",
+  releaseDate: { start: "2026-03-01", precision: "month" },
   paymentDate: "2026-02-20",
   shippingDate: "2026-03-02",
   collectionDate: "2026-03-09",
@@ -156,6 +156,8 @@ describe("merge and split accept only the fields a user edits", () => {
     expect(orders.filter((row) => !["order-1", "order-2"].includes(row.id))).toEqual([
       {
         ...newOrder,
+        releaseDate: "2026-03-01",
+        releaseDatePrecision: "month",
         id: expect.any(String),
         userId,
         createdAt: expect.any(Date),
@@ -328,7 +330,7 @@ describe("a merge starts from its source Orders", () => {
         status: "Shipped",
         paid: true,
         orderDate: "2026-01-05",
-        releaseDate: "2026-04-01",
+        releaseDate: { start: "2026-04-01", precision: "day" },
         paymentDate: "2026-01-20",
         shippingDate: "2026-03-05",
         collectionDate: "2026-03-10",
@@ -464,6 +466,7 @@ describe("a New Order starts from the selected items", () => {
       id: "00000000-0000-4000-8000-000000000001",
       itemId: "item-1",
       date: "2026-05-01",
+      datePrecision: "day",
     });
     await db
       .update(collection)
@@ -477,7 +480,7 @@ describe("a New Order starts from the selected items", () => {
         status: "Shipped",
         paid: true,
         orderDate: "2025-12-30",
-        releaseDate: "2026-05-01",
+        releaseDate: { start: "2026-05-01", precision: "day" },
         paymentDate: "2026-01-21",
         shippingDate: "2026-04-03",
         collectionDate: "2026-02-09",

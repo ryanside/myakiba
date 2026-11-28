@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ControlTooltip } from "@/components/ui/control-tooltip";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { OrderForm } from "@/components/orders/order-form";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { PaymentBadge } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
@@ -125,7 +125,7 @@ function LoadedOrderHero({
               </span>
               {order.releaseDate ? (
                 <span className="animate-data-in inline-block">
-                  Release {formatDateOnlyForDisplay(order.releaseDate, dateFormat)}
+                  Release {formatReleaseDate(order.releaseDate, dateFormat)}
                 </span>
               ) : null}
             </div>

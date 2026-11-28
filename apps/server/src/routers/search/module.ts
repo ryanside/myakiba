@@ -28,6 +28,7 @@ import {
   SUGGESTED_ENTRY_LIMIT,
 } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { releaseDateOf } from "@/lib/release-date";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
 
@@ -114,6 +115,7 @@ export const Search = {
       const latestRelease = scope.tx
         .select({
           date: item_release.date,
+          released: releaseDateOf(item_release.date, item_release.datePrecision).as("released"),
           price: item_release.price,
           priceCurrency: item_release.priceCurrency,
         })
@@ -206,7 +208,7 @@ export const Search = {
         title: item.title,
         image: itemImageSql().as("image"),
         category: item.category,
-        releaseDate: latestRelease.date,
+        releaseDate: latestRelease.released,
         releasePrice: latestRelease.price,
         releasePriceCurrency: latestRelease.priceCurrency,
         ...itemSummaryColumns(scope.tx, scope.viewer.userId),

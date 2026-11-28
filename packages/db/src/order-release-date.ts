@@ -1,6 +1,8 @@
-import { and, eq, inArray, isNotNull, isNull, lt, max, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { collection, item_release, order } from "./schema/figure";
 import type { Tx } from "./tx";
+
+const precisionRank = sql`CASE ${item_release.datePrecision} WHEN 'year' THEN 2 WHEN 'month' THEN 1 ELSE 0 END`;
 
 export async function advanceOrderReleaseDatesForCollectionItems(
   tx: Tx,
@@ -14,20 +16,22 @@ export async function advanceOrderReleaseDatesForCollectionItems(
     .where(and(inArray(collection.id, [...collectionItemIds]), isNotNull(collection.orderId)));
 
   const latestReleaseByOrder = tx
-    .select({
+    .selectDistinctOn([collection.orderId], {
       orderId: collection.orderId,
-      releaseDate: max(item_release.date).as("latest_selected_release_date"),
+      releaseDate: sql<string>`${item_release.date}`.as("latest_selected_release_date"),
+      precision: sql<string>`${item_release.datePrecision}`.as("latest_selected_release_precision"),
     })
     .from(collection)
     .innerJoin(item_release, eq(collection.releaseId, item_release.id))
     .where(inArray(collection.orderId, affectedOrderIds))
-    .groupBy(collection.orderId)
+    .orderBy(collection.orderId, desc(item_release.date), desc(precisionRank))
     .as("latest_release_by_order");
 
   await tx
     .update(order)
     .set({
       releaseDate: sql`${latestReleaseByOrder.releaseDate}`,
+      releaseDatePrecision: sql`${latestReleaseByOrder.precision}`,
       updatedAt: new Date(),
     })
     .from(latestReleaseByOrder)

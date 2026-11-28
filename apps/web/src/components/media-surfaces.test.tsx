@@ -64,7 +64,11 @@ const wishlistItem = {
   category: "Prepainted",
   position: 0,
   createdAt: "2026-01-01T00:00:00.000Z",
-  latestRelease: { date: "2026-01-02", price: 12_000, priceCurrency: "JPY" },
+  latestRelease: {
+    date: { start: "2026-01-02", precision: "day" },
+    price: 12_000,
+    priceCurrency: "JPY",
+  },
 } satisfies ComponentProps<typeof WishlistItemGrid>["items"][number];
 
 const members = [
@@ -123,7 +127,7 @@ const order = {
 
 const calendarItem = {
   releaseId: "release-1",
-  releaseDate: "2026-01-02",
+  releaseDate: { start: "2026-01-02", precision: "day" },
   itemId: "item-1",
   itemExternalId: 123,
   title: "Hatsune Miku",
@@ -141,7 +145,7 @@ const calendarOrder = {
   itemCount: 2,
   status: "Ordered",
   paid: true,
-  releaseDate: "2026-01-02",
+  releaseDate: { start: "2026-01-02", precision: "day" },
   total: 12_000,
 } satisfies CalendarOrder;
 
@@ -151,7 +155,7 @@ const expenseOrder = {
   orderId: "order-1",
   title: "Miku order",
   shop: "AmiAmi",
-  expenseDate: "2026-01-02",
+  expenseDate: { start: "2026-01-02", precision: "day" },
   images: [image],
   feeSpend: 1000,
   totalSpend: 12_000,
