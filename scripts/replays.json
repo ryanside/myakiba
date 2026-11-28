@@ -5889,6 +5889,14 @@
       "fixed": [
         "a saved layout that hid the Title column still shows it, with its link, and the Columns picker never offers it"
       ]
+    },
+    {
+      "fix": "bb4b1536e7cacb82a3597c50eb55e1aeb5d554cd",
+      "bug": "A commit whose answer was lost took its Item off the Wishlist, so after a reload the page no longer offered the removal, sent other choices with a new commitId, and wrote a second Order.",
+      "test": "apps/web/src/components/add/add-retry.test.tsx",
+      "fixed": [
+        "a reload after a lost commit that took an Item off the Wishlist sends its commitId and choices again"
+      ]
     }
   ],
   "lint": [
