@@ -159,7 +159,11 @@ test("an answered refresh clears its deadline and uploads the page once", async 
   globalThis.fetch = Object.assign(
     async () => {
       uploads += 1;
-      return Response.json({ saved: "refreshed" });
+      return Response.json({
+        saved: "refreshed",
+        picture: "absent",
+        selections: { moved: 0, cleared: 0 },
+      });
     },
     { preconnect: realFetch.preconnect },
   );
