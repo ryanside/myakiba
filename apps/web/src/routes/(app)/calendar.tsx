@@ -18,18 +18,17 @@ import { shownMessageOf } from "@/data/api";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
-// Tailwind's `xl`, where the page puts the release list beside the day grid instead of under it.
-const DAY_GRID_QUERY = "(min-width: 80rem)";
+const TAILWIND_XL_QUERY = "(min-width: 80rem)";
 const NO_DAYS: ReadonlySet<number> = new Set();
 
 function subscribeToDayGridWidth(onStoreChange: () => void): () => void {
-  const mediaQuery = window.matchMedia(DAY_GRID_QUERY);
+  const mediaQuery = window.matchMedia(TAILWIND_XL_QUERY);
   mediaQuery.addEventListener("change", onStoreChange);
   return () => mediaQuery.removeEventListener("change", onStoreChange);
 }
 
 function fitsDayGrid(): boolean {
-  return window.matchMedia(DAY_GRID_QUERY).matches;
+  return window.matchMedia(TAILWIND_XL_QUERY).matches;
 }
 
 function calendarViewOf(search: CalendarSearch, now: Date): CalendarQuery {
