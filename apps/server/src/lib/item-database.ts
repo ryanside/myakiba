@@ -331,7 +331,6 @@ async function applyReleases(
       .returning({ id: collection.id });
     moved.push(...remapped.map(({ id }) => id));
   }
-  await advanceOrderReleaseDatesForCollectionItems(tx, moved);
 
   const movedFrom = new Set(plan.moves.map(({ from }) => from));
   const unmatched = plan.staleReleaseIds.filter((id) => !movedFrom.has(id));
@@ -349,6 +348,7 @@ async function applyReleases(
             ),
           )
           .returning({ id: collection.id });
+  await advanceOrderReleaseDatesForCollectionItems(tx, moved);
 
   if (plan.staleReleaseIds.length > 0) {
     await tx
