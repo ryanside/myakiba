@@ -73,6 +73,11 @@ export function formatReleaseDate(
   }
 }
 
+/** A month view names its month already, so a release known only to that month has no caption. */
+export function releaseGroupCaption(date: ReleaseDate): string | null {
+  return date.precision === "month" ? null : formatReleaseDate(date, "weekday");
+}
+
 const breadth = (date: ReleaseDate) => RELEASE_DATE_PRECISIONS.indexOf(date.precision);
 
 export function releaseCalendarOrder(a: ReleaseDate, b: ReleaseDate): number {

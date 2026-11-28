@@ -10,7 +10,7 @@ import { useInvalidateRead, useRead } from "@/data/client";
 import { calendar, monthOf } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
-import { formatReleaseDate, releaseCalendarOrder } from "@/lib/date-display";
+import { releaseCalendarOrder, releaseGroupCaption } from "@/lib/date-display";
 import { releaseDateKey } from "@myakiba/contracts/shared/release-date";
 import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { shownMessageOf } from "@/data/api";
@@ -202,13 +202,14 @@ function DateGroup({
   readonly items: readonly ReleaseItem[];
   readonly currency: Currency;
 }): React.ReactNode {
+  const caption = releaseGroupCaption(date);
   return (
     <div>
-      <div className="flex items-center gap-2 px-(--frame-panel-p) pb-1">
-        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-          {formatReleaseDate(date, "weekday")}
-        </span>
-      </div>
+      {caption === null ? null : (
+        <div className="flex items-center gap-2 px-(--frame-panel-p) pb-1">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">{caption}</span>
+        </div>
+      )}
       <div className="px-(--frame-panel-p)">
         {items.map((item) => (
           <CalendarItemRow key={item.releaseId} item={item} currency={currency} />

@@ -64,10 +64,13 @@ describe("a release known only to its month", () => {
   };
   const withMonthOnly: CalendarResponse = { ...releases, items: [...releases.items, monthOnly] };
 
-  const headers = () =>
-    [...document.querySelectorAll("ol > li > div:first-child")].map((node) => node.textContent);
+  const groups = () =>
+    [...document.querySelectorAll("ol > li")].map((group) => ({
+      caption: group.querySelector(":scope > div")?.textContent ?? null,
+      first: group.querySelector("ul > li")?.textContent?.includes("Figure Month") ?? false,
+    }));
 
-  test("heads the month under Nov 2026, apart from the release on the 1st", () => {
+  test("leads the month with no caption, apart from the release on the 1st", () => {
     render(
       <CalendarReleasePanel
         data={withMonthOnly}
@@ -79,7 +82,12 @@ describe("a release known only to its month", () => {
       />,
     );
 
-    expect(headers()).toEqual(["Nov 2026", "Sun, Nov 1", "Mon, Nov 2", "Tue, Nov 3"]);
+    expect(groups()).toEqual([
+      { caption: null, first: true },
+      { caption: "Sun, Nov 1", first: false },
+      { caption: "Mon, Nov 2", first: false },
+      { caption: "Tue, Nov 3", first: false },
+    ]);
   });
 
   test("falls on no day the user picks", () => {

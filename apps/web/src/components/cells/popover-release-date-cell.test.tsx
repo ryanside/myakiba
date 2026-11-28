@@ -121,17 +121,28 @@ test("a month-only release and a release on the 1st of that month are two choice
   expect(trigger().textContent).toContain("Select release");
 });
 
+const markedDays = (grid: HTMLElement) =>
+  [...grid.querySelectorAll('[data-selected-single="true"]')].map((day) => day.textContent);
+
 test("a month-only date marks no day on the calendar, and opens on its month", async () => {
   const user = userEvent.setup();
   const { trigger } = renderCell(JUNE);
 
   await user.click(trigger());
   const grid = await screen.findByRole("grid");
-  expect(within(grid).queryAllByRole("button", { pressed: true })).toEqual([]);
-  expect(screen.getByRole("grid").getAttribute("aria-label") ?? "").toContain("June 2026");
+  expect(markedDays(grid)).toEqual([]);
+  expect(grid.getAttribute("aria-label") ?? "").toContain("June 2026");
 });
 
-test("the field takes its label's name, as the date field it replaced in New Order and Merge did", () => {
+test("a day-precise date marks its day on the calendar", async () => {
+  const user = userEvent.setup();
+  const { trigger } = renderCell(JUNE_FIRST);
+
+  await user.click(trigger());
+  expect(markedDays(await screen.findByRole("grid"))).toEqual(["1"]);
+});
+
+test("the field takes its label's name, as the date field it replaced in Merge did", () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <label htmlFor="release">Release</label>

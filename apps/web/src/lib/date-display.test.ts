@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
-import { formatReleaseDate, releaseCalendarOrder } from "./date-display";
+import { formatReleaseDate, releaseCalendarOrder, releaseGroupCaption } from "./date-display";
 
 const DAY: ReleaseDate = { start: "2026-06-18", precision: "day" };
 const MONTH: ReleaseDate = { start: "2026-06-01", precision: "month" };
@@ -44,4 +44,10 @@ test("the calendar puts a release known only to its month or year at the head of
     DAY,
     julyFirst,
   ]);
+});
+
+test("a calendar group caption names a day or a year, and no month the page already names", () => {
+  expect(releaseGroupCaption(DAY)).toBe("Thu, Jun 18");
+  expect(releaseGroupCaption(MONTH)).toBeNull();
+  expect(releaseGroupCaption(YEAR)).toBe("2026");
 });

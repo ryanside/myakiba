@@ -6,7 +6,7 @@ import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import { CalendarOrderRow } from "@/components/calendar/calendar-order-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatReleaseDate, releaseCalendarOrder } from "@/lib/date-display";
+import { releaseCalendarOrder, releaseGroupCaption } from "@/lib/date-display";
 import { releaseDateKey } from "@myakiba/contracts/shared/release-date";
 import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import type { CalendarResponse } from "@/queries/calendar";
@@ -64,24 +64,27 @@ function CalendarReleaseList<TItem>({
     <ol className="flex flex-col gap-5">
       {groups.map(([key, { date, items: dayItems }]) => {
         const isSelected = isFilteringByDay && onSelectedDay(date, selectedDays);
+        const caption = releaseGroupCaption(date);
 
         return (
           <li key={key} className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2 pb-1">
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums",
-                  isSelected
-                    ? "rounded-md bg-primary/10 px-2 py-0.5 text-primary ring-1 ring-inset ring-primary/30"
-                    : "text-muted-foreground",
-                )}
-              >
-                {isSelected && (
-                  <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
-                )}
-                {formatReleaseDate(date, "weekday")}
-              </span>
-            </div>
+            {caption === null ? null : (
+              <div className="flex items-center gap-2 pb-1">
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums",
+                    isSelected
+                      ? "rounded-md bg-primary/10 px-2 py-0.5 text-primary ring-1 ring-inset ring-primary/30"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {isSelected && (
+                    <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
+                  )}
+                  {caption}
+                </span>
+              </div>
+            )}
             <ul>
               {dayItems.map((item) => (
                 <li key={getKey(item)}>{renderRow(item)}</li>
