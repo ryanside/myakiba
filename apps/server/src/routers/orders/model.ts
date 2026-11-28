@@ -12,13 +12,20 @@ import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limi
 const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
 const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STATUSES);
 
-export const ordersQuerySchema = searchSchema.extend({
-  ...pageFields(orderSearchSortSchema, "createdAt"),
-  shop: commaSeparatedStringArraySchema,
-  shipMethod: commaSeparatedShipMethodArray,
-  status: commaSeparatedStatusArray,
-  paid: z.stringbool().optional(),
-});
+export const ordersQuerySchema = searchSchema
+  .extend({
+    ...pageFields(orderSearchSortSchema, "createdAt"),
+    shop: commaSeparatedStringArraySchema,
+    shipMethod: commaSeparatedShipMethodArray,
+    status: commaSeparatedStatusArray,
+    paid: z.stringbool().optional(),
+    overdue: z.stringbool().optional(),
+    today: z.iso.date().optional(),
+  })
+  .refine(({ overdue, today }) => overdue !== true || today !== undefined, {
+    message: "Overdue needs today's date",
+    path: ["today"],
+  });
 
 export const orderIdParamSchema = z.object({ orderId: z.string().max(WRITE_LIMITS.id) });
 

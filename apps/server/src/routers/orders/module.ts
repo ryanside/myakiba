@@ -33,7 +33,12 @@ import {
   orderTotal,
   orderUnpaidCosts,
 } from "@/lib/order-money";
-import { optionalReleaseDateOf, releaseDateOf, withOrderReleaseColumns } from "@/lib/release-date";
+import {
+  optionalReleaseDateOf,
+  overdueFromOf,
+  releaseDateOf,
+  withOrderReleaseColumns,
+} from "@/lib/release-date";
 
 const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
@@ -58,6 +63,12 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.colDateEnd ? lte(order.collectionDate, filters.colDateEnd) : undefined,
     filters.status ? inArray(order.status, filters.status) : undefined,
     filters.paid === undefined ? undefined : eq(order.paid, filters.paid),
+    filters.overdue && filters.today
+      ? and(
+          eq(order.status, "Ordered"),
+          lte(overdueFromOf(order.releaseDate, order.releaseDatePrecision), filters.today),
+        )
+      : undefined,
     filters.shippingFeeMin === undefined
       ? undefined
       : gte(order.shippingFee, filters.shippingFeeMin),

@@ -20,7 +20,9 @@ import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, ApiFailure>> {
+export type OrdersListInput = OrderFilters & { readonly today?: string };
+
+export function getOrders(filters: OrdersListInput): Promise<Result<OrdersPage, ApiFailure>> {
   const queryParams = {
     limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
@@ -43,6 +45,8 @@ export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, Api
     colDateEnd: filters.colDateEnd,
     status: filters.status,
     paid: filters.paid,
+    overdue: filters.overdue,
+    today: filters.today,
     totalMin: filters.totalMin,
     totalMax: filters.totalMax,
     paidItemsMin: filters.paidItemsMin,

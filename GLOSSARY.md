@@ -99,8 +99,12 @@ Moving the Order Items of several Orders into one new Order and deleting those O
 _Avoid_: Combine
 
 **Order Release Date**:
-The date the whole Order is expected to release. Like an Item Release's date, it can be known only to its month or year: a date copied from an Item Release is known as far as that release's, and a date picked on the calendar is known to the day. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
+The date the whole Order is expected to release. Like an Item Release's date, it can be known only to its month or year: a date copied from an Item Release is known as far as that release's, and a date picked on the calendar is known to the day. Choosing a month stores the Order Release Date known to the month. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
+
+**Overdue Order**:
+An Order whose Acquisition Status is Ordered and whose Order Release Date period has ended by the viewer's local date: from the 1st of the next month when the date is known to the day or month, or from January 1 of the next year when known only to its year. An Order with no Order Release Date, or one that is Shipped or Owned, is never an Overdue Order. Overdue describes an Order, not its Order Items.
+_Avoid_: Delayed Order, Overdue Item
 
 **Cascade to Items**:
 Copying an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. An Order edit, from Edit Order, the Orders table or the Dashboard board, copies each of these details it changes, and only to the Order Items that still held the Order's old value, so a detail set on one Order Item stays. Edit Order with "Also update matching items in this order" unticked writes the Order alone. Merging Orders and moving Order Items to a new Order copy nothing, so every moved Order Item keeps its own details, and an Order fill copies to every Order Item. Paid is not copied, since an Order Item has no Paid of its own.

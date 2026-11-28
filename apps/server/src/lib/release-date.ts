@@ -9,6 +9,10 @@ export function releaseDateOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<ReleaseDate>`${pair(start, precision)}`;
 }
 
+export function overdueFromOf(start: AnyPgColumn, precision: AnyPgColumn) {
+  return sql<string>`(date_trunc(CASE ${precision} WHEN 'year' THEN 'year' ELSE 'month' END, ${start}) + CASE ${precision} WHEN 'year' THEN interval '1 year' ELSE interval '1 month' END)::date`;
+}
+
 export function optionalReleaseDateOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<ReleaseDate | null>`CASE WHEN ${start} IS NULL THEN NULL ELSE ${pair(start, precision)} END`;
 }
