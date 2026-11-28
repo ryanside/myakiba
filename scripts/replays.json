@@ -3680,7 +3680,9 @@
       "fix": "e75d55dd86a4dbc9a6bba255992d995710400eb1",
       "bug": "an unanswered Add commit's commitId lived in a ref, so a reload mid-commit and the same click sent a new commitId and the server wrote the Collection rows or the Order twice",
       "test": "apps/web/src/components/add/add-retry.test.tsx",
-      "fixed": ["a reload mid-commit, then the same click, sends the same commitId"]
+      "fixed": ["a reload mid-commit, then the same click, sends the same commitId"],
+      "testAt": "e75d55dd86a4dbc9a6bba255992d995710400eb1",
+      "reason": "A later PR added Wishlist retry tests to this file that use a box this fix predates, and one flips here too, so its test file stays at the fix."
     },
     {
       "fix": "3f2b571a4573b13a08dcc8284cf68d07bbf3729e",
@@ -5905,7 +5907,9 @@
       "bug": "An Add commit to an Order carried the Item's live Wishlist membership, so a retry after a lost answer, with the Item put on the Wishlist meanwhile, sent other choices under a new commitId and wrote a second Order.",
       "test": "apps/web/src/components/add/add-retry.test.tsx",
       "fixed": [
-        "a reload after a lost commit whose Item has since joined the Wishlist sends its commitId and choices again"
+        "a reload after a lost commit whose Item has since joined the Wishlist sends its commitId and choices again",
+        "a reload after a lost commit that took an Item off the Wishlist sends its commitId and choices again",
+        "after a lost commit, unticking Remove from Wishlist starts a new commitId"
       ]
     }
   ],
