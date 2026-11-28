@@ -241,7 +241,7 @@ async function itemRows() {
   return { item: row, links, releases };
 }
 
-async function collectEveryRelease(itemId: string, releaseDate: string) {
+async function collectEveryRelease(itemId: string, releaseDate: string | null) {
   const [placed] = await db
     .insert(order)
     .values({ userId, title: "Preorder", releaseDate })
@@ -303,6 +303,18 @@ const derivedSlippedBesideLimitedPage = edit(
   ">12/20/2018<",
 );
 const derivedSlippedPage = edit(page98777, ">11/15/2018<", ">12/20/2018<");
+const secondStandard = (date: string) =>
+  standardRelease.replace("11/15/2018", date).replace("4582292601715", "4582292609998");
+const derivedTwoStandardsPage = edit(
+  page98777,
+  materials,
+  secondStandard("12/15/2018") + materials,
+);
+const derivedTwoStandardsCrossedPage = edit(
+  edit(page98777, ">11/15/2018<", ">12/20/2018<"),
+  materials,
+  secondStandard("11/20/2018") + materials,
+);
 const derivedTwoNearStandardsPage = edit(
   edit(page98777, ">11/15/2018<", ">11/01/2018<"),
   materials,
@@ -595,6 +607,26 @@ describe("an Item Refresh keeps each selection on the release it became", () => 
     expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
 
     expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
+  });
+
+  test("a slipped release beside a removed one advances a blank order date to the slipped release", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    const orderId = await collectEveryRelease(itemId, null);
+
+    expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
+
+    expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
+  });
+
+  test("two releases whose barcodes differ clear their selections when their dates cross", async () => {
+    const itemId = await upload(derivedTwoStandardsPage);
+    const orderId = await collectEveryRelease(itemId, "2018-11-15");
+    const before = await selectedDates();
+
+    expect(await resync(derivedTwoStandardsCrossedPage)).toEqual(answered(0, 2));
+
+    expect(await selectedDates()).toEqual(selectionsAfterMoves(before, {}));
+    expect(await orderReleaseDate(orderId)).toBe("2018-11-15");
   });
 
   test("a release with two equally near successors clears its selection and leaves the order's date", async () => {

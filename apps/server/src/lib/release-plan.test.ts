@@ -7,6 +7,7 @@ const keyOnlyRelease = (id: string, key: string) => ({
   date: "2026-06-01",
   type: "Standard",
   priceCurrency: "JPY",
+  barcode: null,
 });
 
 const plan = (storedKeys: string[], pageKeys: string[]) =>
@@ -90,14 +91,16 @@ type Release = {
   readonly date: string;
   readonly type?: string;
   readonly currency?: string;
+  readonly barcode?: string;
 };
 
-const release = ({ name, date, type = "Standard", currency = "JPY" }: Release) => ({
+const release = ({ name, date, type = "Standard", currency = "JPY", barcode }: Release) => ({
   id: name,
   key: JSON.stringify([date, type, currency, name]),
   date,
   type,
   priceCurrency: currency,
+  barcode: barcode ?? null,
 });
 
 const match = (stored: Release[], page: Release[]) =>
@@ -200,6 +203,42 @@ describe("buildReleasePlan matches changed releases by type, currency and neares
         ],
       ),
     ).toEqual([{ from: "standard", to: "standard slipped" }]);
+  });
+
+  test("two releases whose barcodes differ are not paired even when their dates cross", () => {
+    expect(
+      match(
+        [
+          { name: "a", date: "2026-06-01", barcode: "4580000000001" },
+          { name: "b", date: "2026-06-20", barcode: "4580000000002" },
+        ],
+        [
+          { name: "b moved", date: "2026-06-02", barcode: "4580000000002" },
+          { name: "a moved", date: "2026-06-21", barcode: "4580000000001" },
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  test("releases with the same barcode, or a barcode on one side only, still pair by date", () => {
+    expect(
+      match(
+        [
+          { name: "same", date: "2026-06-01", barcode: "4580000000001" },
+          { name: "dropped", date: "2026-09-01", barcode: "4580000000002" },
+          { name: "none", date: "2026-12-01" },
+        ],
+        [
+          { name: "same slipped", date: "2026-07-01", barcode: "4580000000001" },
+          { name: "dropped slipped", date: "2026-10-01" },
+          { name: "none slipped", date: "2027-01-01" },
+        ],
+      ),
+    ).toEqual([
+      { from: "same", to: "same slipped" },
+      { from: "dropped", to: "dropped slipped" },
+      { from: "none", to: "none slipped" },
+    ]);
   });
 
   test("one changed release still moves to the one new release whatever changed", () => {
