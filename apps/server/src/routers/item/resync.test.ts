@@ -588,6 +588,15 @@ describe("an Item Refresh keeps each selection on the release it became", () => 
     expect(await orderReleaseDate(orderId)).toBe("2019-03-20");
   });
 
+  test("a slipped release beside a removed one advances an earlier order date to the slipped release, not the removed one", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    const orderId = await collectEveryRelease(itemId, "2018-11-15");
+
+    expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
+
+    expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
+  });
+
   test("a release with two equally near successors clears its selection and leaves the order's date", async () => {
     const itemId = await upload(page98777);
     const orderId = await collectEveryRelease(itemId, "2018-11-15");
