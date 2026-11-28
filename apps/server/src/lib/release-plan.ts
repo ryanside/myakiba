@@ -5,6 +5,7 @@ type PlannedRelease = {
   readonly date: string;
   readonly type: string | null;
   readonly priceCurrency: string | null;
+  readonly barcode: string | null;
 };
 
 type Move = { readonly from: string; readonly to: string };
@@ -15,6 +16,9 @@ export type ReleasePlan = {
   readonly addedReleaseIds: readonly string[];
   readonly moves: readonly Move[];
 };
+
+const barcodesDiffer = (a: PlannedRelease, b: PlannedRelease) =>
+  Boolean(a.barcode) && Boolean(b.barcode) && a.barcode !== b.barcode;
 
 const apart = (a: PlannedRelease, b: PlannedRelease) =>
   Math.abs(Date.parse(a.date) - Date.parse(b.date));
@@ -44,7 +48,11 @@ function matchReleases(stale: readonly PlannedRelease[], added: readonly Planned
   }
   return stale.flatMap((release): Move[] => {
     const successor = soleNearestOfSameTypeAndCurrency(release, added);
-    if (successor === undefined || soleNearestOfSameTypeAndCurrency(successor, stale) !== release)
+    if (
+      successor === undefined ||
+      soleNearestOfSameTypeAndCurrency(successor, stale) !== release ||
+      barcodesDiffer(release, successor)
+    )
       return [];
     return [{ from: release.id, to: successor.id }];
   });

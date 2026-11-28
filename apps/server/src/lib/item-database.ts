@@ -285,6 +285,7 @@ async function storedReleases(tx: Tx, itemId: string) {
     date: row.date.start,
     type: row.type,
     priceCurrency: row.priceCurrency,
+    barcode: row.barcode,
   }));
 }
 
@@ -388,6 +389,7 @@ export async function refreshItem(
     date: row.date,
     type: row.type,
     priceCurrency: row.priceCurrency,
+    barcode: row.barcode,
   }));
   const current: Snapshot = {
     fields,
