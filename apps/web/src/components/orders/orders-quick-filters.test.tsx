@@ -78,7 +78,14 @@ test("Releasing this month lights Ordered and Shipped with it, and not All", () 
 });
 
 test("next month from the Filters dialog does not light Releasing this month", () => {
-  filters = { releaseMonth: "next" };
+  filters = { status: ["Ordered", "Shipped"], releaseMonth: "next" };
+  render(<OrdersQuickFilters />);
+
+  expect(pressed(RELEASING)).toBe(false);
+});
+
+test("Ordered and Shipped without a month leave Releasing this month dark", () => {
+  filters = { status: ["Ordered", "Shipped"] };
   render(<OrdersQuickFilters />);
 
   expect(pressed(RELEASING)).toBe(false);
