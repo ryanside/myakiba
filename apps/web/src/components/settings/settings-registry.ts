@@ -160,7 +160,7 @@ export const SETTINGS = {
   "shop-merges": {
     section: "shops",
     title: "Suggested merges",
-    description: "Shops whose names differ only in case or spacing.",
+    description: "",
     keywords: ["merge", "duplicate", "spelling", "typo", "combine", "store", "seller", "tidy"],
   },
   "shop-list": {

@@ -122,6 +122,20 @@ describe("shopVariantGroups", () => {
     ]);
   });
 
+  test("groups a spelling with a trailing .com or full-width letters, but not a www. or a country domain", () => {
+    const terms = [
+      term("AmiAmi", 3, 1),
+      term("amiami.com", 1, 1),
+      term("ＡｍｉＡｍｉ", 1, 1),
+      term("www.amiami.com", 1, 1),
+      term("amiami.co.jp", 1, 1),
+    ];
+
+    expect(shopVariantGroups(terms).map((group) => group.map((shop) => shop.value))).toEqual([
+      ["AmiAmi", "amiami.com", "ＡｍｉＡｍｉ"],
+    ]);
+  });
+
   test("leaves out a shop with one spelling", () => {
     expect(shopVariantGroups([term("AmiAmi", 3, 1), term("Ami", 1, 1)])).toEqual([]);
   });

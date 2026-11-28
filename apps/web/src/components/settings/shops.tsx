@@ -160,9 +160,11 @@ function ShopsGroup({
   return (
     <SettingsGroup title={title} variant="cards">
       <div {...anchor} className={cn("-mx-4 flex flex-col", anchorClassName)}>
-        <p className="px-4 pb-1 text-pretty text-[13px] leading-snug text-muted-foreground">
-          {description}
-        </p>
+        {description ? (
+          <p className="px-4 pb-1 text-pretty text-[13px] leading-snug text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
         <div className="divide-y divide-border/70">{children}</div>
       </div>
     </SettingsGroup>
