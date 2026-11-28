@@ -8,7 +8,7 @@ import { command, query } from "@/domain/kernel";
 import { WishlistItemNotFound } from "./errors/wishlist-item-not-found";
 import type { WishlistPageQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { releaseDateOf } from "@/lib/release-date";
+import { releaseDateOf, releasedFromOf } from "@/lib/release-date";
 
 export const Wishlist = {
   list: query(
@@ -16,8 +16,10 @@ export const Wishlist = {
     async (scope, { limit, offset, releaseStatus, today }: WishlistPageQuery) => {
       const latestRelease = scope.tx
         .select({
-          date: item_release.date,
           released: releaseDateOf(item_release.date, item_release.datePrecision).as("released"),
+          releasedFrom: releasedFromOf(item_release.date, item_release.datePrecision).as(
+            "released_from",
+          ),
           price: item_release.price,
           priceCurrency: item_release.priceCurrency,
         })
@@ -29,8 +31,8 @@ export const Wishlist = {
 
       const releaseFilter = {
         all: undefined,
-        upcoming: gt(latestRelease.date, today),
-        released: lte(latestRelease.date, today),
+        upcoming: gt(latestRelease.releasedFrom, today),
+        released: lte(latestRelease.releasedFrom, today),
       }[releaseStatus];
       const conditions = and(eq(wishlistItem.userId, scope.viewer.userId), releaseFilter);
 
