@@ -5,9 +5,9 @@ import { QuickFilterChips } from "../quick-filter-chips";
 
 const PAID_CHIPS = { Paid: true, Unpaid: false } as const;
 type PaidChip = keyof typeof PAID_CHIPS;
-const ARRIVING_CHIP = "Arriving this month";
-const ARRIVING_STATUSES: readonly OrderStatus[] = ["Ordered", "Shipped"];
-const CHIPS = [...ORDER_STATUSES, "Paid", "Unpaid", ARRIVING_CHIP] as const;
+const RELEASING_CHIP = "Releasing this month";
+const RELEASING_STATUSES: readonly OrderStatus[] = ["Ordered", "Shipped"];
+const CHIPS = [...ORDER_STATUSES, "Paid", "Unpaid", RELEASING_CHIP] as const;
 
 const isStatus = (chip: string): chip is OrderStatus =>
   ORDER_STATUSES.some((status) => status === chip);
@@ -27,12 +27,12 @@ function newlyPressedPaidChip(
 
 function statusesAfter(
   pressed: readonly OrderStatus[],
-  arriving: boolean,
-  wasArriving: boolean,
+  releasing: boolean,
+  wasReleasing: boolean,
 ): OrderStatus[] {
-  if (arriving && !wasArriving) return [...ARRIVING_STATUSES];
-  if (!arriving && wasArriving) {
-    return pressed.filter((status) => !ARRIVING_STATUSES.includes(status));
+  if (releasing && !wasReleasing) return [...RELEASING_STATUSES];
+  if (!releasing && wasReleasing) {
+    return pressed.filter((status) => !RELEASING_STATUSES.includes(status));
   }
   return [...pressed];
 }
@@ -41,11 +41,11 @@ export function OrdersQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useOrdersFilters();
   const statuses = filters.status ?? [];
   const current = paidChipOf(filters.paid);
-  const wasArriving = filters.releaseMonth === "this";
+  const wasReleasing = filters.releaseMonth === "this";
   const selected = [
     ...statuses,
     ...(current ? [current] : []),
-    ...(wasArriving ? [ARRIVING_CHIP] : []),
+    ...(wasReleasing ? [RELEASING_CHIP] : []),
   ];
 
   return (
@@ -53,14 +53,14 @@ export function OrdersQuickFilters(): React.ReactElement {
       options={CHIPS}
       selected={selected}
       onChange={(chips) => {
-        const arriving = chips.includes(ARRIVING_CHIP);
-        const nextStatuses = statusesAfter(chips.filter(isStatus), arriving, wasArriving);
+        const releasing = chips.includes(RELEASING_CHIP);
+        const nextStatuses = statusesAfter(chips.filter(isStatus), releasing, wasReleasing);
         const paidChip = newlyPressedPaidChip(chips.filter(isPaidChip), current);
         setFilters({
           status: nextStatuses.length > 0 ? nextStatuses : undefined,
           paid: paidChip === undefined ? undefined : PAID_CHIPS[paidChip],
-          ...(arriving !== wasArriving && {
-            releaseMonth: arriving ? "this" : undefined,
+          ...(releasing !== wasReleasing && {
+            releaseMonth: releasing ? "this" : undefined,
             releaseDateStart: undefined,
             releaseDateEnd: undefined,
           }),

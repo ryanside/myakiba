@@ -45,14 +45,14 @@ test("pressing the chosen Paid chip again stops narrowing by Paid", async () => 
   expect(await press("Paid")).toEqual([{ status: undefined, paid: undefined, offset: 0 }]);
 });
 
-const ARRIVING = "Arriving this month";
+const RELEASING = "Releasing this month";
 const pressed = (name: string): boolean =>
   screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
 
-test("Arriving this month narrows to this month's Ordered and Shipped Orders", async () => {
+test("Releasing this month narrows to this month's Ordered and Shipped Orders", async () => {
   filters = { status: ["Owned"], paid: true, releaseDateStart: "2026-01-01" };
 
-  expect(await press(ARRIVING)).toEqual([
+  expect(await press(RELEASING)).toEqual([
     {
       status: ["Ordered", "Shipped"],
       paid: true,
@@ -64,11 +64,11 @@ test("Arriving this month narrows to this month's Ordered and Shipped Orders", a
   ]);
 });
 
-test("Arriving this month lights Ordered and Shipped with it, and not All", () => {
+test("Releasing this month lights Ordered and Shipped with it, and not All", () => {
   filters = { status: ["Ordered", "Shipped"], releaseMonth: "this" };
   render(<OrdersQuickFilters />);
 
-  expect([ARRIVING, "Ordered", "Shipped", "Owned", "All"].map(pressed)).toEqual([
+  expect([RELEASING, "Ordered", "Shipped", "Owned", "All"].map(pressed)).toEqual([
     true,
     true,
     true,
@@ -77,17 +77,17 @@ test("Arriving this month lights Ordered and Shipped with it, and not All", () =
   ]);
 });
 
-test("next month from the Filters dialog does not light Arriving this month", () => {
+test("next month from the Filters dialog does not light Releasing this month", () => {
   filters = { releaseMonth: "next" };
   render(<OrdersQuickFilters />);
 
-  expect(pressed(ARRIVING)).toBe(false);
+  expect(pressed(RELEASING)).toBe(false);
 });
 
-test("pressing Arriving this month again lifts the month and the two statuses it set", async () => {
+test("pressing Releasing this month again lifts the month and the two statuses it set", async () => {
   filters = { status: ["Ordered", "Shipped", "Owned"], releaseMonth: "this" };
 
-  expect(await press(ARRIVING)).toEqual([
+  expect(await press(RELEASING)).toEqual([
     {
       status: ["Owned"],
       paid: undefined,
@@ -99,7 +99,7 @@ test("pressing Arriving this month again lifts the month and the two statuses it
   ]);
 });
 
-test("All lifts Arriving this month with every chip", async () => {
+test("All lifts Releasing this month with every chip", async () => {
   filters = { status: ["Ordered", "Shipped"], paid: false, releaseMonth: "this" };
 
   expect(await press("All")).toEqual([
@@ -114,7 +114,7 @@ test("All lifts Arriving this month with every chip", async () => {
   ]);
 });
 
-test("a status chip keeps Arriving this month on", async () => {
+test("a status chip keeps Releasing this month on", async () => {
   filters = { status: ["Ordered", "Shipped"], releaseMonth: "this" };
 
   expect(await press("Shipped")).toEqual([{ status: ["Ordered"], paid: undefined, offset: 0 }]);
