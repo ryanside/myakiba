@@ -27,7 +27,6 @@ const CATEGORIES = [
 /** The legend rows above the list's clipped edge. */
 const VISIBLE_LEGEND_ROWS = 8;
 
-/** Orders releasing in each month, from 2 months back to 9 months ahead. */
 const MONTHLY_ORDERS: readonly number[] = [4, 6, 3, 5, 4, 8, 5, 6, 6, 6, 5, 8];
 
 type Release = {

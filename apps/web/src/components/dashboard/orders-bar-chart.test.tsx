@@ -31,11 +31,11 @@ afterAll(() => {
   jest.setSystemTime();
   mock.restore();
 });
-// The server's window for 2026-10-21: August 2026 to July 2027.
 function chartMonths(counts: Readonly<Record<string, number>>) {
   return Array.from({ length: 12 }, (_, offset) => {
-    const year = offset < 5 ? 2026 : 2027;
-    const month = ((7 + offset) % 12) + 1;
+    const start = new Date(2026, 7 + offset, 1);
+    const year = start.getFullYear();
+    const month = start.getMonth() + 1;
     return { year, month, orderCount: counts[`${year}-${month}`] ?? 0 };
   });
 }
