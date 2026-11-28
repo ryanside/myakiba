@@ -408,23 +408,17 @@ describe("a Paid Order and an Unpaid Order, each holding items that carry no Pai
     }).toEqual({ dated: [1, 3500], otherShop: [0, 0] });
   });
 
-  test("the Orders page's money filters and its Paid and Unpaid filters keep the same Orders", async () => {
-    const owing = await get<OrdersList>(mixed, "/orders?limit=10&unpaidCostsMin=1");
+  test("the Orders page's Paid and Unpaid filters keep the Orders its money totals count", async () => {
     const unpaid = await get<OrdersList>(mixed, "/orders?limit=10&paid=false");
-    const spent = await get<OrdersList>(mixed, "/orders?limit=10&orderSpendMin=1");
     const paid = await get<OrdersList>(mixed, "/orders?limit=10&paid=true");
     const holdingPaidItems = await get<OrdersList>(mixed, "/orders?limit=10&paidItemsMin=1");
 
     expect({
-      owing: [titles(owing), owing.unpaidCosts],
       unpaid: [titles(unpaid), unpaid.unpaidCosts],
-      spent: [titles(spent), spent.totalSpent],
       paid: [titles(paid), paid.totalSpent],
       holdingPaidItems: titles(holdingPaidItems),
     }).toEqual({
-      owing: [["AmiAmi"], 3500],
       unpaid: [["AmiAmi"], 3500],
-      spent: [["HLJ"], 12_500],
       paid: [["HLJ"], 12_500],
       holdingPaidItems: ["HLJ"],
     });
@@ -453,18 +447,6 @@ describe("Paid is apart from the Acquisition Status", () => {
       expensesSpend: 6400,
       paidOrderCount: 1,
       unpaidOrderCount: 1,
-    });
-  });
-});
-
-describe("the Orders page's Unpaid Costs and Order Spend ranges", () => {
-  test("a maximum keeps only the Orders at or under it, judged by each Order's own Paid", async () => {
-    const owingLittle = await get<OrdersList>(paidApart, "/orders?limit=10&unpaidCostsMax=1000");
-    const spentLittle = await get<OrdersList>(paidApart, "/orders?limit=10&orderSpendMax=1000");
-
-    expect({ owingLittle: titles(owingLittle), spentLittle: titles(spentLittle) }).toEqual({
-      owingLittle: ["Paid up front"],
-      spentLittle: ["Pay on delivery"],
     });
   });
 });

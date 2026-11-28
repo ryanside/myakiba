@@ -5036,10 +5036,15 @@
         "the Orders page lists the Orders behind Unpaid Costs > an Unpaid Costs range keeps only the Orders inside it"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix. atHead names the HEAD tests of the Unpaid Costs filter: its minimum keeps only Orders that owe money and its maximum keeps only Orders under the limit, now judged by each Order's Paid.",
-      "atHead": [
-        "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's money filters and its Paid and Unpaid filters keep the same Orders",
-        "the Orders page's Unpaid Costs and Order Spend ranges > a maximum keeps only the Orders at or under it, judged by each Order's own Paid"
+      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix.",
+      "head": [
+        {
+          "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+          "fixed": [
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's Paid and Unpaid filters keep the Orders its money totals count"
+          ],
+          "reason": "PR #303 cut the Unpaid Costs range from the Orders filters, so only the Paid and Unpaid filters that keep the Orders behind each money total run at the head."
+        }
       ]
     },
     {
@@ -5104,10 +5109,15 @@
         "the Orders page lists the Orders behind Order Spend > an Order Spend range keeps only the Orders inside it"
       ],
       "testAt": "8af56ea9d69084350830e3084127be7753b4e70c",
-      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix. atHead names the HEAD tests of the Order Spend filter: its minimum keeps only Orders with Spend and its maximum keeps only Orders under the limit, now judged by each Order's Paid.",
-      "atHead": [
-        "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's money filters and its Paid and Unpaid filters keep the same Orders",
-        "the Orders page's Unpaid Costs and Order Spend ranges > a maximum keeps only the Orders at or under it, judged by each Order's own Paid"
+      "reason": "Paid lives on the Order alone rewrote this file: its rows carry Paid only on the Order, and each test asserts the one rule, which fails at this fix on both sides. Main's copy replays the fix.",
+      "head": [
+        {
+          "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+          "fixed": [
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's Paid and Unpaid filters keep the Orders its money totals count"
+          ],
+          "reason": "PR #303 cut the Order Spend range from the Orders filters, so only the Paid and Unpaid filters that keep the Orders behind each money total run at the head."
+        }
       ]
     },
     {
@@ -5701,6 +5711,28 @@
         "an Owned item removed from an Unpaid Order > leaves Unpaid Costs and becomes Collection Spend, since it is now outside any Order",
         "a Collection Item edit from a tab opened before Paid left the items > still sends paid, so the strict contract answers 422 and the item keeps its price",
         "the Orders page's Unpaid Costs and Order Spend ranges > a maximum keeps only the Orders at or under it, judged by each Order's own Paid"
+      ],
+      "testAt": "2ad81c8bd2215abb5805c49c10abfc92e666196c",
+      "reason": "The Orders filters were trimmed after this fix, which removed one of its tests and renamed another, so its harness stays at the build before that change.",
+      "head": [
+        {
+          "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+          "fixed": [
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Dashboard, the Orders page and Expenses show the Unpaid Order's whole Order Total as Unpaid Costs",
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Paid Order's whole Order Total is Spend, and Spend plus Unpaid Costs is every Order Total",
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > Expenses counts the Paid Order's items and fees as Order Spend, and one Paid Order and one Unpaid Order",
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > Scoped Shop Spend for Orders names only the Paid Order's Shop and adds up to Order Spend",
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Dashboard month splits its Orders' amounts the same way",
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > an Expenses date range does not hide the Unpaid Order, and a Shop filter for the other Shop leaves no Unpaid Costs",
+            "a Paid Order and an Unpaid Order, each holding items that carry no Paid of their own > the Orders page's Paid and Unpaid filters keep the Orders its money totals count",
+            "Paid is apart from the Acquisition Status > a Shipped Order that is unpaid counts as Unpaid Costs and not Spend, and an Ordered Order that is paid counts as Spend",
+            "an Owned item in an Unpaid Order beside an Owned item outside any Order > the item in the Unpaid Order counts as Unpaid Costs, and only the item outside any Order is Collection Spend",
+            "an Owned item in an Unpaid Order beside an Owned item outside any Order > averages divide Collection Spend by the paid items it sums",
+            "an Owned item removed from an Unpaid Order > leaves Unpaid Costs and becomes Collection Spend, since it is now outside any Order",
+            "a Collection Item edit from a tab opened before Paid left the items > still sends paid, so the strict contract answers 422 and the item keeps its price"
+          ],
+          "reason": "PR #303 cut the Unpaid Costs and Order Spend ranges from the Orders filters, so their test is gone and the money filter test checks only Paid and Unpaid at the head."
+        }
       ]
     },
     {
