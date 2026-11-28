@@ -24,11 +24,13 @@ const { Route } = await import("@/routes/(app)/orders_.$id");
 const OrderPage = Route.options.component as () => ReactNode;
 
 const realFetch = globalThis.fetch;
+let deleteRequests = 0;
 
 afterEach(() => {
   cleanup();
   globalThis.fetch = realFetch;
   navigations.length = 0;
+  deleteRequests = 0;
 });
 
 const ORDER = {
@@ -62,7 +64,10 @@ function serveOrderPage(deleteAnswer: () => Response) {
   globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (init?.method === "DELETE") return deleteAnswer();
+      if (init?.method === "DELETE") {
+        deleteRequests += 1;
+        return deleteAnswer();
+      }
       if (url.includes("/item-releases")) return Response.json([]);
       if (url.includes("/items")) return Response.json(EMPTY_PAGE);
       return Response.json(ORDER);
@@ -82,10 +87,11 @@ async function confirmDelete(deleteAnswer: () => Response) {
     </QueryClientProvider>,
   );
   await screen.findByRole("heading", { name: "Alpha Order" });
-  fireEvent.click(screen.getByRole("button", { name: "More order actions" }));
-  fireEvent.click(await screen.findByRole("menuitem", { name: "Delete order" }));
+  expect(screen.queryByRole("button", { name: "More order actions" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Delete order" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText("Delete order?")).toBeTruthy();
+  expect(deleteRequests).toBe(0);
   act(() => within(dialog).getByRole("button", { name: "Delete" }).click());
 }
 

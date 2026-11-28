@@ -7,13 +7,13 @@ import {
   ChartColumnIcon,
   CreditCardIcon,
   DatabaseIcon,
+  Delete02Icon,
   Edit03Icon,
   Folder01Icon,
   FolderAddIcon,
   Home01Icon,
   LibraryIcon,
   Loading03Icon,
-  MoreHorizontalIcon,
   PackageIcon,
   PanelLeftIcon,
   SearchIcon,
@@ -350,7 +350,7 @@ function OrderPage({ compact }: { readonly compact: boolean }) {
               Edit
             </span>
             <span className={`${cls("button")} ${cls("button-icon")}`}>
-              <Icon icon={MoreHorizontalIcon} />
+              <Icon icon={Delete02Icon} />
             </span>
           </div>
         )}

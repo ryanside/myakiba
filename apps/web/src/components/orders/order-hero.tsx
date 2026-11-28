@@ -1,23 +1,11 @@
-import { useState } from "react";
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Delete02Icon,
-  Edit03Icon,
-  FolderAddIcon,
-  MoreHorizontalIcon,
-  PackageIcon,
-} from "@hugeicons/core-free-icons";
+import { Delete02Icon, Edit03Icon, FolderAddIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { Button } from "@/components/ui/button";
+import { ControlTooltip } from "@/components/ui/control-tooltip";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { OrderForm } from "@/components/orders/order-form";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -66,8 +54,8 @@ export function OrderHero({
               <HugeiconsIcon icon={Edit03Icon} data-icon="inline-start" />
               Edit
             </Button>
-            <Button variant="outline" size="icon" disabled aria-label="More order actions">
-              <HugeiconsIcon icon={MoreHorizontalIcon} />
+            <Button variant="outline" size="icon" disabled aria-label="Delete order">
+              <HugeiconsIcon icon={Delete02Icon} />
             </Button>
           </div>
         </div>
@@ -101,8 +89,6 @@ function LoadedOrderHero({
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
   readonly onDeleteOrder: (orderId: string) => Saving;
 }): ReactNode {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -168,24 +154,14 @@ function LoadedOrderHero({
             callbackFn={onEditOrder}
             currency={currency}
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="outline" size="icon" aria-label="More order actions">
-                  <HugeiconsIcon icon={MoreHorizontalIcon} />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <HugeiconsIcon icon={Delete02Icon} />
-                Delete order
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <WriteConfirmDialog
-            open={deleteOpen}
-            onOpenChange={setDeleteOpen}
+            renderTrigger={
+              <ControlTooltip label="Delete order">
+                <Button variant="outline" size="icon" aria-label="Delete order">
+                  <HugeiconsIcon icon={Delete02Icon} />
+                </Button>
+              </ControlTooltip>
+            }
             title="Delete order?"
             description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
             onConfirm={() => onDeleteOrder(order.orderId)}
