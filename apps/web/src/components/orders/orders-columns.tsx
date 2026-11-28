@@ -254,6 +254,7 @@ export function createOrdersColumns({
           value={order.releaseDate}
           dateFormat={dateFormat}
           orderId={order.orderId}
+          offerMonths
           {...edit}
         />
       )),

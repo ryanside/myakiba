@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, setSystemTime, test } from "bun:test";
 import { Result } from "better-result";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -24,21 +24,25 @@ beforeEach(() => {
 
 afterEach(() => {
   globalThis.fetch = realFetch;
+  setSystemTime();
   cleanup();
 });
 
 function EditOrderCell({
   initial,
   saved,
+  offerMonths,
 }: {
   readonly initial: ReleaseDate | null;
   readonly saved: (ReleaseDate | null)[];
+  readonly offerMonths: boolean;
 }) {
   const [value, setValue] = useState(initial);
   return (
     <PopoverReleaseDateCell
       value={value}
       orderId="order-1"
+      offerMonths={offerMonths}
       triggerVariant="outline"
       placeholder="Select release"
       onSubmit={async (next) => {
@@ -50,12 +54,12 @@ function EditOrderCell({
   );
 }
 
-function renderCell(initial: ReleaseDate | null) {
+function renderCell(initial: ReleaseDate | null, { offerMonths = false } = {}) {
   const saved: (ReleaseDate | null)[] = [];
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <EditOrderCell initial={initial} saved={saved} />
+      <EditOrderCell initial={initial} saved={saved} offerMonths={offerMonths} />
     </QueryClientProvider>,
   );
   return { saved, trigger: () => screen.getByRole("button") };
@@ -158,4 +162,52 @@ test("the field takes its label's name, as the date field it replaced in Merge d
   const field = screen.getByRole("button", { name: "Release" });
   const describedBy = field.getAttribute("aria-describedby") ?? "";
   expect(document.querySelector(`#${describedBy}`)?.textContent).toBe("Jun 2026");
+});
+
+async function monthList() {
+  const boxes = await screen.findAllByRole("combobox");
+  const list = boxes.find((box) => box.textContent?.includes("Moved to"));
+  if (!list) throw new Error("the picker has no month list");
+  return list;
+}
+
+test("Moved to offers this month and the next eleven, and saves the month picked as a month", async () => {
+  setSystemTime(new Date(2026, 10, 28, 12));
+  const user = userEvent.setup();
+  const { saved, trigger } = renderCell(JUNE, { offerMonths: true });
+
+  await user.click(trigger());
+  await user.click(await monthList());
+  const menu = await screen.findByRole("listbox");
+  const options = within(menu)
+    .getAllByRole("option")
+    .map((option) => option.textContent);
+  expect(options).toEqual([
+    "Nov 2026",
+    "Dec 2026",
+    "Jan 2027",
+    "Feb 2027",
+    "Mar 2027",
+    "Apr 2027",
+    "May 2027",
+    "Jun 2027",
+    "Jul 2027",
+    "Aug 2027",
+    "Sep 2027",
+    "Oct 2027",
+  ]);
+  await user.click(screen.getByRole("option", { name: "Dec 2026" }));
+
+  expect(saved).toEqual([{ start: "2026-12-01", precision: "month" }]);
+  expect(trigger().textContent).toContain("Dec 2026");
+});
+
+test("the Release field offers no month list unless asked", async () => {
+  const user = userEvent.setup();
+  const { trigger } = renderCell(JUNE);
+
+  await user.click(trigger());
+  await releaseList();
+  const boxes = screen.getAllByRole("combobox").map((box) => box.textContent ?? "");
+  expect(boxes.some((text) => text.includes("Moved to"))).toBe(false);
 });

@@ -44,3 +44,18 @@ test("pressing the chosen Paid chip again stops narrowing by Paid", async () => 
 
   expect(await press("Paid")).toEqual([{ status: undefined, paid: undefined, offset: 0 }]);
 });
+
+test("Overdue narrows to overdue Orders and keeps the chosen statuses and Paid", async () => {
+  filters = { status: ["Ordered"], paid: false };
+
+  const [next] = await press("Overdue");
+  expect(next).toEqual({ status: ["Ordered"], paid: false, overdue: true, offset: 0 });
+});
+
+test("pressing Overdue again stops narrowing to overdue Orders", async () => {
+  filters = { overdue: true };
+
+  const [next] = await press("Overdue");
+  expect(next?.overdue).toBeUndefined();
+  expect(screen.getByRole("button", { name: "Overdue" }).getAttribute("aria-pressed")).toBe("true");
+});

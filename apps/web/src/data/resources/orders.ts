@@ -30,6 +30,7 @@ import {
   splitOrders,
   fillOrderPaid,
 } from "@/queries/orders";
+import type { OrdersListInput } from "@/queries/orders";
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import { FILL_FIELD } from "@/lib/fill-fields";
@@ -37,6 +38,11 @@ import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, messageAs, rootedRead } from "../client";
 
 const orderItemsOf = (orderId: string) => ["orderItems", orderId] as const;
+
+/** Keys the list by day only while Overdue is on, since only that filter reads today. */
+export function ordersListInput(filters: OrderFilters, today: string): OrdersListInput {
+  return filters.overdue === true ? { ...filters, today } : filters;
+}
 
 export const ORDER_ITEM_PAGE_SIZE = 12;
 const FIRST_ORDER_ITEMS_PAGE = { pageIndex: 0, pageSize: ORDER_ITEM_PAGE_SIZE } as const;
@@ -62,7 +68,7 @@ export function orderItemsInput(
 
 export const orders = {
   list: rootedRead("orders", {
-    key: (filters: OrderFilters) => ["orders", filters] as const,
+    key: (filters: OrdersListInput) => ["orders", filters] as const,
     load: getOrders,
     placeholderData: keepPreviousData,
     staleTime: 30_000,

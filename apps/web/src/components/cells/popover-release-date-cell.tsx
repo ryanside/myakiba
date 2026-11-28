@@ -21,7 +21,7 @@ import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import type { OrderItemRelease } from "@/queries/orders";
-import { format } from "date-fns";
+import { addMonths, format, startOfMonth } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
@@ -29,6 +29,7 @@ import type { Saving } from "@/data/client";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { EmptyValue } from "./empty-value";
 import { shownMessageOf } from "@/data/api";
+import { useToday } from "@/hooks/use-today";
 
 interface PopoverReleaseDateCellProps {
   readonly id?: string;
@@ -41,6 +42,7 @@ interface PopoverReleaseDateCellProps {
   readonly triggerClassName?: string;
   readonly placeholder?: string;
   readonly orderId?: string;
+  readonly offerMonths?: boolean;
 }
 
 interface GroupedRelease {
@@ -146,6 +148,54 @@ function ReleaseSelect({
   );
 }
 
+const MONTHS_OFFERED = 12;
+
+function MonthSelect({
+  value,
+  onSelect,
+}: {
+  readonly value: ReleaseDate | null;
+  readonly onSelect: (date: ReleaseDate) => void;
+}) {
+  const today = parseDateOnly(useToday());
+  if (!today) return null;
+  const months = Array.from({ length: MONTHS_OFFERED }, (_, offset): ReleaseDate => ({
+    start: format(addMonths(startOfMonth(today), offset), "yyyy-MM-dd"),
+    precision: "month",
+  }));
+  const items = months.map((month) => ({ label: formatReleaseDate(month), value: month.start }));
+  const selected =
+    value?.precision === "month" && items.some((item) => item.value === value.start)
+      ? value.start
+      : null;
+
+  return (
+    <div className="border-b p-2">
+      <Select
+        value={selected}
+        onValueChange={(start) => {
+          const picked = months.find((month) => month.start === start);
+          if (picked) onSelect(picked);
+        }}
+        items={items}
+      >
+        <SelectTrigger size="sm" className="w-full">
+          <SelectValue placeholder="Moved to" />
+        </SelectTrigger>
+        <SelectContent align="start">
+          <SelectGroup>
+            {items.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function PopoverReleaseDateCell({
   id,
   value,
@@ -157,6 +207,7 @@ export function PopoverReleaseDateCell({
   triggerClassName,
   placeholder,
   orderId,
+  offerMonths = false,
 }: PopoverReleaseDateCellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const valueId = useId();
@@ -214,6 +265,7 @@ export function PopoverReleaseDateCell({
               onSelect={handleReleaseSelect}
             />
           )}
+          {offerMonths && <MonthSelect value={displayValue} onSelect={handleReleaseSelect} />}
           <Calendar
             mode="single"
             selected={displayValue?.precision === "day" ? dateValue : undefined}
