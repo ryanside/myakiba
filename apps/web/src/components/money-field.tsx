@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import * as z from "zod";
+import type * as z from "zod";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { FieldError } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -37,8 +37,6 @@ type MoneyFieldProps<Name extends string> = {
   /** A labelled field also names its input, for a form that reads it by id. */
   readonly label?: string;
   readonly id?: string;
-  /** The error for an empty amount. Without it, an empty amount reads as 0. */
-  readonly required?: string;
 };
 
 /** One amount in a form: its mask, the strict `moneyInput` check, the invalid state and its error. */
@@ -49,15 +47,11 @@ export function MoneyField<Name extends string>({
   placeholder,
   label,
   id,
-  required,
 }: MoneyFieldProps<Name>) {
   return (
     <form.Field
       name={name}
-      validators={{
-        onChange:
-          required === undefined ? moneyInput : z.string().nonempty(required).pipe(moneyInput),
-      }}
+      validators={{ onChange: moneyInput }}
       children={(field) => {
         const input = (
           <MaskInput

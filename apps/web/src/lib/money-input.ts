@@ -22,7 +22,12 @@ export function optionalMinorUnits(text: string): number | undefined {
   return text.trim() === "" ? undefined : acceptedMoneyToMinorUnits(text);
 }
 
-/** The text a Price field starts from. A stored price of 0 is no price, so it starts empty. */
+/** A stored price of 0 is no price. */
+export function isNoPrice(minorUnits: number): boolean {
+  return minorUnits === 0;
+}
+
+/** The text a Price field starts from: empty for no price. */
 export function priceDraft(minorUnits: number): string {
-  return minorUnits === 0 ? "" : minorUnitsToMajorString(minorUnits);
+  return isNoPrice(minorUnits) ? "" : minorUnitsToMajorString(minorUnits);
 }
