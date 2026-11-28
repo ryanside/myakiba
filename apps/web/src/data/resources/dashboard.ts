@@ -29,7 +29,6 @@ export const updateKanbanOrderStatusCommand = defineCommand({
   refetchBy: "caller",
   persist: ({ orderId, status }: { readonly orderId: string; readonly status: OrderStatus }) =>
     updateOrderStatus(orderId, status),
-  successTitle: ({ status }) => (status === "Owned" ? "Order marked as collected" : undefined),
   failureToast: (_input, failure) => ({
     title: shownMessageOf(failure, "Failed to update order status. Please try again."),
   }),

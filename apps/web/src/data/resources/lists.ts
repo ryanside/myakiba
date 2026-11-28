@@ -88,7 +88,6 @@ export const updateListCommand = defineCommand({
   ],
   persist: ({ listId, ...input }: { readonly listId: string } & ListInput) =>
     updateList(listId, input),
-  successTitle: () => "List updated",
   failureToast: () => ({ title: "Failed to update list" }),
 });
 
@@ -101,8 +100,6 @@ export const deleteListsCommand = defineCommand({
       queryClient.removeQueries({ queryKey: detailKey(listId) });
     }
   },
-  successTitle: (listIds) =>
-    listIds.length === 1 ? "List deleted" : `${listIds.length.toLocaleString()} Lists deleted`,
   failureToast: (listIds) => ({
     title: `Failed to delete ${listIds.length === 1 ? "List" : "Lists"}`,
   }),
@@ -154,6 +151,5 @@ export const removeListMembersCommand = defineCommand({
     readonly listId: string;
     readonly memberIds: readonly string[];
   }) => removeListMembers(listId, memberIds),
-  successTitle: ({ memberIds }) => `${memberIds.length} removed from List`,
   failureToast: () => ({ title: "Failed to remove from List" }),
 });

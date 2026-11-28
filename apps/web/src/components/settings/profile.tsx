@@ -4,7 +4,6 @@ import { useRouter } from "@tanstack/react-router";
 import { useId, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
-import { toast } from "@/components/ui/toast";
 import { useRead, useResourceMutation } from "@/data/client";
 import { settings } from "@/data/resources/settings";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -95,7 +94,6 @@ export function Profile({ user }: { user: User }) {
     if (updated.isErr()) return;
     setSaved(draft);
     await router.invalidate();
-    toast.add({ type: "success", title: "Profile updated successfully" });
   };
 
   return (

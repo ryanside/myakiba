@@ -17,7 +17,7 @@ function answerWith(respond: (...request: Parameters<typeof fetch>) => Promise<R
   globalThis.fetch = Object.assign(respond, { preconnect: realFetch.preconnect });
 }
 
-async function moveCardAndReadToast() {
+async function moveCardAndReadToast(status: "Shipped" | "Owned" = "Shipped") {
   const added = spyOn(toast, "add");
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   const { result } = renderHook(() => useResourceMutation(updateKanbanOrderStatusCommand), {
@@ -26,13 +26,19 @@ async function moveCardAndReadToast() {
     ),
   });
 
-  await act(() => result.current.run({ orderId: "od-alpha", status: "Shipped" }));
+  await act(() => result.current.run({ orderId: "od-alpha", status }));
   const toasts = added.mock.calls.map(([options]) => options);
   added.mockRestore();
   return toasts;
 }
 
 const RETRY_ADVICE = { type: "error", title: "Failed to update order status. Please try again." };
+
+test("a card dropped on Owned shows no toast, since the Owned column shows it", async () => {
+  answerWith(async () => Response.json("Order updated successfully"));
+
+  expect(await moveCardAndReadToast("Owned")).toEqual([]);
+});
 
 describe("a failed kanban status write", () => {
   test("shows retry advice when the server answers 500 with a JSON body", async () => {

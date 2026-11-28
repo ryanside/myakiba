@@ -591,7 +591,7 @@ const LIST_WRITES: readonly {
     saved: {
       outcome: "ok",
       writes: ["update l1"],
-      toasts: ["success: List updated"],
+      toasts: [],
       refetchedBeforeResolve: ["l1 detail", "options", "overview"],
       refetched: ["l1 detail", "options", "overview"],
     },
@@ -609,7 +609,7 @@ const LIST_WRITES: readonly {
     saved: {
       outcome: "ok",
       writes: ["delete l1"],
-      toasts: ["success: List deleted"],
+      toasts: [],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["l1", "l1 detail", "options", "overview"],
     },
@@ -627,7 +627,7 @@ const LIST_WRITES: readonly {
     saved: {
       outcome: "ok",
       writes: ["delete l1,l2"],
-      toasts: ["success: 2 Lists deleted"],
+      toasts: [],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["l1", "l1 detail", "options", "overview"],
     },
@@ -681,7 +681,7 @@ const LIST_WRITES: readonly {
     saved: {
       outcome: "ok",
       writes: ["remove m1,m2 from l1"],
-      toasts: ["success: 2 removed from List"],
+      toasts: [],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },

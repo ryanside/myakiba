@@ -44,9 +44,7 @@ export default function UserMenu({ session }: { session: Session }) {
         type: "error",
         title: result.error.message || "Couldn't sign out. Try again.",
       });
-      return;
     }
-    toast.add({ type: "success", title: "Signed out successfully" });
   };
 
   return (

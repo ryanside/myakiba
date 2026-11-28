@@ -110,7 +110,6 @@ export const updateCollectionItemCommand = defineCommand({
       }
     });
   },
-  successTitle: () => "Collection updated",
   failureToast: () => ({ title: "Failed to update collection item. Please try again." }),
 });
 
@@ -158,7 +157,7 @@ export const deleteCollectionItemsCommand = defineCommand({
       }
     });
   },
-  successTitle: () => "Collection item(s) deleted",
+  successTitle: ({ ids }) => (ids.length > 1 ? "Collection item(s) deleted" : undefined),
   failureToast: () => ({ title: "Failed to delete collection item(s). Please try again." }),
 });
 

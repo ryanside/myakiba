@@ -165,7 +165,8 @@ test("saved preferences say so and reload the route data", async () => {
 
   await savePreferences();
 
-  expect(await screen.findByText("Preferences updated successfully")).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Saved" })).toBeTruthy();
+  expect(screen.queryByText("Preferences updated successfully")).toBeNull();
   expect(invalidations).toBe(1);
   expect(requests.filter(({ path }) => path === "/update-user")).toEqual([
     { path: "/update-user", body: { dateFormat: "DD/MM/YYYY" } },
@@ -194,7 +195,8 @@ test("a saved profile says so and reloads the route data", async () => {
 
   await saveProfile();
 
-  expect(await screen.findByText("Profile updated successfully")).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Saved" })).toBeTruthy();
+  expect(screen.queryByText("Profile updated successfully")).toBeNull();
   expect(invalidations).toBe(1);
 });
 

@@ -273,6 +273,20 @@ describe("a Collection Item write on the collection page", () => {
     });
   });
 
+  test("a delete of one item shows no toast, since its row leaves the list", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([MIKU.id])),
+    );
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: [],
+    });
+  });
+
   test("an unfiltered delete leaves the paid item count to the server's answer", async () => {
     const collection = renderCollectionPage({});
     await loaded();
@@ -347,7 +361,7 @@ describe("a Collection Item write on the collection page", () => {
     await answer(0, "finish");
     expect(await editing).toBe("ok");
     await waitFor(() => expect(shown().items).toEqual(["Miku 1500", "Rin 500", "Len 200"]));
-    expect(toastTitles()).toEqual(["success: Collection updated"]);
+    expect(toastTitles()).toEqual([]);
   });
 });
 

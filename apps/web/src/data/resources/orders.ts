@@ -190,7 +190,6 @@ export const editOrderCommand = defineCommand({
       }
     });
   },
-  successTitle: () => "Order updated",
   failureToast: (_input, failure) => ({
     title: shownMessageOf(failure, "Failed to update order. Please try again."),
   }),
@@ -222,7 +221,6 @@ export const setOrderPaidCommand = defineCommand({
       if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
     });
   },
-  successTitle: () => "Order updated",
   failureToast: (_input, failure) => ({
     title: shownMessageOf(failure, "Failed to update Paid. Please try again."),
   }),
@@ -253,7 +251,7 @@ export const deleteOrdersCommand = defineCommand({
     });
   },
   successTitle: ({ orderIds }) =>
-    orderIds.size === 1 ? "Order deleted" : `Successfully deleted ${orderIds.size} orders`,
+    orderIds.size > 1 ? `Successfully deleted ${orderIds.size} orders` : undefined,
   failureToast: () => ({ title: "Failed to delete order(s). Please try again." }),
 });
 
@@ -304,7 +302,6 @@ export const mergeOrdersCommand = defineCommand({
       if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
     });
   },
-  successTitle: ({ orderIds }) => `Successfully merged ${orderIds.size} orders into one!`,
   failureToast: () => ({ title: "Failed to merge orders. Please try again." }),
 });
 
@@ -318,8 +315,6 @@ export const splitOrdersCommand = defineCommand({
     readonly values: NewOrder;
     readonly collectionIds: Set<string>;
   }) => splitOrders(values, collectionIds),
-  successTitle: ({ collectionIds }) =>
-    `Successfully moved ${collectionIds.size} items to a new order!`,
   failureToast: () => ({ title: "Failed to move items to a new order. Please try again." }),
 });
 
@@ -396,7 +391,6 @@ export const editOrderItemCommand = defineCommand({
       }
     });
   },
-  successTitle: () => "Item updated",
   failureToast: () => ({ title: "Failed to update item. Please try again." }),
 });
 
@@ -471,7 +465,6 @@ export const deleteOrderItemCommand = defineCommand({
       }
     });
   },
-  successTitle: () => "Item deleted",
   failureToast: () => ({ title: "Failed to delete item. Please try again." }),
 });
 
@@ -481,7 +474,7 @@ export const deleteOrderItemsCommand = defineCommand({
   persist: ({ collectionIds }: { readonly collectionIds: Set<string> }) =>
     deleteOrderItems(collectionIds),
   successTitle: ({ collectionIds }) =>
-    collectionIds.size === 1 ? "Item deleted" : `Successfully deleted ${collectionIds.size} items`,
+    collectionIds.size > 1 ? `Successfully deleted ${collectionIds.size} items` : undefined,
   failureToast: () => ({ title: "Failed to delete items. Please try again." }),
 });
 
@@ -497,8 +490,6 @@ export const moveOrderItemsCommand = defineCommand({
     readonly collectionIds: Set<string>;
     readonly orderIds?: Set<string>;
   }) => moveItem(targetOrderId, collectionIds, orderIds),
-  successTitle: ({ collectionIds }) =>
-    collectionIds.size === 1 ? "Item moved" : `Successfully moved ${collectionIds.size} items`,
   failureToast: (_input, failure) => ({
     title:
       failure && MoveTargetGone.is(failure)

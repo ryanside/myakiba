@@ -267,7 +267,7 @@ describe("an Order write on the orders page", () => {
     await waitFor(() => expect(server.listReads).toBe(readsBeforeWrite + 1));
     expect({ shown: shown(), toasts: toastTitles() }).toEqual({
       shown: { count: "2", orders: ["Alpha 1000", "Charlie 200"] },
-      toasts: ["success: Order deleted"],
+      toasts: [],
     });
   });
 
@@ -291,7 +291,7 @@ describe("an Order write on the orders page", () => {
       expect(shown()).toEqual({ count: "2", orders: ["Alpha 1000", "Charlie 200"] }),
     );
     expect({ toasts: toastTitles(), closed: toastClose.mock.calls.length }).toEqual({
-      toasts: ["loading: Deleting orders...", "success: Order deleted"],
+      toasts: ["loading: Deleting orders..."],
       closed: 1,
     });
   });
@@ -351,10 +351,49 @@ describe("an Order write on the orders page", () => {
     await waitFor(() =>
       expect(shown()).toEqual({ count: "2", orders: ["Bravo 500", "Charlie 200"] }),
     );
-    expect(toastTitles()).toEqual([
-      "error: Failed to update order. Please try again.",
-      "success: Order deleted",
-    ]);
+    expect(toastTitles()).toEqual(["error: Failed to update order. Please try again."]);
+  });
+});
+
+describe("a delete of several rows on the orders page", () => {
+  test("a delete of two Orders says how many went", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) =>
+      actions.handleDeleteOrders(new Set([ALPHA.orderId, BRAVO.orderId])),
+    );
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: ["success: Successfully deleted 2 orders"],
+    });
+  });
+
+  test("a delete of two Order Items says how many went", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) =>
+      actions.handleDeleteItems(new Set(LOADED_ITEMS.map((item) => item.id))),
+    );
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: ["success: Successfully deleted 2 items"],
+    });
+  });
+
+  test("a delete of one Order Item shows no toast, since its row leaves the Order", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) => actions.handleDeleteItems(new Set(["co-alpha-1"])));
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: [],
+    });
   });
 });
 
@@ -394,6 +433,7 @@ describe("a merge from the Merge dialog", () => {
     expect(merged?.status).toBe("ok");
     await waitFor(() => expect(server.listReads).toBe(listReadsBeforeMerge + 1));
     expect(server.draftReads).toBe(1);
+    expect(toastTitles()).toEqual([]);
   });
 });
 
@@ -415,7 +455,7 @@ describe("a Paid click on the orders page", () => {
       toasts: toastTitles(),
     }).toEqual({
       writes: [["set paid", [ALPHA.orderId, true]]],
-      toasts: ["success: Order updated"],
+      toasts: [],
     });
   });
 });

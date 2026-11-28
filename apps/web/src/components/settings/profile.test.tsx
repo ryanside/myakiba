@@ -81,6 +81,7 @@ test("an available username saves and says so", async () => {
   expect(await screen.findByText("Available")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-  expect(await screen.findByText("Profile updated successfully")).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Saved" })).toBeTruthy();
+  expect(screen.queryByText("Profile updated successfully")).toBeNull();
   await waitFor(() => expect(savedChanges).toEqual([{ username: "new.name" }]));
 });
