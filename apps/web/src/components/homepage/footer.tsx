@@ -41,6 +41,9 @@ export function HomeFooter() {
           <Link to="/changelog" className={LINK}>
             Changelog
           </Link>
+          <Link to="/privacy" className={LINK}>
+            Privacy
+          </Link>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={LINK}>
             GitHub
           </a>

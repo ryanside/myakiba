@@ -1,6 +1,6 @@
 import { AddSentence } from "@/components/homepage/add-sentence";
 import { FramedScreen } from "@/components/homepage/framed-screen";
-import { Bezel, HomeSection, StartActions } from "@/components/homepage/kit";
+import { Bezel, HomeSection, InstallAction, StartActions } from "@/components/homepage/kit";
 import { SceneSpill } from "@/components/homepage/window-light";
 
 export function Hero() {
@@ -16,7 +16,9 @@ export function Hero() {
             <p className="inline">Collection, orders, analytics and expenses.</p>
           </div>
         </div>
-        <StartActions className="animate-appear flex-wrap [--appear-delay:120ms]" />
+        <StartActions className="animate-appear flex-wrap [--appear-delay:120ms]">
+          <InstallAction />
+        </StartActions>
       </div>
 
       <div className="animate-appear relative isolate mt-12 [--appear-delay:180ms] md:mt-16">
