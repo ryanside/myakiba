@@ -18,17 +18,17 @@ import { shownMessageOf } from "@/data/api";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
-const TAILWIND_XL_QUERY = "(min-width: 80rem)";
+const TAILWIND_MD_QUERY = "(min-width: 48rem)";
 const NO_DAYS: ReadonlySet<number> = new Set();
 
 function subscribeToDayGridWidth(onStoreChange: () => void): () => void {
-  const mediaQuery = window.matchMedia(TAILWIND_XL_QUERY);
+  const mediaQuery = window.matchMedia(TAILWIND_MD_QUERY);
   mediaQuery.addEventListener("change", onStoreChange);
   return () => mediaQuery.removeEventListener("change", onStoreChange);
 }
 
 function fitsDayGrid(): boolean {
-  return window.matchMedia(TAILWIND_XL_QUERY).matches;
+  return window.matchMedia(TAILWIND_MD_QUERY).matches;
 }
 
 function calendarViewOf(search: CalendarSearch, now: Date): CalendarQuery {

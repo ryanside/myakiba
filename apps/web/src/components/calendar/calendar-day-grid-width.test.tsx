@@ -14,8 +14,8 @@ import { Route as calendarRoute } from "@/routes/(app)/calendar";
 import { signedInSession } from "../../../test/session";
 import { stubFetch } from "../../../test/app-route";
 
-const PHONE_WIDTH = 360;
-const DESKTOP_WIDTH = 1280;
+const PHONE_WIDTH = 767;
+const TABLET_WIDTH = 768;
 
 const release = {
   itemId: "item",
@@ -131,8 +131,8 @@ describe.each([
     expect(showsDayGrid()).toBe(false);
   });
 
-  test("at desktop width shows the day grid beside the list", async () => {
-    window.happyDOM.setInnerWidth(DESKTOP_WIDTH);
+  test("from tablet width shows the day grid with the list", async () => {
+    window.happyDOM.setInnerWidth(TABLET_WIDTH);
     await openCalendar(viewSearch);
 
     await screen.findByText(monthOnly);
@@ -149,7 +149,7 @@ describe.each([
     expect(showsDayGrid()).toBe(false);
 
     act(() => {
-      window.happyDOM.setInnerWidth(DESKTOP_WIDTH);
+      window.happyDOM.setInnerWidth(TABLET_WIDTH);
     });
     expect(showsDayGrid()).toBe(true);
     expect(screen.queryByText(dayDated) !== null).toBe(true);
