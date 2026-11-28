@@ -115,6 +115,7 @@ export function useAddController(search: AddSearchParams) {
   const commitRows: readonly CommitRow[] = selectedRows.map(({ row, item }) => ({
     row,
     title: item.title,
+    wishlisted: item.wishlisted,
   }));
   const newOrderTitle = defaultOrderTitle(commitRows.map(({ title }) => title));
   const releaseOf = useRowReleases(rows);

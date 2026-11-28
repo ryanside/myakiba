@@ -9,7 +9,11 @@ import type { CommitRow, Destination } from "./commit-input";
 const { CommitButton } = await import("./commit-button");
 
 const ROWS: readonly CommitRow[] = [
-  { row: { itemId: "miku00000001", overrides: {}, selected: true }, title: "Miku" },
+  {
+    row: { itemId: "miku00000001", overrides: {}, selected: true },
+    title: "Miku",
+    wishlisted: false,
+  },
 ];
 const COLLECTION: Destination = {
   ownership: { kind: "collection", shared: DEFAULT_SHARED },

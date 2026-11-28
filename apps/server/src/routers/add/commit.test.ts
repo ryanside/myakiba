@@ -669,6 +669,124 @@ test.each(["order-other", "order-missing"])(
   },
 );
 
+const toExisting: Ownership = {
+  kind: "order",
+  order: { kind: "existing", orderId: "order-existing" },
+};
+
+test.each([
+  { destination: "a new Order", ownership: newOrder() },
+  { destination: "an existing Order", ownership: toExisting },
+])(
+  "a commit to $destination takes a ticked row's Item off the Wishlist and leaves an unticked one",
+  async ({ ownership }) => {
+    await db.insert(wishlistItem).values([
+      { userId, itemId: "item-1", position: 0 },
+      { userId, itemId: "item-2", position: 1 },
+    ]);
+
+    const sent = await commit(
+      request({
+        rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }, ...bare("item-2")],
+        ownership,
+      }),
+    );
+
+    expect(sent.status).toBe(200);
+    const { orderId } = answerOf(sent);
+    const owned = await ownedRows();
+    expect(owned.map((row) => [row.itemId, row.orderId])).toEqual([
+      ["item-1", orderId],
+      ["item-2", orderId],
+    ]);
+    expect(await wished()).toEqual([{ itemId: "item-2", position: 1 }]);
+  },
+);
+
+test("a commit with every row unticked leaves the Wishlist as it was", async () => {
+  await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
+
+  const sent = await commit(request({ rows: bare("item-1"), ownership: newOrder() }));
+
+  expect(sent.status).toBe(200);
+  expect(await ownedRows()).toHaveLength(1);
+  expect(await wished()).toEqual([{ itemId: "item-1", position: 0 }]);
+});
+
+test("a commit that rolls back leaves a ticked row's Item on the Wishlist", async () => {
+  await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
+  const before = await written();
+
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
+      ownership: newOrder(),
+      listIds: ["list-1", "list-other"],
+    }),
+  );
+
+  expect(sent).toMatchObject({ status: 404, body: "List or selection not found" });
+  expect(await written()).toEqual(before);
+  expect(before.wishlist).toEqual([{ itemId: "item-1", position: 0 }]);
+});
+
+test.each([
+  { destination: "the Collection", ownership: toCollection(), wishlist: false },
+  { destination: "an Order that also adds to the Wishlist", ownership: newOrder(), wishlist: true },
+])("a ticked row going to $destination answers 422 and writes nothing", async (choice) => {
+  await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
+  const before = await written();
+
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
+      ownership: choice.ownership,
+      wishlist: choice.wishlist,
+    }),
+  );
+
+  expect(sent.status).toBe(422);
+  expect(await written()).toEqual(before);
+});
+
+test("a repeat of a commit that took an Item off the Wishlist takes nothing off again", async () => {
+  await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
+  const body = request({
+    rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
+    ownership: newOrder(),
+  });
+  const first = await commit(body);
+  expect(await wished()).toEqual([]);
+  await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 3 });
+
+  const repeat = await commit(body);
+
+  expect(first.status).toBe(200);
+  expect(repeat).toMatchObject({ status: 200, body: first.body });
+  expect(await wished()).toEqual([{ itemId: "item-1", position: 3 }]);
+  expect(await ownedRows()).toHaveLength(1);
+});
+
+test("a commit id reused with a row ticked otherwise answers 409 and writes nothing more", async () => {
+  await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
+  const body = request({ rows: bare("item-1"), ownership: newOrder() });
+  const first = await commit(body);
+  expect(first.status).toBe(200);
+  const afterFirst = await written();
+
+  const reused = await commit({
+    ...body,
+    rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
+  });
+
+  expect(reused).toMatchObject({
+    status: 409,
+    body: "These items were already added with different choices",
+  });
+  expect(await written()).toEqual(afterFirst);
+  expect(afterFirst.wishlist).toEqual([{ itemId: "item-1", position: 0 }]);
+});
+
 test("Not owned with Wishlist adds each Item once and keeps an earlier Wishlist entry", async () => {
   await db.insert(wishlistItem).values({ userId, itemId: "item-2", position: 0 });
 

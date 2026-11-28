@@ -57,6 +57,7 @@ const addRowSchema = z.strictObject({
   collectionDate: dateOrNull.optional(),
   shippingMethod: z.enum(SHIPPING_METHODS).optional(),
   releaseId: z.uuid().optional(),
+  removeFromWishlist: z.literal(true).optional(),
 });
 
 const BARE_ROW_FIELDS: ReadonlySet<string> = new Set(["itemId", "price"]);
@@ -112,6 +113,11 @@ export const addCommitSchema = z
   .refine(
     (commit) => commit.ownership.kind !== "none" || commit.wishlist || commit.listIds.length > 0,
     "Choose where these items go",
+  )
+  .refine(
+    (commit) =>
+      (commit.ownership.kind === "order" && !commit.wishlist) ||
+      !commit.rows.some((row) => row.removeFromWishlist),
   );
 
 export const addCommitResponseSchema = z.object({

@@ -24,6 +24,8 @@ const rowOverridesSchema = z.object({
   releaseId: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  /** Unset means ticked, which is where a wishlisted Item going to an Order starts. */
+  removeFromWishlist: z.boolean().optional(),
 });
 
 export type RowOverrides = z.infer<typeof rowOverridesSchema>;

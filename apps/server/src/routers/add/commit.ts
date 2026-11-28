@@ -5,7 +5,7 @@ import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
 import type { ListTarget } from "@myakiba/contracts/lists/schema";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
-import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
+import { collection, item, item_release, order, wishlistItem } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
 import { latestRelease } from "@/lib/latest-release";
@@ -207,6 +207,13 @@ export async function writeCommit(
         collectionItems.map(({ id }) => id),
       );
     }
+  }
+
+  const offWishlist = choices.rows.flatMap((row) => (row.removeFromWishlist ? [row.itemId] : []));
+  if (offWishlist.length > 0) {
+    await tx
+      .delete(wishlistItem)
+      .where(and(eq(wishlistItem.userId, userId), inArray(wishlistItem.itemId, offWishlist)));
   }
 
   let wishlistAdded = 0;

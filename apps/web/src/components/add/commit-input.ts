@@ -97,7 +97,21 @@ export function destinationOf(form: DestinationForm): Destination {
 export type CommitRow = {
   readonly row: DraftRow;
   readonly title: string;
+  readonly wishlisted: boolean;
 };
+
+/**
+ * Whether a row going to `kind` takes its Item off the Wishlist, or null when the row does not offer
+ * it: only a wishlisted Item going to an Order does, unless the commit also adds to the Wishlist.
+ */
+export function wishlistRemoval(
+  row: DraftRow,
+  wishlisted: boolean,
+  { kind, wishlist }: { readonly kind: Ownership["kind"] | null; readonly wishlist: boolean },
+): boolean | null {
+  if (!wishlisted || kind !== "order" || wishlist) return null;
+  return row.overrides.removeFromWishlist ?? true;
+}
 
 export const DEFAULT_SHARED: SharedFields = {
   collectionDate: null,
@@ -260,7 +274,12 @@ export function buildCommitChoices(
           return null;
         }
         return {
-          rows: rows.map(({ row }) => ownedRow(row, issues)),
+          rows: rows.map(({ row, wishlisted }) => ({
+            ...ownedRow(row, issues),
+            ...(wishlistRemoval(row, wishlisted, { kind: "order", wishlist }) && {
+              removeFromWishlist: true as const,
+            }),
+          })),
           ownership: {
             kind: "order",
             order:

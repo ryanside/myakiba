@@ -18,13 +18,15 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PickRow } from "@/data/picks";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
-import { removeButtonId } from "./commit-input";
+import { removeButtonId, wishlistRemoval } from "./commit-input";
 import type { AddItem } from "./commit-input";
 import { onTableKeys, revealFocus } from "./add-table-keys";
 import { useColumnsFade } from "./destination-motion";
@@ -219,7 +221,10 @@ function SelectRow({ row }: CellContext<AddRow, unknown>) {
   );
 }
 
-function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
+function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
+  const { c } = useAddTable();
+  const removal = wishlistRemoval(row, item.wishlisted, c.resolvedForm);
+  const removalId = `add-unwish-${id}`;
   return (
     <ItemTitleCell
       itemId={id}
@@ -227,7 +232,23 @@ function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
       externalId={item.externalId}
       image={item.image}
       walkedByKeys
-    />
+    >
+      {removal === null ? null : (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Checkbox
+            id={removalId}
+            checked={removal}
+            onCheckedChange={(checked) => c.edit(id, { removeFromWishlist: checked === true })}
+          />
+          <Label
+            htmlFor={removalId}
+            className="cursor-pointer truncate text-xs font-normal text-muted-foreground"
+          >
+            Remove from Wishlist
+          </Label>
+        </span>
+      )}
+    </ItemTitleCell>
   );
 }
 

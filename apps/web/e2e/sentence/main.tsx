@@ -71,6 +71,7 @@ function Sentence() {
   const rows: CommitRow[] = Array.from({ length: sentenceCase.selected }, (_, index) => ({
     row: { itemId: `item${String(index).padStart(8, "0")}`, overrides: {}, selected: true },
     title: `Item ${index + 1}`,
+    wishlisted: false,
   }));
   // The sentence reads only these from the page's controller.
   const controller: Pick<

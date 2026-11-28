@@ -104,6 +104,74 @@ test("an Item's second line is only its MFC number, with no date, price or badge
   expect(cell?.textContent).toBe("OwnedMFC #4242");
 });
 
+const REMOVE_FROM_WISHLIST = { name: "Remove from Wishlist" } as const;
+
+test("only a wishlisted Item going to an Order offers Remove from Wishlist, ticked, and the commit sends it", async () => {
+  seedItems(item("wished000001", { title: "Wished", wishlisted: true }));
+  draft("wished000001", "miku00000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+
+  await screen.findByRole("checkbox", { name: "Select Wished" });
+  const boxes = screen.getAllByRole("checkbox", REMOVE_FROM_WISHLIST);
+  expect(boxes).toHaveLength(1);
+  expect(boxes[0]?.getAttribute("aria-checked")).toBe("true");
+  const wishedCell = screen.getByRole("link", { name: "Wished" }).parentElement;
+  expect(wishedCell?.textContent).toBe("WishedMFC #1000Remove from Wishlist");
+
+  await user.click(screen.getByRole("button", { name: "Create order with 2" }));
+
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect<unknown>(server.commits[0]?.rows).toEqual([
+    { itemId: "wished000001", price: null, removeFromWishlist: true },
+    { itemId: "miku00000001", price: null },
+  ]);
+});
+
+test("an unticked Remove from Wishlist sends nothing for the Wishlist", async () => {
+  seedItems(item("wished000001", { title: "Wished", wishlisted: true }));
+  draft("wished000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+
+  await user.click(await screen.findByRole("checkbox", REMOVE_FROM_WISHLIST));
+  expect(screen.getByRole("checkbox", REMOVE_FROM_WISHLIST).getAttribute("aria-checked")).toBe(
+    "false",
+  );
+  await user.click(screen.getByRole("button", { name: "Create order with 1" }));
+
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect<unknown>(server.commits[0]?.rows).toEqual([{ itemId: "wished000001", price: null }]);
+  expect(server.commits[0]?.wishlist).toBe(false);
+});
+
+test.each(["/add?to=collection", "/add?to=wishlist", "/add?to=none", "/add"])(
+  "a wishlisted Item offers no Remove from Wishlist at %s",
+  async (entry) => {
+    seedItems(item("wished000001", { title: "Wished", wishlisted: true }));
+    draft("wished000001");
+    openAddPage(entry);
+
+    await screen.findByRole("checkbox", { name: "Select Wished" });
+    expect(screen.queryByRole("checkbox", REMOVE_FROM_WISHLIST)).toBeNull();
+  },
+);
+
+test("an Order that also adds to the Wishlist offers no Remove from Wishlist", async () => {
+  seedItems(item("wished000001", { title: "Wished", wishlisted: true }));
+  draft("wished000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+
+  await screen.findByRole("checkbox", REMOVE_FROM_WISHLIST);
+  await user.click(screen.getByRole("checkbox", { name: "Wishlist" }));
+
+  expect(screen.queryByRole("checkbox", REMOVE_FROM_WISHLIST)).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Create order with 1" }));
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect<unknown>(server.commits[0]?.rows).toEqual([{ itemId: "wished000001", price: null }]);
+});
+
 test("a custom Item reads Custom item, with no MFC link", async () => {
   seedItems(item("custom000001", { title: "Mine", externalId: null }));
   draft("custom000001");
