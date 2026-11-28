@@ -5,16 +5,11 @@ import { collection, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import { shopKey } from "@myakiba/utils/shop-key";
 
-/** Rows a save rewrites itself, so their spellings do not count as existing ones. */
 type Rewritten = { readonly orders?: SQL; readonly collectionItems?: SQL };
 
 const notRewritten = (rows: SQL | undefined) => rows && not(sql`COALESCE(${rows}, FALSE)`);
 
-/**
- * Returns a function that turns each typed Shop into the viewer's existing spelling of it, the one
- * on the most Orders and Collection Items, then the one used last, then the first in code-point
- * order. A Shop with no existing spelling stays as typed.
- */
+/** Maps each typed Shop to the viewer's existing spelling of it; a Shop with none stays as typed. */
 export async function shopSpellings(
   tx: Tx,
   userId: string,

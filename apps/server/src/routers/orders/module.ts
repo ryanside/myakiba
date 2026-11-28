@@ -84,7 +84,6 @@ async function spelledOrder(tx: Tx, userId: string, newOrder: NewOrder): Promise
   return { ...newOrder, shop: spell(newOrder.shop) };
 }
 
-/** The edit with its Shop in an existing spelling, not counting the rows the edit rewrites. */
 async function spelledEdit(
   tx: Tx,
   userId: string,
