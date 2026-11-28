@@ -33,21 +33,9 @@ export const orderFiltersSchema = z.object({
   paid: z.boolean().optional(),
   totalMin: z.coerce.number().int().optional(),
   totalMax: z.coerce.number().int().optional(),
-  unpaidCostsMin: z.coerce.number().int().optional(),
-  unpaidCostsMax: z.coerce.number().int().optional(),
-  orderSpendMin: z.coerce.number().int().optional(),
-  orderSpendMax: z.coerce.number().int().optional(),
   paidItemsMin: z.coerce.number().int().optional(),
   shippingFeeMin: z.coerce.number().int().optional(),
   shippingFeeMax: z.coerce.number().int().optional(),
-  taxesMin: z.coerce.number().int().optional(),
-  taxesMax: z.coerce.number().int().optional(),
-  dutiesMin: z.coerce.number().int().optional(),
-  dutiesMax: z.coerce.number().int().optional(),
-  tariffsMin: z.coerce.number().int().optional(),
-  tariffsMax: z.coerce.number().int().optional(),
-  miscFeesMin: z.coerce.number().int().optional(),
-  miscFeesMax: z.coerce.number().int().optional(),
 });
 
 export const searchSchema = orderFiltersSchema;

@@ -456,7 +456,7 @@ function ListPage({ s, compact }: { readonly s: S; readonly compact: boolean }) 
                   Edit
                 </span>
                 <span className={cls("button")} data-tone="outline" data-icon>
-                  <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
+                  <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={1.5} />
                 </span>
               </span>
             </span>
