@@ -278,6 +278,32 @@ test("a merge and a split store the existing spelling on the new Order", async (
   expect(await orderShops()).toEqual(["AmiAmi", "AmiAmi", "AmiAmi"]);
 });
 
+test("a merge re-spells a Shop that only the merged Orders hold", async () => {
+  await saveOrder("order-1", "amiami");
+  await saveOrder("order-2", "amiami");
+  await saveItem("c-1", "", "order-1");
+  await saveItem("c-2", "", "order-2");
+
+  await send("POST", "/orders/merge", {
+    orderIds: ["order-1", "order-2"],
+    newOrder: newOrder("AmiAmi"),
+  });
+
+  expect(await orderShops()).toEqual(["AmiAmi"]);
+});
+
+test("an Order edit that sends back its padded Shop does not re-spell it", async () => {
+  await saveOrder("order-1", "AmiAmi ");
+  await saveOrder("order-2", "amiami");
+
+  await send("PUT", "/orders/order-1", {
+    order: { title: "Renamed", shop: "AmiAmi " },
+    cascadeOptions: ["shop"],
+  });
+
+  expect(await orderShop("order-1")).toBe("AmiAmi");
+});
+
 async function editItem(id: string, shop: string) {
   const [row] = await db.select().from(collection).where(eq(collection.id, id));
   if (!row) throw new Error(`No Collection Item ${id}`);
@@ -316,6 +342,24 @@ test("a Collection Item edit re-spells a Shop only it holds", async () => {
   expect(await itemShop("c-1")).toBe("AmiAmi");
 });
 
+test("a Collection Item edit that sends back its padded Shop does not re-spell it", async () => {
+  await saveOrder("order-1", "amiami");
+  await saveItem("c-1", "AmiAmi ");
+
+  await editItem("c-1", "AmiAmi ");
+
+  expect(await itemShop("c-1")).toBe("AmiAmi");
+});
+
+test("a blank Shop stays blank beside a whitespace-only one", async () => {
+  await saveOrder("order-1", "   ");
+  await saveItem("c-1", "HLJ");
+
+  await send("PUT", "/collection/fill", { ids: ["c-1"], fill: { field: "shop", value: "" } });
+
+  expect(await itemShop("c-1")).toBe("");
+});
+
 test("a Collection fill stores the existing spelling, and re-spells one only the filled items hold", async () => {
   await saveOrder("order-1", "AmiAmi");
   await saveItem("c-1", "HLJ");
@@ -338,22 +382,22 @@ test("the spelling most used wins, then the one used last", async () => {
   await db.insert(order).values({
     id: "order-3",
     userId,
-    title: "Recent",
+    title: "Older",
     shop: "HLJ",
-    updatedAt: new Date("2026-02-01"),
+    updatedAt: new Date("2026-01-01"),
   });
   await db.insert(order).values({
     id: "order-4",
     userId,
-    title: "Older",
+    title: "Recent",
     shop: "hlj",
-    updatedAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-02-01"),
   });
 
   await addToNewOrder("AMIAMI");
   await addToNewOrder("hlj.com");
 
-  expect(await orderShops()).toEqual(["AmiAmi", "AmiAmi", "HLJ", "HLJ", "amiami", "hlj"]);
+  expect(await orderShops()).toEqual(["AmiAmi", "AmiAmi", "HLJ", "amiami", "hlj", "hlj"]);
 });
 
 test("another user's spelling of a Shop never changes the viewer's", async () => {
@@ -363,4 +407,23 @@ test("another user's spelling of a Shop never changes the viewer's", async () =>
 
   expect(await orderShops()).toEqual(["amiami"]);
   expect(await orderShop("theirs")).toBe("AmiAmi");
+});
+
+test("another user's Collection Items never change the viewer's spelling", async () => {
+  await db
+    .insert(item)
+    .values({ id: "item-9", ownerId: otherUserId, externalId: 9, title: "Theirs" });
+  await db.insert(collection).values({
+    id: "c-theirs",
+    userId: otherUserId,
+    itemId: "item-9",
+    status: "Owned",
+    shop: "AmiAmi",
+  });
+  await saveItem("c-1", "HLJ");
+
+  await editItem("c-1", "amiami");
+
+  expect(await itemShop("c-1")).toBe("amiami");
+  expect(await itemShop("c-theirs")).toBe("AmiAmi");
 });

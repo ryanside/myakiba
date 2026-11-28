@@ -36,6 +36,7 @@ test.each([
   ["あみあみ", "AmiAmi"],
   ["Mandarake", "mandarake.co.jp"],
   ["amazon.co.jp", "amazon.com"],
+  ["market.example/seller.com", "market.example/seller"],
 ])("%j and %j are different Shops", (a, b) => {
   expect(shopKey(a)).not.toBe(shopKey(b));
 });
