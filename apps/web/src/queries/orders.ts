@@ -45,21 +45,9 @@ export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, Api
     paid: filters.paid,
     totalMin: filters.totalMin,
     totalMax: filters.totalMax,
-    unpaidCostsMin: filters.unpaidCostsMin,
-    unpaidCostsMax: filters.unpaidCostsMax,
-    orderSpendMin: filters.orderSpendMin,
-    orderSpendMax: filters.orderSpendMax,
     paidItemsMin: filters.paidItemsMin,
     shippingFeeMin: filters.shippingFeeMin,
     shippingFeeMax: filters.shippingFeeMax,
-    taxesMin: filters.taxesMin,
-    taxesMax: filters.taxesMax,
-    dutiesMin: filters.dutiesMin,
-    dutiesMax: filters.dutiesMax,
-    tariffsMin: filters.tariffsMin,
-    tariffsMax: filters.tariffsMax,
-    miscFeesMin: filters.miscFeesMin,
-    miscFeesMax: filters.miscFeesMax,
   };
 
   return call(app.api.orders.get({ query: queryParams }), {

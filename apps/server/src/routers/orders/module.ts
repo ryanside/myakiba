@@ -64,14 +64,6 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.shippingFeeMax === undefined
       ? undefined
       : lte(order.shippingFee, filters.shippingFeeMax),
-    filters.taxesMin === undefined ? undefined : gte(order.taxes, filters.taxesMin),
-    filters.taxesMax === undefined ? undefined : lte(order.taxes, filters.taxesMax),
-    filters.dutiesMin === undefined ? undefined : gte(order.duties, filters.dutiesMin),
-    filters.dutiesMax === undefined ? undefined : lte(order.duties, filters.dutiesMax),
-    filters.tariffsMin === undefined ? undefined : gte(order.tariffs, filters.tariffsMin),
-    filters.tariffsMax === undefined ? undefined : lte(order.tariffs, filters.tariffsMax),
-    filters.miscFeesMin === undefined ? undefined : gte(order.miscFees, filters.miscFeesMin),
-    filters.miscFeesMax === undefined ? undefined : lte(order.miscFees, filters.miscFeesMax),
   );
 }
 
@@ -186,18 +178,6 @@ export const Orders = {
             and(
               input.totalMin === undefined ? undefined : sql`${orderTotal} >= ${input.totalMin}`,
               input.totalMax === undefined ? undefined : sql`${orderTotal} <= ${input.totalMax}`,
-              input.unpaidCostsMin === undefined
-                ? undefined
-                : sql`${orderUnpaidCosts} >= ${input.unpaidCostsMin}`,
-              input.unpaidCostsMax === undefined
-                ? undefined
-                : sql`${orderUnpaidCosts} <= ${input.unpaidCostsMax}`,
-              input.orderSpendMin === undefined
-                ? undefined
-                : sql`${orderSpend} >= ${input.orderSpendMin}`,
-              input.orderSpendMax === undefined
-                ? undefined
-                : sql`${orderSpend} <= ${input.orderSpendMax}`,
               input.paidItemsMin === undefined
                 ? undefined
                 : sql`${orderPaidItemCount} >= ${input.paidItemsMin}`,
