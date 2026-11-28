@@ -142,7 +142,11 @@ export function ExtensionLink({
       href={link.href}
       target="_blank"
       rel="noreferrer"
-      className={cn(buttonVariants(), className)}
+      className={cn(
+        buttonVariants(),
+        "h-auto min-h-8 py-1 text-balance text-center whitespace-normal",
+        className,
+      )}
     >
       {link.label}
       <span className="sr-only"> (opens in a new tab)</span>
