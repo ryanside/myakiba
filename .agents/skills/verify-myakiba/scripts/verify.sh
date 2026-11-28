@@ -107,7 +107,7 @@ up() {
     -e DATABASE_URL="postgres://verify:verify@$prefix-postgres:5432/verify" \
     -e REDIS_HOST="$prefix-redis" -e REDIS_PORT=6379 \
     -e CORS_ORIGIN="$url" -e BETTER_AUTH_URL="$url" \
-    -e BETTER_AUTH_SECRET=verify-myakiba-secret-0123456789abcdef \
+    -e BETTER_AUTH_SECRET="verify-myakiba-$run-0123456789abcdef" \
     -e TURNSTILE_SECRET_KEY="$turnstile_secret_key" \
     -e RESEND_API_KEY=re_verify_myakiba -e RESEND_FROM_EMAIL=verify@example.invalid \
     -e GOOGLE_CLIENT_ID=verify-myakiba -e GOOGLE_CLIENT_SECRET=verify-myakiba \
