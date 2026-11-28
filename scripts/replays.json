@@ -5889,6 +5889,67 @@
       "fixed": [
         "a saved layout that hid the Title column still shows it, with its link, and the Columns picker never offers it"
       ]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > an unfiltered delete hides the items before the server answers, its totals follow the server's answer, and no toast says so",
+        "a Collection Item write on the collection page > a filtered edit leaves the list alone, still patches the Item page's copy, and no toast says so"
+      ]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "an Order write on the orders page > an unfiltered delete hides the Order before the server answers, and no toast says so",
+        "an Order write on the orders page > a filtered delete marks the Order as saving until the server answers, and no toast says it landed",
+        "an Order write on the orders page > an edit that fails while a delete of the same Order is saving shows the Order until the delete lands",
+        "a merge from the Merge dialog > does not read the merge draft again once the merged Orders are gone, and no toast says they merged",
+        "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands, with no toast"
+      ]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
+      "fixed": [
+        "list writes > update a List: what the write shows and refetches",
+        "list writes > delete a List: what the write shows and refetches",
+        "list writes > delete two Lists: what the write shows and refetches",
+        "list writes > remove members from a List: what the write shows and refetches"
+      ]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/components/auth/auth-router-provider.test.tsx",
+      "fixed": [
+        "signing out settles before the follow-up session check, then stays on login without a dashboard bounce"
+      ]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/components/settings/auth-settings.test.tsx",
+      "fixed": [
+        "saved preferences show Saved on the button, with no toast, and reload the route data",
+        "a saved profile shows Saved on the button, with no toast, and reloads the route data"
+      ]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/components/settings/profile.test.tsx",
+      "fixed": ["an available username saves and shows Saved on the button, with no toast"]
+    },
+    {
+      "fix": "fe174127fd3fbe905f45bcdd3a9256823677fb1a",
+      "bug": "A save whose result the screen already showed, such as an inline cell edit, a deleted row or a flipped Paid box, still popped a success toast.",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": ["a card dropped on Owned shows no toast, since the Owned column shows it"]
     }
   ],
   "lint": [
