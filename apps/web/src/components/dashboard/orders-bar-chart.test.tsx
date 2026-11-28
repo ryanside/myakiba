@@ -31,10 +31,15 @@ afterAll(() => {
   jest.setSystemTime();
   mock.restore();
 });
-const data = [
-  { month: 8, orderCount: 2 },
-  { month: 10, orderCount: 1 },
-];
+// The server's window for 2026-10-21: August 2026 to July 2027.
+function chartMonths(counts: Readonly<Record<string, number>>) {
+  return Array.from({ length: 12 }, (_, offset) => {
+    const year = offset < 5 ? 2026 : 2027;
+    const month = ((7 + offset) % 12) + 1;
+    return { year, month, orderCount: counts[`${year}-${month}`] ?? 0 };
+  });
+}
+const data = chartMonths({ "2026-8": 2, "2026-10": 1 });
 afterEach(() => {
   cleanup();
   navigate.mockClear();
@@ -129,18 +134,18 @@ test("each order bar is a link named for its month and count, and only the highl
   await frame(600);
   const links = [...container.querySelectorAll('[role="link"]')];
   expect(links.map((link) => link.getAttribute("aria-label"))).toEqual([
-    "January: 0 orders",
-    "February: 0 orders",
-    "March: 0 orders",
-    "April: 0 orders",
-    "May: 0 orders",
-    "June: 0 orders",
-    "July: 0 orders",
     "August: 2 orders",
     "September: 0 orders",
     "October: 1 order",
     "November: 0 orders",
     "December: 0 orders",
+    "January 2027: 0 orders",
+    "February 2027: 0 orders",
+    "March 2027: 0 orders",
+    "April 2027: 0 orders",
+    "May 2027: 0 orders",
+    "June 2027: 0 orders",
+    "July 2027: 0 orders",
   ]);
   expect(links.filter((link) => link.getAttribute("tabindex") === "0")).toEqual([
     monthLink(container, "October"),
@@ -159,16 +164,16 @@ test("arrow keys move the order chart highlight between months and Enter opens t
   expect(bar(container, 0).getAttribute("opacity")).toBe("1");
   expect(container.textContent).toContain("2 orders releasing in August");
   fireEvent.keyDown(document.activeElement ?? container, { key: "End" });
-  expect(document.activeElement).toBe(monthLink(container, "December"));
+  expect(document.activeElement).toBe(monthLink(container, "July 2027"));
   fireEvent.keyDown(document.activeElement ?? container, { key: "Home" });
-  expect(document.activeElement).toBe(monthLink(container, "January"));
+  expect(document.activeElement).toBe(monthLink(container, "August"));
   fireEvent.keyDown(document.activeElement ?? container, { key: "ArrowLeft" });
-  expect(document.activeElement).toBe(monthLink(container, "January"));
+  expect(document.activeElement).toBe(monthLink(container, "August"));
   fireEvent.keyDown(document.activeElement ?? container, { key: "ArrowRight" });
   fireEvent.keyDown(document.activeElement ?? container, { key: "Enter" });
   expect(navigate).toHaveBeenCalledWith({
     to: "/orders",
-    search: { releaseDateStart: "2026-02-01", releaseDateEnd: "2026-02-28" },
+    search: { releaseDateStart: "2026-09-01", releaseDateEnd: "2026-09-30" },
   });
 });
 
@@ -243,14 +248,23 @@ test("a focused month keeps keyboard focus when the order counts refresh", async
   const { container, rerender } = render(<OrdersBarChart data={data} />);
   await frame(600);
   act(() => monthLink(container, "August").focus());
-  rerender(
-    <OrdersBarChart
-      data={[
-        { month: 8, orderCount: 3 },
-        { month: 10, orderCount: 1 },
-      ]}
-    />,
-  );
+  rerender(<OrdersBarChart data={chartMonths({ "2026-8": 3, "2026-10": 1 })} />);
   await frame(600);
   expect(document.activeElement?.getAttribute("aria-label")).toBe("August: 3 orders");
+});
+
+test("a month in next year names its year in the heading and opens Orders for that year", async () => {
+  const { container } = render(
+    <OrdersBarChart data={chartMonths({ "2026-10": 1, "2027-2": 2 })} />,
+  );
+  await frame(600);
+  const february = monthLink(container, "February 2027");
+  fireEvent.mouseOver(bar(container, 1));
+  await frame();
+  expect(container.textContent).toContain("2 orders releasing in February 2027");
+  fireEvent.keyDown(february, { key: "Enter" });
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/orders",
+    search: { releaseDateStart: "2027-02-01", releaseDateEnd: "2027-02-28" },
+  });
 });

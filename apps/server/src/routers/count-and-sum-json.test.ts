@@ -162,14 +162,18 @@ describe("every count and sum the contracts call a number is a JSON number", () 
       readonly collectionStats: { readonly totalSpent: unknown };
       readonly categoriesOwned: readonly { readonly totalValue: unknown }[];
       readonly ordersSummary: unknown;
-      readonly monthlyOrders: readonly { readonly month: unknown }[];
+      readonly monthlyOrders: readonly {
+        readonly year: unknown;
+        readonly month: unknown;
+        readonly orderCount: unknown;
+      }[];
     }>("/dashboard");
 
     expect({
       totalSpent: overview.collectionStats.totalSpent,
       categoryTotals: overview.categoriesOwned.map((row) => row.totalValue),
       ordersSummary: overview.ordersSummary,
-      months: overview.monthlyOrders.map((row) => row.month),
+      months: overview.monthlyOrders.filter((row) => row.orderCount !== 0),
     }).toEqual({
       totalSpent: 3000,
       categoryTotals: [3000],
@@ -181,7 +185,7 @@ describe("every count and sum the contracts call a number is a JSON number", () 
         totalTariffsAllTime: 5,
         totalMiscFeesAllTime: 1,
       },
-      months: [month],
+      months: [{ year, month, orderCount: 2 }],
     });
   });
 

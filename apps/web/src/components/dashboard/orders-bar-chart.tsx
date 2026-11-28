@@ -34,12 +34,16 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface MonthlyOrderData {
+  readonly year: number;
   readonly month: number;
   readonly orderCount: number;
 }
 
 type MonthlyChartRow = {
+  readonly year: number;
+  readonly monthNumber: number;
   readonly month: string;
+  readonly label: string;
   readonly desktop: number;
 };
 
@@ -76,28 +80,28 @@ interface OrdersBarChartProps {
 export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.ReactNode {
   const navigate = useNavigate();
 
-  const chartData = useMemo(() => {
-    const monthMap = new Map(data.map((item) => [item.month, item.orderCount]));
-    return MONTH_NAMES.map((monthName, index) => ({
-      month: monthName,
-      desktop: monthMap.get(index + 1) || 0,
-    }));
+  const { chartData, currentMonthIndex } = useMemo(() => {
+    const today = new Date();
+    const rows = data.map(({ year, month, orderCount }) => {
+      const monthName = MONTH_NAMES[month - 1] ?? "";
+      return {
+        year,
+        monthNumber: month,
+        month: monthName,
+        label: year === today.getFullYear() ? monthName : `${monthName} ${year}`,
+        desktop: orderCount,
+      };
+    });
+    return {
+      chartData: rows,
+      currentMonthIndex: rows.findIndex(
+        (row) => row.year === today.getFullYear() && row.monthNumber === today.getMonth() + 1,
+      ),
+    };
   }, [data]);
-
-  const currentMonthIndex = useMemo(() => new Date().getMonth(), []);
 
   const [activeIndex, setActiveIndex] = useState<number>();
   const [focusedIndex, setFocusedIndex] = useState<number>();
-
-  const getReleaseMonthDateRange = useCallback((monthIndex: number) => {
-    const currentYear = new Date().getFullYear();
-    const bounds = getDateOnlyMonthBounds(currentYear, monthIndex + 1);
-
-    return {
-      releaseDateStart: bounds.start,
-      releaseDateEnd: bounds.end,
-    };
-  }, []);
 
   const resetActiveIndex = useCallback(() => setActiveIndex(undefined), []);
 
@@ -113,13 +117,15 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
 
   const handleBarClick = useCallback(
     (monthIndex: number) => {
-      const releaseDateRange = getReleaseMonthDateRange(monthIndex);
+      const row = chartData[monthIndex];
+      if (!row) return;
+      const bounds = getDateOnlyMonthBounds(row.year, row.monthNumber);
       navigate({
         to: "/orders",
-        search: releaseDateRange,
+        search: { releaseDateStart: bounds.start, releaseDateEnd: bounds.end },
       });
     },
-    [navigate, getReleaseMonthDateRange],
+    [navigate, chartData],
   );
 
   // The pointer's month wins, then the focused month, then the current month.
@@ -148,7 +154,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
         ) : (
           <FrameTitle className="animate-data-in text-base font-medium">
             {maxValueIndex.value} {maxValueIndex.value === 1 ? "order" : "orders"} releasing in{" "}
-            {chartData[maxValueIndex.index]?.month}
+            {chartData[maxValueIndex.index]?.label}
           </FrameTitle>
         )}
       </FrameHeader>
@@ -271,7 +277,7 @@ function OrderBar(props: OrderBarProps): React.ReactNode {
       chart.onMonthOpen(monthIndex);
       return;
     }
-    const nextIndex = monthIndexForKey(event.key, monthIndex);
+    const nextIndex = monthIndexForKey(event.key, monthIndex, chart.months.length);
     if (nextIndex === undefined) return;
     event.preventDefault();
     event.currentTarget
@@ -292,7 +298,7 @@ function OrderBar(props: OrderBarProps): React.ReactNode {
       ref={barRef}
       tabIndex={monthIndex === (chart.focusedIndex ?? chart.active.index) ? 0 : -1}
       aria-label={
-        month && `${month.month}: ${month.desktop} ${month.desktop === 1 ? "order" : "orders"}`
+        month && `${month.label}: ${month.desktop} ${month.desktop === 1 ? "order" : "orders"}`
       }
       data-month-index={monthIndex}
       className="group/bar outline-none"
@@ -323,16 +329,16 @@ function OrderBar(props: OrderBarProps): React.ReactNode {
   );
 }
 
-function monthIndexForKey(key: string, monthIndex: number): number | undefined {
+function monthIndexForKey(key: string, monthIndex: number, monthCount: number): number | undefined {
   switch (key) {
     case "ArrowLeft":
       return Math.max(monthIndex - 1, 0);
     case "ArrowRight":
-      return Math.min(monthIndex + 1, MONTH_NAMES.length - 1);
+      return Math.min(monthIndex + 1, monthCount - 1);
     case "Home":
       return 0;
     case "End":
-      return MONTH_NAMES.length - 1;
+      return monthCount - 1;
     default:
       return undefined;
   }

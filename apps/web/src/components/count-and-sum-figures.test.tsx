@@ -43,7 +43,7 @@ const dashboard = {
   },
   unpaidOrderCount: 1,
   unpaidCosts: 3600,
-  monthlyOrders: [{ month: 11, orderCount: 2 }],
+  monthlyOrders: [{ year: 2026, month: 11, orderCount: 2 }],
 } satisfies DashboardResponse;
 
 test("the Dashboard's Total Spent adds paid Collection Items and paid Order fees", async () => {
