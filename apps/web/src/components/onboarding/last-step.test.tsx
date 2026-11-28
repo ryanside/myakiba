@@ -49,6 +49,25 @@ function loadExtension(options: Parameters<typeof fakeExtension>[0]) {
   bridge = createExtensionBridge(extension.window);
 }
 
+function holdExtensionCheck(): () => Promise<null> {
+  const held = bridge;
+  const released = Promise.withResolvers<null>();
+  const started = Promise.withResolvers<null>();
+  bridge = {
+    ...held,
+    probe: async () => {
+      await released.promise;
+      const status = held.probe();
+      started.resolve(null);
+      return status;
+    },
+  };
+  return () => {
+    released.resolve(null);
+    return started.promise;
+  };
+}
+
 function GettingStartedButton() {
   const openOnboarding = useOpenOnboarding();
   return (
@@ -119,7 +138,9 @@ afterEach(() => {
 
 test("the last step says nothing until the extension answers, then links a missing one to its store listing", async () => {
   loadExtension({ installed: false });
+  const startCheck = holdExtensionCheck();
   await openLastStep();
+  await startCheck();
 
   expect(lastStepText()).not.toContain("Install the myakiba extension to pick items");
   expect(lastStepText()).not.toContain(PICK_HOW_TO);

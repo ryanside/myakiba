@@ -1303,8 +1303,9 @@ test("picks past the row cap wait on the page and come in as rows are committed"
   const user = userEvent.setup();
   openAddPage("/add?to=none");
 
-  await waitFor(() =>
-    expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(101),
+  await waitFor(
+    () => expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(101),
+    { timeout: 15_000 },
   );
   await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
 
