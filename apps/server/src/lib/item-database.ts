@@ -278,7 +278,14 @@ async function storedReleases(tx: Tx, itemId: string) {
     })
     .from(item_release)
     .where(eq(item_release.itemId, itemId));
-  return rows.map((row) => ({ id: row.id, key: releaseKey(row), precision: row.date.precision }));
+  return rows.map((row) => ({
+    id: row.id,
+    key: releaseKey(row),
+    precision: row.date.precision,
+    date: row.date.start,
+    type: row.type,
+    priceCurrency: row.priceCurrency,
+  }));
 }
 
 type KeyedRelease = { readonly key: string; readonly precision: string };
@@ -303,44 +310,46 @@ async function rereadPrecisions(
   }
 }
 
+/** How many Collection Items' Selected Item Releases a refresh moved or cleared. */
+type Selections = { readonly moved: number; readonly cleared: number };
+
 async function applyReleases(
   tx: Tx,
   itemId: string,
   plan: ReleasePlan,
   rows: readonly ReleaseRow[],
-): Promise<ReleasePlan["kind"]> {
+): Promise<Selections> {
   const added = new Set(plan.addedReleaseIds);
   const inserts = rows.flatMap(({ row }) => (added.has(row.id) ? [row] : []));
   if (inserts.length > 0) await tx.insert(item_release).values(inserts);
 
-  switch (plan.kind) {
-    case "none":
-      break;
-    case "remap": {
-      const remapped = await tx
-        .update(collection)
-        .set({ releaseId: plan.toReleaseId, updatedAt: new Date() })
-        .where(and(eq(collection.itemId, itemId), eq(collection.releaseId, plan.fromReleaseId)))
-        .returning({ id: collection.id });
-      await advanceOrderReleaseDatesForCollectionItems(
-        tx,
-        remapped.map(({ id }) => id),
-      );
-      break;
-    }
-    case "clear":
-      await tx
-        .update(collection)
-        .set({ releaseId: null, updatedAt: new Date() })
-        .where(
-          and(
-            eq(collection.itemId, itemId),
-            isNotNull(collection.releaseId),
-            inArray(collection.releaseId, [...plan.staleReleaseIds]),
-          ),
-        );
-      break;
+  const moved: string[] = [];
+  for (const { from, to } of plan.moves) {
+    const remapped = await tx
+      .update(collection)
+      .set({ releaseId: to, updatedAt: new Date() })
+      .where(and(eq(collection.itemId, itemId), eq(collection.releaseId, from)))
+      .returning({ id: collection.id });
+    moved.push(...remapped.map(({ id }) => id));
   }
+  await advanceOrderReleaseDatesForCollectionItems(tx, moved);
+
+  const movedFrom = new Set(plan.moves.map(({ from }) => from));
+  const unmatched = plan.staleReleaseIds.filter((id) => !movedFrom.has(id));
+  const cleared =
+    unmatched.length === 0
+      ? []
+      : await tx
+          .update(collection)
+          .set({ releaseId: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(collection.itemId, itemId),
+              isNotNull(collection.releaseId),
+              inArray(collection.releaseId, unmatched),
+            ),
+          )
+          .returning({ id: collection.id });
 
   if (plan.staleReleaseIds.length > 0) {
     await tx
@@ -349,11 +358,12 @@ async function applyReleases(
         and(eq(item_release.itemId, itemId), inArray(item_release.id, [...plan.staleReleaseIds])),
       );
   }
-  return plan.kind;
+  return { moved: moved.length, cleared: cleared.length };
 }
 
 type Refreshed = {
-  readonly saved: ReleasePlan["kind"] | "unchanged";
+  readonly saved: "refreshed" | "unchanged";
+  readonly selections: Selections;
   readonly picture: PictureOutcome;
 };
 
@@ -372,7 +382,14 @@ export async function refreshItem(
   const { legacyImageUrl, imageKey } = shown ?? fields;
   const existing = await storedReleases(tx, id);
   const rows = releaseRows(id, page);
-  const keyed = rows.map(({ row, key }) => ({ id: row.id, key, precision: row.datePrecision }));
+  const keyed = rows.map(({ row, key }) => ({
+    id: row.id,
+    key,
+    precision: row.datePrecision,
+    date: row.date,
+    type: row.type,
+    priceCurrency: row.priceCurrency,
+  }));
   const current: Snapshot = {
     fields,
     links: await storedLinks(tx, id),
@@ -383,7 +400,13 @@ export async function refreshItem(
     links: linksInLockOrder(page).map(pageLink),
     releaseKeys: sortedKeys(keyed),
   };
-  if (Bun.deepEquals(current, next)) return Result.ok({ saved: "unchanged", picture: outcome });
+  if (Bun.deepEquals(current, next)) {
+    return Result.ok({
+      saved: "unchanged",
+      selections: { moved: 0, cleared: 0 },
+      picture: outcome,
+    });
+  }
 
   await tx
     .update(item)
@@ -393,5 +416,6 @@ export async function refreshItem(
   await linkEntries(tx, viewer.userId, id, page);
   await rereadPrecisions(tx, existing, rows);
   const plan = buildReleasePlan({ existing, page: keyed });
-  return Result.ok({ saved: await applyReleases(tx, id, plan, rows), picture: outcome });
+  const selections = await applyReleases(tx, id, plan, rows);
+  return Result.ok({ saved: "refreshed", selections, picture: outcome });
 }
