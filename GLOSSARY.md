@@ -128,13 +128,13 @@ One Item included in a Wishlist. An Item can appear only once and stays until th
 _Avoid_: Wishlist Entry, List Member, wished Item
 
 **Wishlist Release Filter**:
-One of three Wishlist views: All, Upcoming, or Available, based on the Item Release with the latest date and the viewer's local date. All includes every Wishlist Item, including Items with no Item Release, and is the only view with ranks and manual reordering.
+One of three Wishlist views: All, Upcoming, or Released, based on the Item Release with the latest date and the viewer's local date. An Item Release's released-from day is its own day for a day-precise release, the 1st of the next month for a month-only release, and January 1 of the next year for a year-only release; it counts as Released from that day on and Upcoming before it. All includes every Wishlist Item, including Items with no Item Release, and is the only view with ranks and manual reordering.
 
 **Upcoming**:
-A Wishlist Release Filter for Items whose latest Item Release date is after today.
+A Wishlist Release Filter for Items whose latest Item Release has a released-from day after the viewer's local date.
 
-**Available**:
-A Wishlist Release Filter for Items whose latest Item Release date is today or earlier. Available describes the release date, not whether a Shop has stock.
+**Released**:
+A Wishlist Release Filter for Items whose latest Item Release has a released-from day on or before the viewer's local date (its own day for a day-precise release, the 1st of the next month for a month-only release, and January 1 of the next year for a year-only release). Released describes the release date, not whether a Shop has stock.
 
 ### Expenses
 
