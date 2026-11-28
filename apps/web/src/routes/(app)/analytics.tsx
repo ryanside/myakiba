@@ -101,12 +101,7 @@ function RouteComponent(): ReactNode {
                   rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
-                    isLoading
-                      ? undefined
-                      : (row) => ({
-                          to: "/collection",
-                          search: { entries: [String(row.entryId)] },
-                        })
+                    isLoading ? undefined : (row) => ({ to: `/entries/${row.entryId}` })
                   }
                 />
               </div>
@@ -119,12 +114,7 @@ function RouteComponent(): ReactNode {
                   rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
-                    isLoading
-                      ? undefined
-                      : (row) => ({
-                          to: "/collection",
-                          search: { entries: [String(row.entryId)] },
-                        })
+                    isLoading ? undefined : (row) => ({ to: `/entries/${row.entryId}` })
                   }
                 />
               </div>

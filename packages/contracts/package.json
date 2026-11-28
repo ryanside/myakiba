@@ -13,6 +13,7 @@
     "./search/*": "./src/search/*.ts",
     "./calendar/*": "./src/calendar/*.ts",
     "./analytics/*": "./src/analytics/*.ts",
+    "./entries/*": "./src/entries/*.ts",
     "./lists/*": "./src/lists/*.ts",
     "./wishlist/*": "./src/wishlist/*.ts",
     "./add/*": "./src/add/*.ts",

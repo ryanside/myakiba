@@ -29,6 +29,7 @@ import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-pas
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as changelogChangelogRouteImport } from './routes/(changelog)/changelog'
 import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/analytics_.$sectionName'
+import { Route as appEntriesEntryIdRouteImport } from './routes/(app)/entries.$entryId'
 import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
 import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
@@ -135,6 +136,11 @@ const appAnalyticsSectionNameRoute = appAnalyticsSectionNameRouteImport.update({
   path: '/analytics/$sectionName',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appEntriesEntryIdRoute = appEntriesEntryIdRouteImport.update({
+  id: '/entries/$entryId',
+  path: '/entries/$entryId',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appItemExternalIdRoute = appItemExternalIdRouteImport.update({
   id: '/item_/$externalId',
   path: '/item/$externalId',
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof authSignupRoute
   '/changelog': typeof changelogChangelogRouteWithChildren
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
+  '/entries/$entryId': typeof appEntriesEntryIdRoute
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof authResetPasswordRoute
   '/signup': typeof authSignupRoute
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
+  '/entries/$entryId': typeof appEntriesEntryIdRoute
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/(auth)/signup': typeof authSignupRoute
   '/(changelog)/changelog': typeof changelogChangelogRouteWithChildren
   '/(app)/analytics_/$sectionName': typeof appAnalyticsSectionNameRoute
+  '/(app)/entries/$entryId': typeof appEntriesEntryIdRoute
   '/(app)/item_/$externalId': typeof appItemExternalIdRoute
   '/(app)/lists_/$listId': typeof appListsListIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/changelog'
     | '/analytics/$sectionName'
+    | '/entries/$entryId'
     | '/item/$externalId'
     | '/lists/$listId'
     | '/orders/$id'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/analytics/$sectionName'
+    | '/entries/$entryId'
     | '/item/$externalId'
     | '/lists/$listId'
     | '/orders/$id'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/(auth)/signup'
     | '/(changelog)/changelog'
     | '/(app)/analytics_/$sectionName'
+    | '/(app)/entries/$entryId'
     | '/(app)/item_/$externalId'
     | '/(app)/lists_/$listId'
     | '/(app)/orders_/$id'
@@ -485,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appAnalyticsSectionNameRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/entries/$entryId': {
+      id: '/(app)/entries/$entryId'
+      path: '/entries/$entryId'
+      fullPath: '/entries/$entryId'
+      preLoaderRoute: typeof appEntriesEntryIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/item_/$externalId': {
       id: '/(app)/item_/$externalId'
       path: '/item/$externalId'
@@ -543,6 +562,7 @@ interface appRouteRouteChildren {
   appSettingsRoute: typeof appSettingsRoute
   appWishlistRoute: typeof appWishlistRoute
   appAnalyticsSectionNameRoute: typeof appAnalyticsSectionNameRoute
+  appEntriesEntryIdRoute: typeof appEntriesEntryIdRoute
   appItemExternalIdRoute: typeof appItemExternalIdRoute
   appListsListIdRoute: typeof appListsListIdRoute
   appOrdersIdRoute: typeof appOrdersIdRoute
@@ -562,6 +582,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appSettingsRoute: appSettingsRoute,
   appWishlistRoute: appWishlistRoute,
   appAnalyticsSectionNameRoute: appAnalyticsSectionNameRoute,
+  appEntriesEntryIdRoute: appEntriesEntryIdRoute,
   appItemExternalIdRoute: appItemExternalIdRoute,
   appListsListIdRoute: appListsListIdRoute,
   appOrdersIdRoute: appOrdersIdRoute,

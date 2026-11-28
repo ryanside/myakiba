@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "motion/react";
+import { useNavigate } from "@tanstack/react-router";
 import { ICON_SWAP } from "@/lib/motion";
 import {
   functionalUpdate,
@@ -28,28 +29,37 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { ExpandedRowContent } from "@/components/analytics/section-expanded-row";
+import type { ExpandingSection } from "@/components/analytics/section-expanded-row";
 import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
 
+function isExpandingSection(sectionName: AnalyticsSection): sectionName is ExpandingSection {
+  return sectionName === "shops" || sectionName === "scales";
+}
+
 function createSectionColumns({
   currency,
   locale,
   offset,
+  expanding,
 }: {
   readonly currency: ReturnType<typeof useUserPreferences>["currency"];
   readonly locale: string;
   readonly offset: number;
+  readonly expanding: boolean;
 }): ColumnDef<AnalyticsSectionRow>[] {
+  const expandColumn: ColumnDef<AnalyticsSectionRow> = {
+    id: EXPAND_COLUMN_ID,
+    header: "",
+    cell: ({ row }) => <RowExpandButton row={row} />,
+    size: 40,
+    meta: { headerClassName: "max-[440px]:w-[11.2%]", skeleton: ROW_EXPAND_SKELETON },
+  };
+
   return [
-    {
-      id: EXPAND_COLUMN_ID,
-      header: "",
-      cell: ({ row }) => <RowExpandButton row={row} />,
-      size: 40,
-      meta: { headerClassName: "max-[440px]:w-[11.2%]", skeleton: ROW_EXPAND_SKELETON },
-    },
+    ...(expanding ? [expandColumn] : []),
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
@@ -64,7 +74,7 @@ function createSectionColumns({
       cell: ({ getValue }) => getValue() ?? "—",
       size: 150,
       sortDescFirst: false,
-      meta: { headerClassName: "max-[440px]:w-[32.7%]" },
+      meta: { headerClassName: expanding ? "max-[440px]:w-[32.7%]" : "max-[440px]:w-[43.9%]" },
     },
     {
       id: "itemCount",
@@ -113,7 +123,9 @@ export function SectionTable({
   ) => void;
 }): ReactNode {
   const { currency, locale } = useUserPreferences();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const expanding = isExpandingSection(sectionName);
 
   const tableData = useMemo(() => [...rows], [rows]);
   const sorting = useMemo<SortingState>(
@@ -144,8 +156,8 @@ export function SectionTable({
   );
 
   const columns = useMemo<ColumnDef<AnalyticsSectionRow>[]>(
-    () => createSectionColumns({ currency, locale, offset }),
-    [currency, locale, offset],
+    () => createSectionColumns({ currency, locale, offset, expanding }),
+    [currency, locale, offset, expanding],
   );
 
   const table = useReactTable({
@@ -157,7 +169,7 @@ export function SectionTable({
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getRowId: (row) => `${sectionName}:${row.id ?? row.name}`,
-    getRowCanExpand: () => true,
+    getRowCanExpand: () => expanding,
     enableMultiSort: false,
     enableSortingRemoval: true,
     manualSorting: true,
@@ -171,10 +183,19 @@ export function SectionTable({
         skeletonRowCount={pageSize}
         empty={<DataTableEmpty title={`No ${sectionName} found`} />}
         variant="sized"
-        onRowClick={(row) => row.toggleExpanded()}
-        renderExpandedRow={(row) => (
-          <ExpandedRowContent row={row.original} sectionName={sectionName} />
-        )}
+        onRowClick={async (row) => {
+          if (expanding) {
+            row.toggleExpanded();
+            return;
+          }
+          const entryId = row.original.id;
+          if (entryId) await navigate({ to: "/entries/$entryId", params: { entryId } });
+        }}
+        renderExpandedRow={
+          isExpandingSection(sectionName)
+            ? (row) => <ExpandedRowContent row={row.original} sectionName={sectionName} />
+            : undefined
+        }
         getCellClassName={(_, columnId) =>
           cn(
             columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",

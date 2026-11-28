@@ -37,7 +37,7 @@ export const wishlist = defineResource("wishlist", {
 export type WishlistPage = NonNullable<Awaited<ReturnType<typeof app.api.wishlist.get>>["data"]>;
 
 export const setWishlistMembership = defineCommand({
-  invalidates: ["wishlist"],
+  invalidates: ["wishlist", "itemEntry"],
   failureToast: ({ wishlisted }: Membership) => ({
     title: wishlisted ? "Failed to add to Wishlist" : "Failed to remove from Wishlist",
   }),
