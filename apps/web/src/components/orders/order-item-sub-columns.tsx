@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Copy01Icon,
   Delete02Icon,
   Edit03Icon,
   Loading03Icon,
@@ -25,8 +24,7 @@ import { cn } from "@/lib/utils";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import { toast } from "@/components/ui/toast";
-import { writeClipboard } from "@/lib/clipboard";
+import { OpenOnMfcMenuItem } from "@/components/open-on-mfc-menu-item";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "../collection/collection-item-form";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
@@ -112,28 +110,7 @@ function OrderItemActionsCell({
                 <HugeiconsIcon icon={ViewIcon} />
                 View details
               </DropdownMenuLinkItem>
-              <DropdownMenuItem
-                onClick={async () => {
-                  if (item.itemExternalId === null) {
-                    toast.add({ type: "error", title: "No MFC item ID for custom items" });
-                    return;
-                  }
-
-                  const copied = await writeClipboard(String(item.itemExternalId));
-                  if (copied.isErr()) {
-                    toast.add({
-                      type: "error",
-                      title: "Could not copy MFC item ID to clipboard",
-                    });
-                    return;
-                  }
-
-                  toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
-                }}
-              >
-                <HugeiconsIcon icon={Copy01Icon} />
-                Copy MFC ID
-              </DropdownMenuItem>
+              <OpenOnMfcMenuItem externalId={item.itemExternalId} />
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"

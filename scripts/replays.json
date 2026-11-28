@@ -5838,6 +5838,19 @@
       ]
     },
     {
+      "fix": "e5f8fda63062da249d4c235fe6501e8b8893bb3f",
+      "bug": "Every Item menu offered Copy MFC ID, which copied a bare number and, on a custom Item, only said it had none, instead of linking to the Item's MFC page.",
+      "test": "apps/web/src/components/open-on-mfc-menu-item.test.tsx",
+      "fixed": [
+        "a collection card's menu opens an MFC Item's page on MFC in a new tab",
+        "a collection card's menu has no MFC entry for a custom Item",
+        "a collection table row's menu opens an MFC Item's page on MFC in a new tab",
+        "a collection table row's menu has no MFC entry for a custom Item",
+        "an order item row's menu opens an MFC Item's page on MFC in a new tab",
+        "an order item row's menu has no MFC entry for a custom Item"
+      ]
+    },
+    {
       "fix": "b6c008f36c257e05ad9267442e39b26d581b156d",
       "bug": "The Edit Item sheet filled the Price of a Collection Item with no price with 0.00, and refused to save an emptied Price, so a price could not be cleared back to no price.",
       "test": "apps/web/src/components/collection/collection-item-form.test.tsx",
