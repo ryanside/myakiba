@@ -49,7 +49,6 @@ function loadExtension(options: Parameters<typeof fakeExtension>[0]) {
   bridge = createExtensionBridge(extension.window);
 }
 
-/** Holds the extension check until the returned release, which resolves once the check has started. */
 function holdExtensionCheck(): () => Promise<null> {
   const held = bridge;
   const released = Promise.withResolvers<null>();
