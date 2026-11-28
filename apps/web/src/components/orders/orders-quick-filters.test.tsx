@@ -52,7 +52,7 @@ const pressed = (name: string): boolean =>
 test("Releasing this month narrows to this month's Ordered and Shipped Orders", async () => {
   filters = { status: ["Owned"], paid: true, releaseDateStart: "2026-01-01" };
 
-  expect(await press(RELEASING)).toEqual([
+  expect(await press(RELEASING)).toStrictEqual([
     {
       status: ["Ordered", "Shipped"],
       paid: true,
@@ -87,7 +87,7 @@ test("next month from the Filters dialog does not light Releasing this month", (
 test("pressing Releasing this month again lifts the month and its two statuses", async () => {
   filters = { status: ["Ordered", "Shipped"], paid: true, releaseMonth: "this" };
 
-  expect(await press(RELEASING)).toEqual([
+  expect(await press(RELEASING)).toStrictEqual([
     {
       status: undefined,
       paid: true,
@@ -116,7 +116,7 @@ test("Releasing this month goes dark once another status joins Ordered and Shipp
 test("pressing Releasing this month over a dialog month adds its two statuses", async () => {
   filters = { status: ["Owned"], releaseMonth: "this" };
 
-  expect(await press(RELEASING)).toEqual([
+  expect(await press(RELEASING)).toStrictEqual([
     {
       status: ["Ordered", "Shipped"],
       paid: undefined,
@@ -131,7 +131,7 @@ test("pressing Releasing this month over a dialog month adds its two statuses", 
 test("All lifts Releasing this month with every chip", async () => {
   filters = { status: ["Ordered", "Shipped"], paid: false, releaseMonth: "this" };
 
-  expect(await press("All")).toEqual([
+  expect(await press("All")).toStrictEqual([
     {
       status: undefined,
       paid: undefined,
@@ -146,5 +146,22 @@ test("All lifts Releasing this month with every chip", async () => {
 test("a status chip changes the statuses and keeps the month", async () => {
   filters = { status: ["Ordered", "Shipped"], releaseMonth: "this" };
 
-  expect(await press("Shipped")).toEqual([{ status: ["Ordered"], paid: undefined, offset: 0 }]);
+  expect(await press("Shipped")).toStrictEqual([
+    { status: ["Ordered"], paid: undefined, offset: 0 },
+  ]);
+});
+
+test("All lifts this month after Releasing this month went dark", async () => {
+  filters = { status: ["Ordered", "Shipped", "Owned"], releaseMonth: "this" };
+
+  expect(await press("All")).toStrictEqual([
+    {
+      status: undefined,
+      paid: undefined,
+      releaseMonth: undefined,
+      releaseDateStart: undefined,
+      releaseDateEnd: undefined,
+      offset: 0,
+    },
+  ]);
 });

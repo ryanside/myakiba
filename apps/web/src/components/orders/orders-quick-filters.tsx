@@ -59,10 +59,11 @@ export function OrdersQuickFilters(): React.ReactElement {
         const releasing = chips.includes(RELEASING_CHIP);
         const nextStatuses = statusesAfter(chips.filter(isStatus), releasing, wasReleasing);
         const paidChip = newlyPressedPaidChip(chips.filter(isPaidChip), current);
+        const allPressed = chips.length === 0 && filters.releaseMonth === "this";
         setFilters({
           status: nextStatuses.length > 0 ? nextStatuses : undefined,
           paid: paidChip === undefined ? undefined : PAID_CHIPS[paidChip],
-          ...(releasing !== wasReleasing && {
+          ...((releasing !== wasReleasing || allPressed) && {
             releaseMonth: releasing ? "this" : undefined,
             releaseDateStart: undefined,
             releaseDateEnd: undefined,
