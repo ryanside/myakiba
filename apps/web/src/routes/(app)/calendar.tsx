@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { preload, preloadPage, useRead } from "@/data/client";
@@ -18,6 +18,19 @@ import { shownMessageOf } from "@/data/api";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
+// Tailwind's `xl`, where the page puts the release list beside the day grid instead of under it.
+const DAY_GRID_QUERY = "(min-width: 80rem)";
+const NO_DAYS: ReadonlySet<number> = new Set();
+
+function subscribeToDayGridWidth(onStoreChange: () => void): () => void {
+  const mediaQuery = window.matchMedia(DAY_GRID_QUERY);
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => mediaQuery.removeEventListener("change", onStoreChange);
+}
+
+function fitsDayGrid(): boolean {
+  return window.matchMedia(DAY_GRID_QUERY).matches;
+}
 
 function calendarViewOf(search: CalendarSearch, now: Date): CalendarQuery {
   const current = monthOf(now);
@@ -55,6 +68,7 @@ function RouteComponent(): ReactNode {
   const days = useMemo<readonly number[]>(() => searchDays ?? [], [searchDays]);
 
   const selectedDaysSet = useMemo<ReadonlySet<number>>(() => new Set(days), [days]);
+  const showsDayGrid = useSyncExternalStore(subscribeToDayGridWidth, fitsDayGrid, () => true);
 
   const updateSearch = useCallback(
     (patch: {
@@ -156,22 +170,24 @@ function RouteComponent(): ReactNode {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <CalendarMonthGrid
-            data={data}
-            isLoading={isPending}
-            month={month}
-            year={year}
-            selectedDays={selectedDaysSet}
-            onToggleDay={toggleDay}
-          />
-        </div>
+        {showsDayGrid && (
+          <div className="flex min-w-0 flex-col gap-3">
+            <CalendarMonthGrid
+              data={data}
+              isLoading={isPending}
+              month={month}
+              year={year}
+              selectedDays={selectedDaysSet}
+              onToggleDay={toggleDay}
+            />
+          </div>
+        )}
         <div className="flex min-w-0 flex-col xl:h-0 xl:min-h-full xl:overflow-hidden">
           <CalendarReleasePanel
             data={data}
             isPending={isPending}
             view={view}
-            selectedDays={selectedDaysSet}
+            selectedDays={showsDayGrid ? selectedDaysSet : NO_DAYS}
             currency={currency}
             locale={locale}
           />
