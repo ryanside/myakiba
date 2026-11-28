@@ -43,5 +43,5 @@ Preconditions:
 - The Preferences step's `Continue` saves the username, currency and date format that differ from the account's.
 - The account menu also holds `Settings`.
 - The default preview profile keeps the session cookie for this run's origin across tabs. Open an `incognito` profile tab for a clean signed-out start.
-- Cookies ignore the port, and every run signs its cookie cache with the same secret. A session from an earlier run can survive in a profile, so sign out before `$H down`, or sign out first when the dashboard opens without a sign-in.
+- Cookies ignore the port, and every run uses the same cookie names. A sign-in on another run in the same profile replaces this run's cookie, so this run's tab is signed out and `/api/auth/get-session` answers `null`. Drive one signed-in run at a time in a profile, and sign in again when that happens.
 - Sign-in calls Cloudflare Turnstile. Without internet access, sign-in and `seed-user` fail on the captcha.
