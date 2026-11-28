@@ -14,7 +14,6 @@ import type {
   Updater,
 } from "@tanstack/react-table";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { orderSearchSortSchema } from "@myakiba/contracts/search/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { useSelection, withoutOrderItems } from "@/hooks/use-selection";
 import type { Saving } from "@/data/client";
@@ -267,18 +266,8 @@ export default function OrdersDataGrid() {
     [sorting, setFilters],
   );
 
-  const sortableColumns = useMemo(
-    () =>
-      columns.map((column) =>
-        orderSearchSortSchema.safeParse(column.id).success
-          ? column
-          : { ...column, enableSorting: false },
-      ),
-    [columns],
-  );
-
   const table = useReactTable({
-    columns: sortableColumns,
+    columns,
     data: tableData,
     pageCount: Math.ceil(totalCount / limit),
     getRowId: (row: Order) => row.orderId,
