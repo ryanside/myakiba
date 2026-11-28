@@ -10,6 +10,7 @@ import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
 import { fillColumns } from "@/lib/fill-columns";
 import { foundAll } from "@/lib/found-all";
 import { guardedWrite } from "@/lib/owner-guard";
+import { shopSpellings } from "@/lib/shop-spelling";
 import { CollectionItemNotFound } from "./errors/collection-item-not-found";
 import { CollectionItemTagsFull } from "./errors/collection-item-tags-full";
 import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
@@ -209,6 +210,7 @@ export const Collection = {
           itemId: collection.itemId,
           orderId: collection.orderId,
           releaseId: collection.releaseId,
+          shop: collection.shop,
         })
         .from(collection)
         .where(selected)
@@ -232,10 +234,20 @@ export const Collection = {
         if (!release) return Result.err(new ReleaseNotOfItem());
       }
 
+      const typed = input.update.shop;
+      const shop =
+        typed === existing.shop
+          ? typed
+          : (
+              await shopSpellings(scope.tx, scope.viewer.userId, [typed], {
+                collectionItems: eq(collection.id, input.id),
+              })
+            )(typed);
+
       const written = await guardedWrite(
         scope.tx
           .update(collection)
-          .set({ ...input.update, updatedAt: new Date() })
+          .set({ ...input.update, shop, updatedAt: new Date() })
           .where(selected)
           .returning(),
         { collection_release_of_item: () => new ReleaseNotOfItem() },
@@ -268,7 +280,17 @@ export const Collection = {
         eq(collection.userId, scope.viewer.userId),
         inArray(collection.id, input.ids),
       );
-      const columns = fillColumns(input.fill);
+      const filled = fillColumns(input.fill);
+      const columns: typeof filled =
+        filled.shop === undefined
+          ? filled
+          : {
+              shop: (
+                await shopSpellings(scope.tx, scope.viewer.userId, [filled.shop], {
+                  collectionItems: selected,
+                })
+              )(filled.shop),
+            };
       const locked = await scope.tx
         .select({
           orderId: collection.orderId,
