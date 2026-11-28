@@ -166,12 +166,12 @@ test("the field takes its label's name, as the date field it replaced in Merge d
 
 async function monthList() {
   const boxes = await screen.findAllByRole("combobox");
-  const list = boxes.find((box) => box.textContent?.includes("Moved to"));
+  const list = boxes.find((box) => box.textContent?.trim() === "Month");
   if (!list) throw new Error("the picker has no month list");
   return list;
 }
 
-test("Moved to offers this month and the next eleven, and saves the month picked as a month", async () => {
+test("the Month list offers this month and the next eleven, and saves the month picked as a month", async () => {
   setSystemTime(new Date(2026, 10, 28, 12));
   const user = userEvent.setup();
   const { saved, trigger } = renderCell(JUNE, { offerMonths: true });
@@ -209,5 +209,5 @@ test("the Release field offers no month list unless asked", async () => {
   await user.click(trigger());
   await releaseList();
   const boxes = screen.getAllByRole("combobox").map((box) => box.textContent ?? "");
-  expect(boxes.some((text) => text.includes("Moved to"))).toBe(false);
+  expect(boxes.some((text) => text.trim() === "Month")).toBe(false);
 });

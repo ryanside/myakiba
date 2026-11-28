@@ -180,7 +180,7 @@ function MonthSelect({
         items={items}
       >
         <SelectTrigger size="sm" className="w-full">
-          <SelectValue placeholder="Moved to" />
+          <SelectValue placeholder="Month" />
         </SelectTrigger>
         <SelectContent align="start">
           <SelectGroup>
