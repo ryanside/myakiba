@@ -19,7 +19,7 @@ The picture an Item shows, stored by its content, so two Items with the same pic
 _Avoid_: Thumbnail when the stored picture is meant
 
 **Item Release**:
-A dated release of an Item for sale. One Item can have several Item Releases. Its date is known to the day, the month or the year, as MyFigureCollection printed it, and is shown only that far: a month reads "Jun 2026" and a year "2026". When dates are sorted or compared, a date known only to its month or year counts as the first day of that period, but the Calendar never places it on that day.
+A dated release of an Item for sale. One Item can have several Item Releases. Its date is known to the day, the month or the year, as MyFigureCollection printed it, and is shown only that far: a month reads "Jun 2026" and a year "2026". When dates are sorted or compared, a date known only to its month or year counts as the first day of that period, but the Calendar never places it on that day. For an Item Release saved before precision was recorded, its precision is a guess from the stored date until an Item Refresh reads the page.
 _Avoid_: Catalog Release, release when Order Release Date could also be meant
 
 **Selected Item Release**:

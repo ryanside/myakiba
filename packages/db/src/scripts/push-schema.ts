@@ -59,7 +59,7 @@ const orderPaidMigration = await attempt(
 console.log(`Paid-on-Order migration: ${JSON.stringify(orderPaidMigration)}`);
 const precisionMigration = await attempt(
   () => migrateReleasePrecision(database),
-  "RELEASE DATE PRECISION MIGRATION FAILED. It rolled back, so Item Releases and Orders have no precision column. The steps reported above have committed.",
+  "RELEASE DATE PRECISION MIGRATION FAILED. Its transaction rolled back, so Item Releases and Orders are as the step found them. The steps reported above have committed.",
 );
 await database.close();
 console.log(`Release date precision migration: ${JSON.stringify(precisionMigration)}`);
@@ -115,7 +115,7 @@ if (exitCode !== 0 || !completed) {
       : []),
     ...(precisionMigration.status === "migrated"
       ? [
-          "The release date precision migration above has committed, so main's server fails on every Item save and Item Refresh until the new server starts.",
+          "The release date precision migration above has committed, so main's server fails on writes that insert an Item Release (saving a new Item with releases, or an Item Refresh that adds one) until the new server starts; existing Items and unchanged refreshes are unaffected.",
         ]
       : []),
     ...(droppedTables.length > 0
