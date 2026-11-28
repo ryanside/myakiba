@@ -87,10 +87,10 @@ export const addOwnershipSchema = z.discriminatedUnion("kind", [
 ]);
 
 /**
- * One Add click. A retry of the same click sends the same `commitId`, so the server answers it once.
- * A commit to an Order that does not also add to the Wishlist takes every committed Item off the
- * Wishlist, except rows marked `keepOnWishlist`, even an Item that joined the Wishlist after the
- * page loaded. The request names only what the collector chose, so a retry sends the same bytes.
+ * One Add click. The request leaves out Wishlist membership; unchanged choices keep their
+ * `commitId` within the retry window, so a retry replays a saved answer and removes nothing. A
+ * fresh write to an Order that does not also add to the Wishlist removes every committed Item from
+ * the Wishlist, except rows marked `keepOnWishlist`, even an Item that joined after the last read.
  */
 export const addCommitSchema = z
   .strictObject({
