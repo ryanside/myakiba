@@ -34,6 +34,7 @@ import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
 import { withOrderPending } from "./order-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
+import { NavigateIcon } from "@/lib/icons";
 import { cascadeToItems } from "@/lib/order-cascade";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
@@ -58,6 +59,7 @@ function editedOrder({
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
   onSetPaid: (orderId: string, paid: boolean) => Saving;
+  onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   onEditItem: (values: CollectionItemFormValues) => Saving;
   onDeleteItem: (orderId: string, itemId: string) => Saving;
   currency: Currency;
@@ -68,6 +70,7 @@ interface OrdersColumnsParams {
 export function createOrdersColumns({
   onEditOrder,
   onSetPaid,
+  onDeleteOrders,
   onEditItem,
   onDeleteItem,
   currency,
@@ -180,6 +183,15 @@ export function createOrdersColumns({
               previewClassName="text-sm font-medium"
             />
           </div>
+          <Link
+            to="/orders/$id"
+            params={{ id: order.orderId }}
+            className="shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label={`View ${order.title}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <HugeiconsIcon icon={NavigateIcon} className="size-3.5" strokeWidth={2} />
+          </Link>
         </div>
       )),
       enableSorting: true,
@@ -595,11 +607,12 @@ export function createOrdersColumns({
             order={order}
             isPending={isPending}
             onEditOrder={onEditOrder}
+            onDeleteOrders={onDeleteOrders}
             currency={currency}
           />
         );
       }),
-      size: 52,
+      size: 72,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

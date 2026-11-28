@@ -218,13 +218,23 @@ export default function OrdersDataGrid() {
       createOrdersColumns({
         onEditOrder: handleEditOrder,
         onSetPaid: handleSetOrderPaid,
+        onDeleteOrders: deleteOrders,
         onEditItem: handleEditItem,
         onDeleteItem: deleteItem,
         currency,
         locale,
         dateFormat,
       }),
-    [handleEditItem, deleteItem, handleEditOrder, handleSetOrderPaid, currency, locale, dateFormat],
+    [
+      handleEditItem,
+      deleteItem,
+      handleEditOrder,
+      handleSetOrderPaid,
+      deleteOrders,
+      currency,
+      locale,
+      dateFormat,
+    ],
   );
   const columnVisibility = useMemo(
     () => ({

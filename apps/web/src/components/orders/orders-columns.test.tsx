@@ -59,6 +59,7 @@ const columns = createOrdersColumns({
     paidSets.push([orderId, paid]);
     return Result.ok();
   },
+  onDeleteOrders: async () => Result.ok(),
   onEditItem: async () => Result.ok(),
   onDeleteItem: async () => Result.ok(),
   currency: "USD",
@@ -174,10 +175,6 @@ test("the Paid checkbox shows the Order's own Paid, never half-ticked, and a cli
   expect(edits).toEqual([]);
 });
 
-function glyph(control: HTMLElement): (string | null)[] {
-  return [...control.querySelectorAll("svg path")].map((path) => path.getAttribute("d"));
-}
-
 function OrderRow() {
   const table = useReactTable({
     data: [order("o1")],
@@ -188,22 +185,25 @@ function OrderRow() {
   return table
     .getRowModel()
     .rows[0]?.getVisibleCells()
+    .filter(({ column }) => column.id === "expand" || column.id === "title")
     .map((cell) => (
       <div key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
     ));
 }
 
-test("an Orders row links to its Order once, with an icon unlike its expand button, and has no row menu", async () => {
+function glyph(control: HTMLElement): (string | null)[] {
+  return [...control.querySelectorAll("svg path")].map((path) => path.getAttribute("d"));
+}
+
+test("draws the row's open-order link with a different icon from its expand button", async () => {
   const router = createRouter({
     routeTree: createRootRoute({
       component: () => (
-        <QueryClientProvider client={new QueryClient()}>
-          <OrderPendingContext
-            value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
-          >
-            <OrderRow />
-          </OrderPendingContext>
-        </QueryClientProvider>
+        <OrderPendingContext
+          value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+        >
+          <OrderRow />
+        </OrderPendingContext>
       ),
     }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
@@ -212,11 +212,8 @@ test("an Orders row links to its Order once, with an icon unlike its expand butt
   render(<RouterProvider router={router} />);
 
   const expand = await screen.findByRole("button", { name: "Expand row" });
-  const links = screen.getAllByRole("link");
-  expect(links.map((link) => link.getAttribute("href"))).toEqual(["/orders/o1"]);
-  const [open] = links;
+  const open = screen.getAllByRole("link", { name: "View o1" }).at(-1);
   if (!open) throw new Error("the row has no open-order link");
+
   expect(glyph(open)).not.toEqual(glyph(expand));
-  expect(screen.queryByRole("button", { name: "Open menu" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Edit order" })).toBeTruthy();
 });

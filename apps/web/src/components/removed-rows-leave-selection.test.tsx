@@ -250,13 +250,7 @@ describe("the Orders page", () => {
     await select(user, "Alpha", "Bravo", "co-miku", "co-len");
     expect(selection()).toContain("2 orders, 2 items selected");
 
-    await user.click(screen.getByRole("button", { name: "Grid view" }));
-    const alphaCard = around(
-      screen.getByRole("checkbox", { name: "Deselect Alpha" }),
-      '[data-slot="item-controls"]',
-    );
-    await user.click(within(alphaCard).getByRole("button", { name: "Open menu" }));
-    await user.click(await screen.findByText("Delete order"));
+    await chooseFromRowMenu(user, "Alpha", "Delete order");
     await confirm(user, "Delete order?", "Delete");
     await waitFor(() => expect(server.writes).toHaveLength(1));
     await waitFor(() => expect(isShown("Alpha")).toBe(false));

@@ -27,7 +27,7 @@ Preconditions:
 
 - **Empty state.** `preview_navigate` to `<url>/orders`. The title is `Orders - myakiba`, the table shows `No data available`, and the cards are `total orders`, `order spend`, `active orders` and `unpaid costs`.
 - **Create.** Click `main a[href^='/add?to=order-new']` and follow **New Order details** in `add.md`. Back on `/orders`, the row shows `Verify Figure Beta`, `1 items`, `$110.00` and `Ordered`, and `unpaid costs` reads `$110.00`.
-- **Open the Order.** Read the Order's id with the SQL under Gotchas and `preview_navigate` to `<url>/orders/<id>`. The row's `View Verify Figure Beta` link leads there too. The page shows `Items (1)`, a `Cost breakdown` of `Items $100.00`, `Shipping $10.00` and `Total $110.00`, and the buttons `Add to List`, `Edit` and `Delete order`.
+- **Open the Order.** Read the Order's id with the SQL under Gotchas and `preview_navigate` to `<url>/orders/<id>`. The row's two `View Verify Figure Beta` links lead there too. The page shows `Items (1)`, a `Cost breakdown` of `Items $100.00`, `Shipping $10.00` and `Total $110.00`, and the buttons `Add to List`, `Edit` and `Delete order`.
 - **Add an Item.** Follow **Existing Order** in `add.md`. The heading becomes `Items (2)`.
 - **Change status.** On `/orders`, click `role=main >> role=combobox[name='Status']` and then `role=option[name='Shipped']`. The options are `Ordered`, `Shipped` and `Owned`. The toast reads `Order updated`, `$H logs <run>` has `PUT /api/orders/<id>`, and both `"order".status` and its `collection` rows read `Shipped`.
 - **Mark paid.** Click `role=checkbox[name='Verify Figure Beta paid']`. `$H psql <run> "select paid from \"order\""` returns `t`, `order spend` reads `$110.00` and `unpaid costs` reads `$0.00`.

@@ -12,6 +12,7 @@ import {
   Image01Icon,
   LeftToRightListDashIcon,
   Loading03Icon,
+  MoreHorizontalIcon,
   MoveIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -268,7 +269,7 @@ function OrderRow({ order, picked }: { readonly order: Order; readonly picked?: 
         <Check on={order.paid} />
       </span>
       <span className={cls("cell-more")}>
-        <HugeiconsIcon icon={Edit03Icon} size={16} strokeWidth={1.5} />
+        <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
       </span>
     </div>
   );

@@ -769,9 +769,7 @@
         "the Collection page > drops a row deleted from its row menu and keeps the other selected row",
         "the Orders page > drops an Order Item removed from its row menu and keeps the other selected item",
         "the Orders page > drops a deleted Order and its selected items and keeps another Order's"
-      ],
-      "testAt": "5119fd1b1b7e2959ac2e822edc5dddd16a912832",
-      "reason": "The Orders table row has no menu now, so the head's test deletes the Order from its Grid view card menu, which this fix's build cannot render with the head's fixtures; the test file and harness stay at the fix."
+      ]
     },
     {
       "fix": "5119fd1b1b7e2959ac2e822edc5dddd16a912832",
@@ -3522,10 +3520,7 @@
       "test": "apps/web/src/components/orders/orders-columns.test.tsx",
       "fixed": ["draws the row's open-order link with a different icon from its expand button"],
       "testAt": "b9876b38b52f80196c15e885fbd29d8dcdee708b",
-      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix.",
-      "atHead": [
-        "an Orders row links to its Order once, with an icon unlike its expand button, and has no row menu"
-      ]
+      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "3cc4dbf2",
