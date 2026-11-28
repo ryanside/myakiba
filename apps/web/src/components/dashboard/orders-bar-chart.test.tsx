@@ -258,11 +258,14 @@ test("a month in next year names its year in the heading and opens Orders for th
     <OrdersBarChart data={chartMonths({ "2026-10": 1, "2027-2": 2 })} />,
   );
   await frame(600);
-  const february = monthLink(container, "February 2027");
-  fireEvent.mouseOver(bar(container, 1));
+  const february = bar(container, 1);
+  fireEvent.mouseOver(february);
   await frame();
   expect(container.textContent).toContain("2 orders releasing in February 2027");
-  fireEvent.keyDown(february, { key: "Enter" });
+  fireEvent.mouseDown(february);
+  fireEvent.mouseUp(february);
+  fireEvent.click(february);
+  expect(navigate).toHaveBeenCalledTimes(1);
   expect(navigate).toHaveBeenCalledWith({
     to: "/orders",
     search: { releaseDateStart: "2027-02-01", releaseDateEnd: "2027-02-28" },
