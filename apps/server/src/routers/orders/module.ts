@@ -195,7 +195,7 @@ export const Orders = {
           paymentDate: order.paymentDate,
           shippingDate: order.shippingDate,
           collectionDate: order.collectionDate,
-          releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
+          releaseDate: order.releaseDate,
           shippingMethod: order.shippingMethod,
           total: orderTotal,
           shippingFee: order.shippingFee,
@@ -324,7 +324,7 @@ export const Orders = {
         sortBy: {
           title: item.title,
           orderDate: collection.orderDate,
-          releaseDate: optionalReleaseDateOf(item_release.date, item_release.datePrecision),
+          releaseDate: item_release.date,
           count: collection.count,
           price: collection.price,
           status: collection.status,
