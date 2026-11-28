@@ -3,7 +3,8 @@ import { RELEASE_DATE_PRECISIONS } from "./constants";
 
 /**
  * A release date and how much of it is known. `start` is the first day of the known period, so a
- * June 2026 release starts 2026-06-01 and sorts and filters as that day.
+ * June 2026 release starts 2026-06-01 and sorts as that day. The Wishlist's Released filter waits
+ * for the period to end.
  */
 export const releaseDateSchema = z
   .strictObject({

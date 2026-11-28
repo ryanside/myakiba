@@ -5957,7 +5957,7 @@
     },
     {
       "fix": "c2cec6fd21c3132390e833b6b15dc2912c920037",
-      "bug": "A release tile read Released from the 1st of a month-only release's month and from January 1 of a year-only release's year.",
+      "bug": "A release tile read \"Released\" during a month-only release's month or a year-only release's year, before the period had ended.",
       "test": "apps/web/src/components/release-item-tile.test.tsx",
       "fixed": [
         "a month-only release tile reads Releases Jun 2026 on 2026-06-30",
