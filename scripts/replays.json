@@ -5928,6 +5928,23 @@
         "parseMfcItemPage release barcodes > a barcode link holding other characters reads as none and warns",
         "parseMfcItemPage values too large to store > a release price past safe money reads as no price and warns"
       ]
+    },
+    {
+      "fix": "0bc1e0b3dea0bd6aa71ad926918aa7eba50b00a0",
+      "bug": "Sorting Orders or an Order's items by Release Date compared the date-and-precision pair, so on one date a day sorted before a month ahead of the creation-order tiebreak.",
+      "test": "apps/server/src/routers/orders/release-sort.test.ts",
+      "fixed": [
+        "Orders sorted by Release Date fall back to when they were made, whatever their precision",
+        "an Order's items sorted by Release Date fall back to when they were added, whatever their precision"
+      ]
+    },
+    {
+      "fix": "60ad5bba6129eb84c989cb2404a34cd4ac0dbfa0",
+      "bug": "An Item Refresh keyed releases by their precision, so two releases on the 1st that the backfill read as month-only were replaced when the page printed their days, and the refresh cleared every Collection Item's selection of them.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > two releases on the 1st that the backfill read as month-only keep their selections when a refresh reads their days"
+      ]
     }
   ],
   "lint": [
