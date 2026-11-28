@@ -4,7 +4,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatCurrencyFromMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { MONEY_INPUT_HINT, parseMoneyInputToMinorUnits } from "@/lib/money-input";
+import {
+  MONEY_INPUT_HINT,
+  isNoPrice,
+  parseMoneyInputToMinorUnits,
+  priceDraft,
+} from "@/lib/money-input";
 import type { Saving } from "@/data/client";
 import { cn } from "@/lib/utils";
 import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
@@ -43,11 +48,11 @@ export function InlineCurrencyCell({
     onSubmit,
     disabled,
     format: (minorUnits) =>
-      zeroAsEmpty && minorUnits === 0
+      zeroAsEmpty && isNoPrice(minorUnits)
         ? ""
         : formatCurrencyFromMinorUnits(minorUnits, currency, locale),
-    toDraft: minorUnitsToMajorString,
-    parse: (draft) => (draft === "" ? null : amountOf(draft)),
+    toDraft: zeroAsEmpty ? priceDraft : minorUnitsToMajorString,
+    parse: (draft) => (draft === "" && !zeroAsEmpty ? null : amountOf(draft)),
   });
 
   const handleInputRef = useCallback((node: HTMLInputElement | null) => {

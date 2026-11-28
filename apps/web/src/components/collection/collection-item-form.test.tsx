@@ -149,3 +149,46 @@ test("the sheet has no Paid field, and an update sends no paid", async () => {
   await waitFor(() => expect(saves).toHaveLength(1));
   expect(Object.keys(saves[0] ?? {}).includes("paid")).toBe(false);
 });
+
+async function openEdit(price: number, saves: CollectionItemFormValues[]) {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CollectionItemForm
+        renderTrigger={<Button>Edit</Button>}
+        itemData={{ ...ITEM, price }}
+        callbackFn={async (values) => {
+          saves.push(values);
+          return Result.ok();
+        }}
+        currency="USD"
+      />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Edit" }));
+  await screen.findByText("Edit Item");
+  return user;
+}
+
+test("an item with no price opens with an empty Price and saves no price untouched", async () => {
+  const saves: CollectionItemFormValues[] = [];
+  const user = await openEdit(0, saves);
+  expect(screen.getByLabelText<HTMLInputElement>("Price").value).toBe("");
+
+  await user.click(screen.getByRole("button", { name: "Update" }));
+
+  await waitFor(() => expect(saves).toHaveLength(1));
+  expect(saves[0]?.price).toBe(0);
+});
+
+test("clearing a price saves no price", async () => {
+  const saves: CollectionItemFormValues[] = [];
+  const user = await openEdit(1000, saves);
+  expect(screen.getByLabelText<HTMLInputElement>("Price").value).toBe("$10.00");
+
+  await user.clear(screen.getByLabelText("Price"));
+  await user.click(screen.getByRole("button", { name: "Update" }));
+
+  await waitFor(() => expect(saves).toHaveLength(1));
+  expect(saves[0]?.price).toBe(0);
+});

@@ -35,8 +35,7 @@ import * as z from "zod";
 import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
 import { FormSection } from "@/components/ui/form-section";
-import { minorUnitsToMajorString } from "@myakiba/utils/currency";
-import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { acceptedMoneyToMinorUnits, priceDraft } from "@/lib/money-input";
 import { MoneyField } from "@/components/money-field";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import {
@@ -89,7 +88,7 @@ function CollectionItemFormContent({
   const form = useForm({
     defaultValues: {
       ...itemData,
-      price: minorUnitsToMajorString(itemData.price ?? 0),
+      price: priceDraft(itemData.price),
     },
     onSubmit: async ({ value }) => {
       const transformedValue: CollectionItemFormValues = {
@@ -127,7 +126,6 @@ function CollectionItemFormContent({
                   currency={currency}
                   placeholder="0.00"
                   label="Price"
-                  required="Price is required"
                 />
 
                 <form.Field

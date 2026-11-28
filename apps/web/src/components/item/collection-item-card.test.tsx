@@ -102,3 +102,14 @@ test("a Payment Date shows on its own beside the steps, with no Paid badge", () 
   expect(steps()).toEqual(["Ordered", "Shipped", "Owned"]);
   expect(payment.textContent).toBe("Payment01/05/2026");
 });
+
+const priceRow = () => screen.getByText("Price").parentElement?.textContent;
+
+test("a Collection Item with no price reads No price, and a priced one its amount", () => {
+  card(entry({ price: 0 }));
+  expect(priceRow()).toBe("PriceNo price");
+  cleanup();
+
+  card(entry({ price: 1000 }));
+  expect(priceRow()).toBe("Price$10.00");
+});

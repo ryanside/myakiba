@@ -1,4 +1,4 @@
-import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString, parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import * as z from "zod";
 
 export { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
@@ -20,4 +20,14 @@ export function acceptedMoneyToMinorUnits(text: string): number {
 /** Minor units of an optional amount its field's `moneyInput` validator already accepted, or undefined when it is empty. */
 export function optionalMinorUnits(text: string): number | undefined {
   return text.trim() === "" ? undefined : acceptedMoneyToMinorUnits(text);
+}
+
+/** A stored price of 0 is no price. */
+export function isNoPrice(minorUnits: number): boolean {
+  return minorUnits === 0;
+}
+
+/** The text a Price field starts from: empty for no price. */
+export function priceDraft(minorUnits: number): string {
+  return isNoPrice(minorUnits) ? "" : minorUnitsToMajorString(minorUnits);
 }

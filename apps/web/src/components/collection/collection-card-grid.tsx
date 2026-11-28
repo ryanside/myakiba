@@ -12,6 +12,7 @@ import {
   CARD_GRID_GAP_CLASS_NAME,
 } from "@/components/media-tile";
 import { cn } from "@/lib/utils";
+import { isNoPrice } from "@/lib/money-input";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -143,12 +144,12 @@ export function CollectionCardGrid({
               </span>
               <MediaCardTitle as="h3" title={item.itemTitle} destination={itemLink} />
               <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
-                {item.price > 0 ? (
+                {isNoPrice(item.price) ? (
+                  <span className="shrink-0 text-xs leading-5 text-muted-foreground">No price</span>
+                ) : (
                   <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
                     {formatCurrencyFromMinorUnits(item.price, currency, locale)}
                   </span>
-                ) : (
-                  <span className="shrink-0 text-xs leading-5 text-muted-foreground">No price</span>
                 )}
                 {item.shop && !isCompact ? (
                   <span

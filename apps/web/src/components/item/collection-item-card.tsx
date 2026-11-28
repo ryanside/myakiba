@@ -26,6 +26,7 @@ import {
 } from "@/components/reui/timeline";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { isNoPrice } from "@/lib/money-input";
 import { getStatusVariant } from "@/lib/orders";
 import { PaymentLine } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,22 @@ function DetailRow({
         {children}
       </div>
     </div>
+  );
+}
+
+function PriceValue({
+  price,
+  currency,
+  locale,
+}: {
+  readonly price: number;
+  readonly currency: Currency;
+  readonly locale: string;
+}): ReactNode {
+  return isNoPrice(price) ? (
+    <span className="text-muted-foreground">No price</span>
+  ) : (
+    formatCurrencyFromMinorUnits(price, currency, locale)
   );
 }
 
@@ -258,7 +275,7 @@ export function CollectionItemCard({
         </DetailRow>
         <DetailRow label="Price" animateValue>
           {collectionItem ? (
-            formatCurrencyFromMinorUnits(collectionItem.price, currency, locale)
+            <PriceValue price={collectionItem.price} currency={currency} locale={locale} />
           ) : (
             <Skeleton className="h-5 w-16" />
           )}
