@@ -159,12 +159,12 @@ describe("an Add commit", () => {
     const toOrder = {
       ownership: { kind: "order", order: { kind: "existing", orderId: "order-1" } },
     };
-    const ticked = [{ ...bareRow("item-1"), removeFromWishlist: true as const }, bareRow("item-2")];
+    const ticked = [{ ...bareRow("item-1"), keepOnWishlist: true as const }, bareRow("item-2")];
 
     expect(addCommitSchema.parse(commit({ ...toOrder, rows: ticked })).rows).toEqual(ticked);
     expect(
       addCommitSchema.safeParse(
-        commit({ ...toOrder, rows: [{ ...bareRow("item-1"), removeFromWishlist: false }] }),
+        commit({ ...toOrder, rows: [{ ...bareRow("item-1"), keepOnWishlist: false }] }),
       ).success,
     ).toBe(false);
   });
@@ -178,7 +178,7 @@ describe("an Add commit", () => {
     ],
   ])("to %s refuses a row taken off the Wishlist", (_, overrides) => {
     const parsed = addCommitSchema.safeParse(
-      commit({ ...overrides, rows: [{ ...bareRow("item-1"), removeFromWishlist: true }] }),
+      commit({ ...overrides, rows: [{ ...bareRow("item-1"), keepOnWishlist: true }] }),
     );
 
     expect(parsed.success).toBe(false);

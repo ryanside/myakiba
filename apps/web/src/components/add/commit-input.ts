@@ -97,7 +97,6 @@ export function destinationOf(form: DestinationForm): Destination {
 export type CommitRow = {
   readonly row: DraftRow;
   readonly title: string;
-  readonly wishlisted: boolean;
 };
 
 export const offersWishlistRemoval = (
@@ -270,10 +269,9 @@ export function buildCommitChoices(
           return null;
         }
         return {
-          rows: rows.map(({ row, wishlisted }) => ({
+          rows: rows.map(({ row }) => ({
             ...ownedRow(row, issues),
-            ...(offersWishlistRemoval(wishlisted, destination) &&
-              !row.overrides.keepOnWishlist && { removeFromWishlist: true as const }),
+            ...(row.overrides.keepOnWishlist && !wishlist && { keepOnWishlist: true as const }),
           })),
           ownership: {
             kind: "order",

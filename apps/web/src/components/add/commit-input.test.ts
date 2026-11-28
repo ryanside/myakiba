@@ -16,7 +16,6 @@ import type { CommitRow, Destination, Ownership } from "./commit-input";
 const row = (itemId: string, overrides: DraftRow["overrides"] = {}): CommitRow => ({
   row: { itemId, overrides, selected: true },
   title: `Title ${itemId}`,
-  wishlisted: false,
 });
 
 const to = (ownership: Ownership | null, rest: Partial<Destination> = {}): Destination => ({

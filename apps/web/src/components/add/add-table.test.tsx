@@ -123,7 +123,7 @@ test("only a wishlisted Item going to an Order offers Remove from Wishlist, tick
 
   await waitFor(() => expect(server.commits).toHaveLength(1));
   expect<unknown>(server.commits[0]?.rows).toEqual([
-    { itemId: "wished000001", price: null, removeFromWishlist: true },
+    { itemId: "wished000001", price: null },
     { itemId: "miku00000001", price: null },
   ]);
 });
@@ -141,7 +141,9 @@ test("an unticked Remove from Wishlist sends nothing for the Wishlist", async ()
   await user.click(screen.getByRole("button", { name: "Create order with 1" }));
 
   await waitFor(() => expect(server.commits).toHaveLength(1));
-  expect<unknown>(server.commits[0]?.rows).toEqual([{ itemId: "wished000001", price: null }]);
+  expect<unknown>(server.commits[0]?.rows).toEqual([
+    { itemId: "wished000001", price: null, keepOnWishlist: true },
+  ]);
   expect(server.commits[0]?.wishlist).toBe(false);
 });
 

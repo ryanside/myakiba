@@ -131,7 +131,7 @@ const toCollection = {
 } as const;
 
 function addCommit(
-  rows: readonly { itemId: string; releaseId?: string; removeFromWishlist?: true }[],
+  rows: readonly { itemId: string; releaseId?: string }[],
   listIds: string[] = [],
   ownership: z.input<typeof addOwnershipSchema> = toCollection,
 ) {
@@ -348,7 +348,7 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
           BOB,
           "POST",
           "/add/commit",
-          addCommit([{ itemId: held.itemId, removeFromWishlist: true }], [], {
+          addCommit([{ itemId: held.itemId }], [], {
             kind: "order",
             order: { kind: "existing", orderId: "order-bob" },
           }),

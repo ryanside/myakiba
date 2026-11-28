@@ -57,7 +57,7 @@ const addRowSchema = z.strictObject({
   collectionDate: dateOrNull.optional(),
   shippingMethod: z.enum(SHIPPING_METHODS).optional(),
   releaseId: z.uuid().optional(),
-  removeFromWishlist: z.literal(true).optional(),
+  keepOnWishlist: z.literal(true).optional(),
 });
 
 const BARE_ROW_FIELDS: ReadonlySet<string> = new Set(["itemId", "price"]);
@@ -86,7 +86,12 @@ export const addOwnershipSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("none") }),
 ]);
 
-/** One Add click. A retry of the same click sends the same `commitId`, so the server answers it once. */
+/**
+ * One Add click. A retry of the same click sends the same `commitId`, so the server answers it once.
+ * A commit to an Order that does not also add to the Wishlist takes every committed Item off the
+ * Wishlist, except rows marked `keepOnWishlist`, even an Item that joined the Wishlist after the
+ * page loaded. The request names only what the collector chose, so a retry sends the same bytes.
+ */
 export const addCommitSchema = z
   .strictObject({
     commitId: z.uuidv4(),
@@ -117,7 +122,7 @@ export const addCommitSchema = z
   .refine(
     (commit) =>
       (commit.ownership.kind === "order" && !commit.wishlist) ||
-      !commit.rows.some((row) => row.removeFromWishlist),
+      !commit.rows.some((row) => row.keepOnWishlist),
   );
 
 export const addCommitResponseSchema = z.object({

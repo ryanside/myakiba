@@ -232,7 +232,7 @@ function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
       walkedByKeys
     />
   );
-  if (!offersWishlistRemoval(c.onWishlist(item), c.commitProps.destination)) return title;
+  if (!offersWishlistRemoval(item.wishlisted, c.commitProps.destination)) return title;
   const removalId = `add-unwish-${id}`;
   return (
     <div className="space-y-1.5">

@@ -209,7 +209,10 @@ export async function writeCommit(
     }
   }
 
-  const offWishlist = choices.rows.flatMap((row) => (row.removeFromWishlist ? [row.itemId] : []));
+  const offWishlist =
+    choices.ownership.kind === "order" && !choices.wishlist
+      ? choices.rows.flatMap((row) => (row.keepOnWishlist ? [] : [row.itemId]))
+      : [];
   if (offWishlist.length > 0) {
     await lockWishlist(tx, userId);
     await tx

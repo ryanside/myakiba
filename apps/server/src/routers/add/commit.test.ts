@@ -687,7 +687,7 @@ test.each([
 
     const sent = await commit(
       request({
-        rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }, ...bare("item-2")],
+        rows: [...bare("item-1"), { itemId: "item-2", price: null, keepOnWishlist: true }],
         ownership,
       }),
     );
@@ -720,7 +720,12 @@ test("a commit to an Order takes a wishlisted Item off with no flag sent, and ke
 test("a commit with every row unticked leaves the Wishlist as it was", async () => {
   await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
 
-  const sent = await commit(request({ rows: bare("item-1"), ownership: newOrder() }));
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, keepOnWishlist: true }],
+      ownership: newOrder(),
+    }),
+  );
 
   expect(sent.status).toBe(200);
   expect(await ownedRows()).toHaveLength(1);
@@ -733,7 +738,7 @@ test("a commit that rolls back leaves a ticked row's Item on the Wishlist", asyn
 
   const sent = await commit(
     request({
-      rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
+      rows: bare("item-1"),
       ownership: newOrder(),
       listIds: ["list-1", "list-other"],
     }),
@@ -753,7 +758,7 @@ test.each([
 
   const sent = await commit(
     request({
-      rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
+      rows: [{ itemId: "item-1", price: null, keepOnWishlist: true }],
       ownership: choice.ownership,
       wishlist: choice.wishlist,
     }),
@@ -765,10 +770,7 @@ test.each([
 
 test("a repeat of a commit that took an Item off the Wishlist takes nothing off again", async () => {
   await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
-  const body = request({
-    rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
-    ownership: newOrder(),
-  });
+  const body = request({ rows: bare("item-1"), ownership: newOrder() });
   const first = await commit(body);
   expect(await wished()).toEqual([]);
   await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 3 });
@@ -783,15 +785,15 @@ test("a repeat of a commit that took an Item off the Wishlist takes nothing off 
 
 test("a commit id reused with a row ticked otherwise answers 409 and writes nothing more", async () => {
   await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
-  const body = request({ rows: bare("item-1"), ownership: newOrder() });
+  const body = request({
+    rows: [{ itemId: "item-1", price: null, keepOnWishlist: true }],
+    ownership: newOrder(),
+  });
   const first = await commit(body);
   expect(first.status).toBe(200);
   const afterFirst = await written();
 
-  const reused = await commit({
-    ...body,
-    rows: [{ itemId: "item-1", price: null, removeFromWishlist: true }],
-  });
+  const reused = await commit({ ...body, rows: bare("item-1") });
 
   expect(reused).toMatchObject({
     status: 409,
@@ -1190,8 +1192,8 @@ test("a commit takes its Items off the Wishlist only under the Wishlist lock a r
   const committing = commit(
     request({
       rows: [
-        { itemId: "item-1", price: null, removeFromWishlist: true },
-        { itemId: "item-2", price: null, removeFromWishlist: true },
+        { itemId: "item-1", price: null },
+        { itemId: "item-2", price: null },
       ],
       ownership: newOrder(),
     }),

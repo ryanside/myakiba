@@ -80,18 +80,8 @@ const RETRY_WINDOW_MS = 9 * 60 * 1000;
 /** The last click that got no answer, so a retry after a reload is still that click. */
 const unansweredCommit = accountSlot(
   "add-commit",
-  z.object({
-    choices: z.string(),
-    commitId: z.uuid(),
-    expiresAt: z.number(),
-    offWishlist: z.array(z.string()),
-  }),
+  z.object({ choices: z.string(), commitId: z.uuid(), expiresAt: z.number() }),
 );
-
-export function unansweredRemovals(userId: string): ReadonlySet<string> {
-  const unanswered = unansweredCommit.read(userId);
-  return new Set(unanswered && unanswered.expiresAt > Date.now() ? unanswered.offWishlist : []);
-}
 
 /**
  * The Add click. Sending the same choices again after a click that got no answer is a retry of
@@ -107,14 +97,7 @@ export function useCommitAdd(userId: string) {
     const sent =
       unanswered?.choices === key && unanswered.expiresAt > now
         ? unanswered
-        : {
-            choices: key,
-            commitId: crypto.randomUUID(),
-            expiresAt: now + RETRY_WINDOW_MS,
-            offWishlist: choices.rows.flatMap((row) =>
-              row.removeFromWishlist ? [row.itemId] : [],
-            ),
-          };
+        : { choices: key, commitId: crypto.randomUUID(), expiresAt: now + RETRY_WINDOW_MS };
     unansweredCommit.write(userId, sent);
     const committed = await commit.run({ ...choices, commitId: sent.commitId });
     if (committed.isOk()) unansweredCommit.clear();
