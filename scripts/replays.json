@@ -5889,6 +5889,15 @@
       "fixed": [
         "a saved layout that hid the Title column still shows it, with its link, and the Columns picker never offers it"
       ]
+    },
+    {
+      "fix": "3835d0137967f634c1f574a0f74879ea691c823a",
+      "bug": "Delete Account refused a current password shorter than 8 characters, the sign-up minimum, so an account with a shorter password could not be deleted from the form.",
+      "test": "apps/web/src/components/settings/account.test.tsx",
+      "fixed": [
+        "Delete Account still asks for the password",
+        "Delete Account sends a current password shorter than 8 characters as typed"
+      ]
     }
   ],
   "lint": [
