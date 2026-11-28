@@ -37,7 +37,7 @@ Preconditions:
 ## Gotchas
 
 - The page lists `Owned` rows only. An Order Item that is `Ordered` or `Shipped` is a `collection` row in SQL but does not show here, and `total items` does not count it.
-- The row menu holds `View details` (to `/item/<externalId>`), `Copy MFC ID`, `Add to List`, `Assign order` and `Delete item`.
+- The row menu holds `View details` (to `/item/<externalId>`), `Open on MFC` (a link to `https://myfigurecollection.net/item/<externalId>` that opens a new tab, absent on a custom Item), `Add to List`, `Assign order` and `Delete item`.
 - The `Edit Item` sheet also edits `Price`, `Count`, `Status`, `Condition`, `Shop`, the release, four dates, `Shipping Method`, `Tags` and `Notes`.
 - The search box has the placeholder `Search`, but its accessible name is `Search Collection`.
 - The view mode persists in `localStorage` under `collection:viewMode` for this origin.
