@@ -54,8 +54,19 @@ test("Overdue narrows to overdue Orders and keeps the chosen statuses and Paid",
 
 test("pressing Overdue again stops narrowing to overdue Orders", async () => {
   filters = { overdue: true };
+  const { rerender } = render(<OrdersQuickFilters />);
+  const pressed = (name: string) =>
+    screen.getByRole("button", { name }).getAttribute("aria-pressed");
+  expect(pressed("Overdue")).toBe("true");
 
-  const [next] = await press("Overdue");
-  expect(next?.overdue).toBeUndefined();
-  expect(screen.getByRole("button", { name: "Overdue" }).getAttribute("aria-pressed")).toBe("true");
+  await userEvent.click(screen.getByRole("button", { name: "Overdue" }));
+  expect(applied.length).toBe(1);
+  const [next] = applied;
+  expect(next !== undefined && "overdue" in next && next.overdue === undefined).toBe(true);
+  expect(next?.offset).toBe(0);
+
+  filters = { ...filters, ...next };
+  rerender(<OrdersQuickFilters />);
+  expect(pressed("Overdue")).toBe("false");
+  expect(pressed("All")).toBe("true");
 });
