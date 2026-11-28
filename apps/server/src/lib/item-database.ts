@@ -310,15 +310,14 @@ async function rereadPrecisions(
   }
 }
 
-/** How many Collection Items' Selected Item Releases a refresh moved or cleared. */
-type Selections = { readonly moved: number; readonly cleared: number };
+type SelectionCounts = { readonly moved: number; readonly cleared: number };
 
 async function applyReleases(
   tx: Tx,
   itemId: string,
   plan: ReleasePlan,
   rows: readonly ReleaseRow[],
-): Promise<Selections> {
+): Promise<SelectionCounts> {
   const added = new Set(plan.addedReleaseIds);
   const inserts = rows.flatMap(({ row }) => (added.has(row.id) ? [row] : []));
   if (inserts.length > 0) await tx.insert(item_release).values(inserts);
@@ -363,7 +362,7 @@ async function applyReleases(
 
 type Refreshed = {
   readonly saved: "refreshed" | "unchanged";
-  readonly selections: Selections;
+  readonly selections: SelectionCounts;
   readonly picture: PictureOutcome;
 };
 

@@ -310,7 +310,6 @@ const derivedTwoNearStandardsPage = edit(
     materials,
 );
 
-/** Each Collection Item's id and the date of its Selected Item Release, or null. */
 async function selectedDates() {
   const rows = await db
     .select({ id: collection.id, date: item_release.date })
@@ -319,8 +318,10 @@ async function selectedDates() {
   return Object.fromEntries(rows.map((row) => [row.id, row.date]));
 }
 
-/** The selections after a refresh that moved each listed date to its new date and cleared the rest. */
-function followed(before: Record<string, string | null>, moved: Record<string, string>) {
+function selectionsAfterMoves(
+  before: Record<string, string | null>,
+  moved: Record<string, string>,
+) {
   return Object.fromEntries(
     Object.entries(before).map(([id, date]) => [id, (date && moved[date]) ?? null]),
   );
@@ -355,7 +356,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await resync(derivedTwoRepricedPage)).toMatchObject(refreshed("refreshed"));
 
     expect(await selectedDates()).toEqual(
-      followed(before, { "2018-11-15": "2018-11-15", "2019-03-20": "2019-03-20" }),
+      selectionsAfterMoves(before, { "2018-11-15": "2018-11-15", "2019-03-20": "2019-03-20" }),
     );
     const { releases } = await itemRows();
     expect(releases).toEqual([
@@ -544,7 +545,7 @@ describe("an Item Refresh keeps each selection on the release it became", () => 
     expect(await resync(derivedTwoSlippedPage)).toEqual(answered(2, 0));
 
     expect(await selectedDates()).toEqual(
-      followed(before, { "2018-11-15": "2018-12-20", "2019-03-20": "2019-04-20" }),
+      selectionsAfterMoves(before, { "2018-11-15": "2018-12-20", "2019-03-20": "2019-04-20" }),
     );
     const { releases } = await itemRows();
     expect(releases).toEqual([
@@ -561,7 +562,9 @@ describe("an Item Refresh keeps each selection on the release it became", () => 
 
     expect(await resync(derivedSlippedBesideLimitedPage)).toEqual(answered(1, 0));
 
-    expect(await selectedDates()).toEqual(followed(before, { "2018-11-15": "2018-12-20" }));
+    expect(await selectedDates()).toEqual(
+      selectionsAfterMoves(before, { "2018-11-15": "2018-12-20" }),
+    );
     const { releases } = await itemRows();
     expect(releases).toEqual([
       { id: expect.any(String), ...RELEASE_98777, date: "2018-12-20" },
@@ -577,7 +580,9 @@ describe("an Item Refresh keeps each selection on the release it became", () => 
 
     expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
 
-    expect(await selectedDates()).toEqual(followed(before, { "2018-11-15": "2018-12-20" }));
+    expect(await selectedDates()).toEqual(
+      selectionsAfterMoves(before, { "2018-11-15": "2018-12-20" }),
+    );
     const { releases } = await itemRows();
     expect(releases).toEqual([{ id: expect.any(String), ...RELEASE_98777, date: "2018-12-20" }]);
     expect(await orderReleaseDate(orderId)).toBe("2019-03-20");
@@ -590,7 +595,7 @@ describe("an Item Refresh keeps each selection on the release it became", () => 
 
     expect(await resync(derivedTwoNearStandardsPage)).toEqual(answered(0, 1));
 
-    expect(await selectedDates()).toEqual(followed(before, {}));
+    expect(await selectedDates()).toEqual(selectionsAfterMoves(before, {}));
     const { releases } = await itemRows();
     expect(releases).toEqual([
       { id: expect.any(String), ...RELEASE_98777, date: "2018-11-01" },

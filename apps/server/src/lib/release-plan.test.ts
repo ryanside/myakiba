@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildReleasePlan } from "./release-plan";
 
-/** Releases told apart by key alone: the same date, type and currency. */
-const keyed = (id: string, key: string) => ({
+const keyOnlyRelease = (id: string, key: string) => ({
   id,
   key,
   date: "2026-06-01",
@@ -12,8 +11,8 @@ const keyed = (id: string, key: string) => ({
 
 const plan = (storedKeys: string[], pageKeys: string[]) =>
   buildReleasePlan({
-    existing: storedKeys.map((key) => keyed(`stored-${key}`, key)),
-    page: pageKeys.map((key) => keyed(`new-${key}`, key)),
+    existing: storedKeys.map((key) => keyOnlyRelease(`stored-${key}`, key)),
+    page: pageKeys.map((key) => keyOnlyRelease(`new-${key}`, key)),
   });
 
 describe("buildReleasePlan", () => {

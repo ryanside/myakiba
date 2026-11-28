@@ -1,7 +1,4 @@
-/**
- * A release, its key, and the fields that tell which page release a changed one became. Each side
- * holds one release per key; a page release's id is the id it gets if added.
- */
+/** Each side holds one release per key; a page release's id is the id it gets if added. */
 type PlannedRelease = {
   readonly id: string;
   readonly key: string;
@@ -10,7 +7,6 @@ type PlannedRelease = {
   readonly priceCurrency: string | null;
 };
 
-/** A stored release the page no longer lists, and the added page release it became. */
 type Move = { readonly from: string; readonly to: string };
 
 /** Selections of a stale release in `moves` move to its added release; all other stale selections clear. */
@@ -23,8 +19,10 @@ export type ReleasePlan = {
 const apart = (a: PlannedRelease, b: PlannedRelease) =>
   Math.abs(Date.parse(a.date) - Date.parse(b.date));
 
-/** The one release of `candidates` with the same type and currency nearest `release`, or none on a tie. */
-function nearest(release: PlannedRelease, candidates: readonly PlannedRelease[]) {
+function soleNearestOfSameTypeAndCurrency(
+  release: PlannedRelease,
+  candidates: readonly PlannedRelease[],
+) {
   let best: PlannedRelease | undefined;
   let bestApart = Infinity;
   let tied = false;
@@ -38,10 +36,6 @@ function nearest(release: PlannedRelease, candidates: readonly PlannedRelease[])
   return tied ? undefined : best;
 }
 
-/**
- * One stale and one added release always pair. Otherwise a stale and an added release pair only
- * when each is the other's one nearest release of the same type and currency.
- */
 function matchReleases(stale: readonly PlannedRelease[], added: readonly PlannedRelease[]) {
   const [onlyStale] = stale;
   const [onlyAdded] = added;
@@ -49,8 +43,9 @@ function matchReleases(stale: readonly PlannedRelease[], added: readonly Planned
     return [{ from: onlyStale.id, to: onlyAdded.id }];
   }
   return stale.flatMap((release): Move[] => {
-    const successor = nearest(release, added);
-    if (successor === undefined || nearest(successor, stale) !== release) return [];
+    const successor = soleNearestOfSameTypeAndCurrency(release, added);
+    if (successor === undefined || soleNearestOfSameTypeAndCurrency(successor, stale) !== release)
+      return [];
     return [{ from: release.id, to: successor.id }];
   });
 }
