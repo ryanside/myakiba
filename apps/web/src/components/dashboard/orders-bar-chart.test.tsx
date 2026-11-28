@@ -31,9 +31,9 @@ afterAll(() => {
   jest.setSystemTime();
   mock.restore();
 });
-function chartMonths(counts: Readonly<Record<string, number>>) {
+function chartMonths(counts: Readonly<Record<string, number>>, firstMonth = new Date(2026, 7, 1)) {
   return Array.from({ length: 12 }, (_, offset) => {
-    const start = new Date(2026, 7 + offset, 1);
+    const start = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + offset, 1);
     const year = start.getFullYear();
     const month = start.getMonth() + 1;
     return { year, month, orderCount: counts[`${year}-${month}`] ?? 0 };
@@ -270,4 +270,18 @@ test("a month in next year names its year in the heading and opens Orders for th
     to: "/orders",
     search: { releaseDateStart: "2027-02-01", releaseDateEnd: "2027-02-28" },
   });
+});
+
+test("when no month is the browser's month, the third month is highlighted and holds the tab stop", async () => {
+  const { container } = render(
+    <OrdersBarChart data={chartMonths({ "2027-3": 2, "2027-5": 1 }, new Date(2027, 0, 1))} />,
+  );
+  await frame(600);
+  expect(container.textContent).toContain("2 orders releasing in March 2027");
+  expect(bar(container, 0).getAttribute("opacity")).toBe("1");
+  expect(
+    [...container.querySelectorAll('[role="link"][tabindex="0"]')].map((link) =>
+      link.getAttribute("aria-label"),
+    ),
+  ).toEqual(["March 2027: 2 orders"]);
 });
