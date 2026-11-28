@@ -1,10 +1,14 @@
 import type { ComponentType, ReactNode } from "react";
+import { PuzzleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import { useDemoTheme } from "@/components/demos/demo-props";
 import type { DemoProps } from "@/components/demos/demo-props";
 import { GITHUB_URL } from "@/components/homepage/links";
 import { GitHubLogo } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
+import { extensionAvailability } from "@/lib/extension-availability";
+import type { ExtensionAvailability } from "@/lib/extension-availability";
 import { cn } from "@/lib/utils";
 
 export type HomeDemo = {
@@ -88,29 +92,81 @@ export function DemoStage({
   );
 }
 
-export function StartActions({ className }: { readonly className?: string }) {
+export function StartActions({
+  className,
+  children,
+}: {
+  readonly className?: string;
+  readonly children: ReactNode;
+}) {
   return (
     <div className={cn("flex shrink-0 items-center gap-2", className)}>
       <Button size="lg" render={<Link to="/signup" />} nativeButton={false}>
         Get started
       </Button>
-      <Button
-        variant="ghost"
-        size="lg"
-        render={
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View on GitHub"
-          />
-        }
-        nativeButton={false}
-        className="lg:-mr-4"
-      >
-        <GitHubLogo data-icon="inline-start" className="size-4" />
-        View on GitHub
-      </Button>
+      {children}
     </div>
+  );
+}
+
+export function GitHubAction() {
+  return (
+    <Button
+      variant="ghost"
+      size="lg"
+      render={
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View on GitHub"
+        />
+      }
+      nativeButton={false}
+      className="lg:-mr-4"
+    >
+      <GitHubLogo data-icon="inline-start" className="size-4" />
+      View on GitHub
+    </Button>
+  );
+}
+
+/** A store listing that installs in this browser, or null where none does. */
+function listingFor(availability: ExtensionAvailability): string | null {
+  switch (availability.kind) {
+    case "listed":
+      return availability.url;
+    case "in_review":
+      return availability.alternative?.url ?? null;
+    case "unsupported":
+      return null;
+  }
+}
+
+/** Opens the listing; without one, goes to How it works, which says where the extension runs. */
+export function InstallAction() {
+  const listing = listingFor(extensionAvailability());
+  return (
+    <Button
+      variant="ghost"
+      size="lg"
+      render={(props) =>
+        listing === null ? (
+          <a {...props} href="#how-it-works">
+            {props.children}
+          </a>
+        ) : (
+          <a {...props} href={listing} target="_blank" rel="noreferrer">
+            {props.children}
+          </a>
+        )
+      }
+      nativeButton={false}
+      className="lg:-mr-4"
+    >
+      <HugeiconsIcon icon={PuzzleIcon} data-icon="inline-start" className="size-4" />
+      Install the extension
+      {listing === null ? null : <span className="sr-only"> (opens in a new tab)</span>}
+    </Button>
   );
 }

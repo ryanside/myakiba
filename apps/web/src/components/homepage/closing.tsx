@@ -1,6 +1,4 @@
-import { Add01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { HomeSection, StartActions } from "@/components/homepage/kit";
+import { GitHubAction, HomeSection, StartActions } from "@/components/homepage/kit";
 
 const SHELF: readonly { readonly src: string; readonly fromSm?: true }[] = [
   { src: "/example-item2.webp" },
@@ -26,11 +24,6 @@ function ItemShelf() {
           />
         </li>
       ))}
-      <li>
-        <span className="flex size-14 items-center justify-center rounded-lg border border-dashed border-foreground/20 text-muted-foreground">
-          <HugeiconsIcon icon={Add01Icon} className="size-4" />
-        </span>
-      </li>
     </ul>
   );
 }
@@ -46,7 +39,9 @@ export function Closing() {
         >
           Track your next preorder in myakiba.
         </h2>
-        <StartActions />
+        <StartActions>
+          <GitHubAction />
+        </StartActions>
       </div>
     </HomeSection>
   );
