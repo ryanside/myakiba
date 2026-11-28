@@ -67,7 +67,7 @@ export const moveWishlistItemsCommand = positionOrderCommand({
   queryKey: wishlist.items.key({ releaseStatus: "all" }),
   additionalInvalidations: [
     { queryKey: wishlist.items.partialKey({ releaseStatus: "upcoming" }) },
-    { queryKey: wishlist.items.partialKey({ releaseStatus: "available" }) },
+    { queryKey: wishlist.items.partialKey({ releaseStatus: "released" }) },
   ],
   persist: (intent: PositionOrderInput) =>
     call(app.api.wishlist.order.patch({ ...intent, movedIds: [...intent.movedIds] }), {

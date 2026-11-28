@@ -30,7 +30,7 @@ export const Wishlist = {
       const releaseFilter = {
         all: undefined,
         upcoming: gt(latestRelease.date, today),
-        available: lte(latestRelease.date, today),
+        released: lte(latestRelease.date, today),
       }[releaseStatus];
       const conditions = and(eq(wishlistItem.userId, scope.viewer.userId), releaseFilter);
 

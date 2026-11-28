@@ -280,7 +280,7 @@ function Header({ layout }: { readonly layout: Layout }) {
             All
           </span>
           <span className="mk-wishlist-rank-segment">Upcoming</span>
-          <span className="mk-wishlist-rank-segment">Available</span>
+          <span className="mk-wishlist-rank-segment">Released</span>
         </span>
         {layout === "wide" ? (
           <span className="mk-wishlist-rank-segmented">

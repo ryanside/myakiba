@@ -32,7 +32,7 @@ import { readToday } from "@/hooks/use-today";
 const RELEASE_FILTERS = {
   all: { label: "All", emptyTitle: "Your Wishlist is empty" },
   upcoming: { label: "Upcoming", emptyTitle: "No upcoming items" },
-  available: { label: "Available", emptyTitle: "No available items" },
+  released: { label: "Released", emptyTitle: "No released items" },
 };
 
 export const Route = createFileRoute("/(app)/wishlist")({
