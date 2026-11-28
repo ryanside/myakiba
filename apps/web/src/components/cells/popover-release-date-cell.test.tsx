@@ -155,5 +155,7 @@ test("the field takes its label's name, as the date field it replaced in Merge d
     </QueryClientProvider>,
   );
 
-  expect(screen.getByRole("button", { name: "Release" }).textContent).toContain("Jun 2026");
+  const field = screen.getByRole("button", { name: "Release" });
+  const describedBy = field.getAttribute("aria-describedby") ?? "";
+  expect(document.querySelector(`#${describedBy}`)?.textContent).toBe("Jun 2026");
 });

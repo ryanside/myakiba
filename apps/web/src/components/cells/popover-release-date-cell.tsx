@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { Calendar } from "@/components/ui/calendar";
@@ -159,6 +159,7 @@ export function PopoverReleaseDateCell({
   orderId,
 }: PopoverReleaseDateCellProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const valueId = useId();
   const [displayValue, submit] = usePendingValue(value, onSubmit);
   const dateValue = displayValue ? parseDateOnly(displayValue.start) : undefined;
 
@@ -191,11 +192,12 @@ export function PopoverReleaseDateCell({
         triggerClassName,
       )}
       disabled={disabled}
+      aria-describedby={id ? valueId : undefined}
     >
       {triggerVariant === "outline" && (
         <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" />
       )}
-      {formattedDisplay ?? (placeholder ? <span>{placeholder}</span> : <EmptyValue />)}
+      <span id={valueId}>{formattedDisplay ?? (placeholder || <EmptyValue />)}</span>
     </Button>
   );
 
