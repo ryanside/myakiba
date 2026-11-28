@@ -5990,7 +5990,8 @@
         "buildReleasePlan matches changed releases by type, currency and nearest date > two stored releases equally near one page release move nothing",
         "buildReleasePlan matches changed releases by type, currency and nearest date > a page release nearer another stored release is not taken by the selected one",
         "buildReleasePlan matches changed releases by type, currency and nearest date > a release whose type or currency changed beside another change is not matched",
-        "buildReleasePlan matches changed releases by type, currency and nearest date > one changed release still moves to the one new release whatever changed"
+        "buildReleasePlan matches changed releases by type, currency and nearest date > one changed release still moves to the one new release whatever changed",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > releases with the same barcode, or a barcode on one side only, still pair by date"
       ]
     },
     {
@@ -6023,7 +6024,24 @@
       "bug": "An Item Refresh that moved one selection and cleared another advanced the Order before the clear, so an Order dated before a removed release took that release's date.",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
-        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one advances an earlier order date to the slipped release, not the removed one"
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one advances an earlier order date to the slipped release, not the removed one",
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one advances a blank order date to the slipped release"
+      ]
+    },
+    {
+      "fix": "aae9c9ba2596cdfb39e92cf5dab36df66c2810e9",
+      "bug": "An Item Refresh that found several releases changed paired two releases whose dates crossed even when each kept its own barcode, so their Collection Items swapped onto the wrong releases.",
+      "test": "apps/server/src/lib/release-plan.test.ts",
+      "fixed": [
+        "buildReleasePlan matches changed releases by type, currency and nearest date > two releases whose barcodes differ are not paired even when their dates cross"
+      ]
+    },
+    {
+      "fix": "aae9c9ba2596cdfb39e92cf5dab36df66c2810e9",
+      "bug": "An Item Refresh that found several releases changed paired two releases whose dates crossed even when each kept its own barcode, so their Collection Items swapped onto the wrong releases.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "an Item Refresh keeps each selection on the release it became > two releases whose barcodes differ clear their selections when their dates cross"
       ]
     }
   ],
