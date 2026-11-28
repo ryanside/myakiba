@@ -156,9 +156,11 @@ export function SettingsSearchResults({ query }: { readonly query: string }) {
                   <span className="text-sm font-medium">
                     <Highlight text={SETTINGS[id].title} terms={terms} />
                   </span>
-                  <span className="text-pretty text-[13px] leading-snug text-muted-foreground">
-                    <Highlight text={SETTINGS[id].description} terms={terms} />
-                  </span>
+                  {SETTINGS[id].description ? (
+                    <span className="text-pretty text-[13px] leading-snug text-muted-foreground">
+                      <Highlight text={SETTINGS[id].description} terms={terms} />
+                    </span>
+                  ) : null}
                 </span>
                 <HugeiconsIcon
                   icon={NavigateIcon}

@@ -1,4 +1,5 @@
 import type { ShopTerm, ShopUses } from "@myakiba/contracts/vocabulary/schema";
+import { shopKey } from "@myakiba/utils/shop-key";
 
 const RECENT_TERM_COUNT = 6;
 
@@ -73,7 +74,7 @@ export function rankTerms(terms: readonly RankedTerm[], query: string, limit = 8
 const byUses = (a: ShopTerm, b: ShopTerm) => b.uses - a.uses;
 
 export function shopVariantGroups(terms: readonly ShopTerm[]): readonly (readonly ShopTerm[])[] {
-  const spellings = Map.groupBy(terms.toSorted(byUses), (term) => normalizeTerm(term.value));
+  const spellings = Map.groupBy(terms.toSorted(byUses), (term) => shopKey(term.value));
   return [...spellings.values()].filter((group) => group.length > 1);
 }
 

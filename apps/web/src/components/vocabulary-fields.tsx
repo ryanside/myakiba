@@ -39,7 +39,7 @@ type ShopInputProps = Omit<ComponentProps<"input">, "value" | "defaultValue" | "
   onValueChange: (value: string) => void;
 };
 
-/** A Shop field that suggests the user's shops and saves what the user typed or picked. */
+/** A Shop field that suggests the user's shops. */
 export function ShopInput({ value, onValueChange, ...props }: ShopInputProps) {
   const suggest = useSuggestions("shops");
   return (

@@ -15,6 +15,7 @@ import { OrderNotFound } from "@/routers/orders/errors/order-not-found";
 import { ItemsMissing } from "./errors/items-missing";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
 import { guardedWrite } from "@/lib/owner-guard";
+import { shopSpellings } from "@/lib/shop-spelling";
 import type { AddChoices, AddOwnership, AddRow } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 
@@ -50,9 +51,10 @@ async function orderTermsOf(
       .for("update");
     return found;
   }
+  const spell = await shopSpellings(tx, userId, [target.fields.shop]);
   const [created] = await tx
     .insert(order)
-    .values({ userId, ...target.fields })
+    .values({ userId, ...target.fields, shop: spell(target.fields.shop) })
     .returning(orderTerms);
   if (!created)
     panic("Inserting the new order returned no row, so add.commit has no order to add to");
@@ -63,17 +65,22 @@ async function placementOf(
   tx: Tx,
   userId: string,
   ownership: AddOwnership,
+  rows: readonly AddRow[],
 ): Promise<Result<Placement | null, OrderNotFound>> {
   switch (ownership.kind) {
     case "none":
       return Result.ok(null);
     case "collection": {
       const { shared } = ownership;
+      const spell = await shopSpellings(tx, userId, [
+        shared.shop,
+        ...rows.flatMap((row) => row.shop ?? []),
+      ]);
       return Result.ok({
         orderId: null,
         fields: (row) => ({
           status: "Owned",
-          shop: row.shop ?? shared.shop,
+          shop: spell(row.shop ?? shared.shop),
           orderDate: row.orderDate,
           paymentDate: row.paymentDate,
           shippingDate: row.shippingDate,
@@ -160,7 +167,7 @@ export async function writeCommit(
   // addListMembers checks that the viewer owns them once the rows exist.
   if (choices.listIds.length > 0) await lockOwnedLists(tx, userId, choices.listIds);
 
-  const placement = await placementOf(tx, userId, choices.ownership);
+  const placement = await placementOf(tx, userId, choices.ownership, choices.rows);
   if (placement.isErr()) return placement;
   const place = placement.value;
 

@@ -14,6 +14,7 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import { fillColumns } from "@/lib/fill-columns";
 import type { CascadeColumns } from "@/lib/fill-columns";
 import { foundAll } from "@/lib/found-all";
+import { shopSpellings } from "@/lib/shop-spelling";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result, panic } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
@@ -76,6 +77,37 @@ async function cascadeToItems(
     .update(collection)
     .set(columns)
     .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)));
+}
+
+async function spelledOrder(
+  tx: Tx,
+  userId: string,
+  newOrder: NewOrder,
+  deletedOrders?: SQL,
+): Promise<NewOrder> {
+  const spell = await shopSpellings(tx, userId, [newOrder.shop], { orders: deletedOrders });
+  return { ...newOrder, shop: spell(newOrder.shop) };
+}
+
+async function spelledEdit(
+  tx: Tx,
+  userId: string,
+  input: {
+    readonly orderId: string;
+    readonly order: OrderEdit;
+    readonly cascadeOptions: CascadeOptions;
+  },
+  oldShop: string,
+): Promise<OrderEdit> {
+  const { shop } = input.order;
+  if (shop === undefined || shop === oldShop.trim()) return input.order;
+  const spell = await shopSpellings(tx, userId, [shop], {
+    orders: eq(order.id, input.orderId),
+    collectionItems: input.cascadeOptions.includes("shop")
+      ? and(eq(collection.orderId, input.orderId), eq(collection.shop, oldShop))
+      : undefined,
+  });
+  return { ...input.order, shop: spell(shop) };
 }
 
 /**
@@ -430,9 +462,15 @@ export const Orders = {
       const userId = scope.viewer.userId;
       scope.log.set({ merge: { orderCount: input.orderIds.length } });
       await lockOrdersToDelete(scope.tx, userId, input.orderIds);
+      const merged = await spelledOrder(
+        scope.tx,
+        userId,
+        input.newOrder,
+        inArray(order.id, input.orderIds),
+      );
       const [inserted] = await scope.tx
         .insert(order)
-        .values({ userId, ...input.newOrder })
+        .values({ userId, ...merged })
         .returning();
       if (!inserted)
         panic(
@@ -476,7 +514,7 @@ export const Orders = {
       scope.log.set({ split: { itemCount: input.collectionIds.length } });
       const [inserted] = await scope.tx
         .insert(order)
-        .values({ userId, ...input.newOrder })
+        .values({ userId, ...(await spelledOrder(scope.tx, userId, input.newOrder)) })
         .returning();
       if (!inserted)
         panic(
@@ -570,14 +608,15 @@ export const Orders = {
       const selected = and(eq(order.userId, userId), eq(order.id, input.orderId));
       const [before] = await scope.tx.select().from(order).where(selected).for("no key update");
       if (!before) return Result.err(new OrderNotFound());
+      const edit = await spelledEdit(scope.tx, userId, input, before.shop);
 
       await scope.tx
         .update(order)
-        .set({ ...input.order, updatedAt: new Date() })
+        .set({ ...edit, updatedAt: new Date() })
         .where(selected);
 
       const changed = [...new Set(input.cascadeOptions)].filter(
-        (field) => input.order[field] !== undefined && input.order[field] !== before[field],
+        (field) => edit[field] !== undefined && edit[field] !== before[field],
       );
       if (changed.length === 0) return Result.ok("Order updated successfully" as const);
 
@@ -592,7 +631,7 @@ export const Orders = {
         const old = before[field];
         await scope.tx
           .update(collection)
-          .set(Object.fromEntries([[field, input.order[field]]]))
+          .set(Object.fromEntries([[field, edit[field]]]))
           .where(and(items, old === null ? isNull(collection[field]) : eq(collection[field], old)));
       }
       return Result.ok("Order updated successfully" as const);
@@ -634,7 +673,18 @@ export const Orders = {
         .orderBy(asc(collection.id))
         .for("no key update");
 
-      const columns = fillColumns(input.fill);
+      const filled = fillColumns(input.fill);
+      const columns: typeof filled =
+        filled.shop === undefined
+          ? filled
+          : {
+              shop: (
+                await shopSpellings(scope.tx, userId, [filled.shop], {
+                  orders: selected,
+                  collectionItems: inArray(collection.orderId, input.orderIds),
+                })
+              )(filled.shop),
+            };
       await scope.tx
         .update(order)
         .set({ ...columns, updatedAt: new Date() })
