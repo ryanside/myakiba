@@ -10,8 +10,8 @@ export const releaseDateSchema = z
     start: z.iso.date(),
     precision: z.enum(RELEASE_DATE_PRECISIONS),
   })
-  .refine(({ start, precision }) => precision === "day" || start.endsWith("-01"), {
-    message: "A month or year starts on the 1st",
+  .refine(({ start, precision }) => precision !== "month" || start.endsWith("-01"), {
+    message: "A month starts on the 1st",
     path: ["start"],
   })
   .refine(({ start, precision }) => precision !== "year" || start.slice(5) === "01-01", {

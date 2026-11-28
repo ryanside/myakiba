@@ -20,3 +20,10 @@ test("a year that does not start on January 1 is refused", () => {
     false,
   );
 });
+
+test("a year off January 1 gets the year's one message, not the month's too", () => {
+  const parsed = releaseDateSchema.safeParse({ start: "2026-11-18", precision: "year" });
+  expect(parsed.success ? [] : parsed.error.issues.map((issue) => issue.message)).toEqual([
+    "A year starts on January 1",
+  ]);
+});
