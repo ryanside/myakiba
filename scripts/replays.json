@@ -5911,6 +5911,14 @@
         "a reload after a lost commit that took an Item off the Wishlist sends its commitId and choices again",
         "after a lost commit, unticking Remove from Wishlist starts a new commitId"
       ]
+    },
+    {
+      "fix": "d909f39a1e33d539a994427e07c85fdf7d5fff98",
+      "bug": "A Wishlist add elsewhere in the app left the Add page's cached Item summary saying the Item was off the Wishlist, so on return its row showed no Remove from Wishlist box while an Order commit would still take the Item off.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": [
+        "an Item put on the Wishlist elsewhere in the app offers Remove from Wishlist back on Add"
+      ]
     }
   ],
   "lint": [
