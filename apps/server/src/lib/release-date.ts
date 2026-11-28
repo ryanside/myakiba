@@ -9,10 +9,6 @@ export function releaseDateOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<ReleaseDate>`${pair(start, precision)}`;
 }
 
-/**
- * The first day a release counts as Released: a day-precise release on its day, a month-only one
- * on the 1st of the next month, and a year-only one on January 1 of the next year.
- */
 export function releasedFromOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<string>`(${start} + CASE ${precision} WHEN 'month' THEN interval '1 month' WHEN 'year' THEN interval '1 year' ELSE interval '0' END)::date`;
 }

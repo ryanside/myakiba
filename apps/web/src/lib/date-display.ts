@@ -73,7 +73,6 @@ export function formatReleaseDate(
   }
 }
 
-/** The last day of a release date's period: its day, its month's last day, or December 31. */
 export function releasePeriodEnd({ start, precision }: ReleaseDate): string {
   const date = parseDateOnly(start);
   if (!date || precision === "day") return start;
