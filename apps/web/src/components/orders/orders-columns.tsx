@@ -118,7 +118,7 @@ export function createOrdersColumns({
       id: "expand",
       header: () => null,
       cell: ({ row }) => <RowExpandButton row={row} />,
-      size: 24,
+      size: 40,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
