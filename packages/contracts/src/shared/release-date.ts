@@ -5,10 +5,19 @@ import { RELEASE_DATE_PRECISIONS } from "./constants";
  * A release date and how much of it is known. `start` is the first day of the known period, so a
  * June 2026 release starts 2026-06-01 and sorts and filters as that day.
  */
-export const releaseDateSchema = z.strictObject({
-  start: z.iso.date(),
-  precision: z.enum(RELEASE_DATE_PRECISIONS),
-});
+export const releaseDateSchema = z
+  .strictObject({
+    start: z.iso.date(),
+    precision: z.enum(RELEASE_DATE_PRECISIONS),
+  })
+  .refine(({ start, precision }) => precision === "day" || start.endsWith("-01"), {
+    message: "A month or year starts on the 1st",
+    path: ["start"],
+  })
+  .refine(({ start, precision }) => precision !== "year" || start.slice(5) === "01-01", {
+    message: "A year starts on January 1",
+    path: ["start"],
+  });
 
 export type ReleaseDate = z.infer<typeof releaseDateSchema>;
 
