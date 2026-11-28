@@ -79,8 +79,13 @@ async function cascadeToItems(
     .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)));
 }
 
-async function spelledOrder(tx: Tx, userId: string, newOrder: NewOrder): Promise<NewOrder> {
-  const spell = await shopSpellings(tx, userId, [newOrder.shop]);
+async function spelledOrder(
+  tx: Tx,
+  userId: string,
+  newOrder: NewOrder,
+  deletedOrders?: SQL,
+): Promise<NewOrder> {
+  const spell = await shopSpellings(tx, userId, [newOrder.shop], { orders: deletedOrders });
   return { ...newOrder, shop: spell(newOrder.shop) };
 }
 
@@ -95,7 +100,7 @@ async function spelledEdit(
   oldShop: string,
 ): Promise<OrderEdit> {
   const { shop } = input.order;
-  if (shop === undefined || shop === oldShop) return input.order;
+  if (shop === undefined || shop === oldShop.trim()) return input.order;
   const spell = await shopSpellings(tx, userId, [shop], {
     orders: eq(order.id, input.orderId),
     collectionItems: input.cascadeOptions.includes("shop")
@@ -457,9 +462,15 @@ export const Orders = {
       const userId = scope.viewer.userId;
       scope.log.set({ merge: { orderCount: input.orderIds.length } });
       await lockOrdersToDelete(scope.tx, userId, input.orderIds);
+      const merged = await spelledOrder(
+        scope.tx,
+        userId,
+        input.newOrder,
+        inArray(order.id, input.orderIds),
+      );
       const [inserted] = await scope.tx
         .insert(order)
-        .values({ userId, ...(await spelledOrder(scope.tx, userId, input.newOrder)) })
+        .values({ userId, ...merged })
         .returning();
       if (!inserted)
         panic(

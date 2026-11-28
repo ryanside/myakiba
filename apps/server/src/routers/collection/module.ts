@@ -236,7 +236,7 @@ export const Collection = {
 
       const typed = input.update.shop;
       const shop =
-        typed === existing.shop
+        typed === existing.shop.trim()
           ? typed
           : (
               await shopSpellings(scope.tx, scope.viewer.userId, [typed], {
