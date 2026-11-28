@@ -25,6 +25,8 @@ await mock.module("@/lib/changelog", () => ({
   loadChangelogEntry: () => null,
 }));
 
+const EMPTY_PASSWORD_MESSAGE = "Enter your current password";
+
 const UNREACHABLE = [
   "/send-verification-email",
   "/link-social",
@@ -35,6 +37,7 @@ const UNREACHABLE = [
 
 let isGoogleLinked = false;
 let unlinkBodies: unknown[] = [];
+let deleteBodies: unknown[] = [];
 
 const account = (providerId: string) => ({
   id: `${providerId}-account`,
@@ -72,6 +75,13 @@ globalThis.fetch = Object.assign(
     const request = new Request(input, init);
     const { pathname } = new URL(request.url);
     if (pathname.endsWith("/unlink-account")) unlinkBodies.push(await request.json());
+    if (pathname.endsWith("/delete-user")) {
+      deleteBodies.push(await request.json());
+      return Response.json(
+        { code: "INVALID_PASSWORD", message: "Invalid password" },
+        { status: 400 },
+      );
+    }
     if (UNREACHABLE.some((path) => pathname.endsWith(path))) {
       throw new TypeError("Failed to fetch");
     }
@@ -98,6 +108,7 @@ afterEach(() => {
   cleanup();
   isGoogleLinked = false;
   unlinkBodies = [];
+  deleteBodies = [];
 });
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -207,7 +218,31 @@ test("Delete Account still asks for the password", async () => {
   const submit = screen.getByRole("button", { name: "Delete Account Permanently" });
   expect(submit.hasAttribute("disabled")).toBe(false);
   await pointer.click(submit);
-  expect(await screen.findByText("Password must be at least 8 characters")).toBeTruthy();
+  expect(await screen.findByText(EMPTY_PASSWORD_MESSAGE)).toBeTruthy();
+  expect(deleteBodies).toEqual([]);
+});
+
+test("Delete Account sends a current password shorter than 8 characters as typed", async () => {
+  openAccount();
+  const pointer = userEvent.setup();
+  const trigger = await waitFor(() => {
+    const button = screen.getByRole("button", { name: "Delete Account" });
+    expect(button.hasAttribute("disabled")).toBe(false);
+    return button;
+  });
+  await pointer.click(trigger);
+  await screen.findByRole("dialog", { name: "Are you absolutely sure?" });
+  const submit = screen.getByRole("button", { name: "Delete Account Permanently" });
+  await pointer.click(submit);
+  expect(deleteBodies).toEqual([]);
+
+  await pointer.type(screen.getByLabelText("Password"), "short");
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  await pointer.click(submit);
+
+  await waitFor(() => expect(deleteBodies).toEqual([{ password: "short" }]));
+  expect(await screen.findByText("Invalid password")).toBeTruthy();
+  expect(screen.queryByText(EMPTY_PASSWORD_MESSAGE) === null).toBe(true);
 });
 
 test("Change password reopened right after a change starts idle", async () => {
