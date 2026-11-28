@@ -157,6 +157,7 @@ export const deleteCollectionItemsCommand = defineCommand({
       }
     });
   },
+  successTitle: ({ ids }) => (ids.length > 1 ? "Collection item(s) deleted" : undefined),
   failureToast: () => ({ title: "Failed to delete collection item(s). Please try again." }),
 });
 

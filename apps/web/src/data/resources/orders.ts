@@ -250,6 +250,8 @@ export const deleteOrdersCommand = defineCommand({
       if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
     });
   },
+  successTitle: ({ orderIds }) =>
+    orderIds.size > 1 ? `Successfully deleted ${orderIds.size} orders` : undefined,
   failureToast: () => ({ title: "Failed to delete order(s). Please try again." }),
 });
 
@@ -471,6 +473,8 @@ export const deleteOrderItemsCommand = defineCommand({
   refetchBy: "settled",
   persist: ({ collectionIds }: { readonly collectionIds: Set<string> }) =>
     deleteOrderItems(collectionIds),
+  successTitle: ({ collectionIds }) =>
+    collectionIds.size > 1 ? `Successfully deleted ${collectionIds.size} items` : undefined,
   failureToast: () => ({ title: "Failed to delete items. Please try again." }),
 });
 
