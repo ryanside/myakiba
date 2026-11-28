@@ -1095,3 +1095,54 @@ test.each([
   expect(committed.status).toBe(200);
   expect(answered.status).toBe(200);
 });
+
+test("a new Order with no Release Date takes its rows' latest release with its precision, and of two on one date the one known only to its month", async () => {
+  await db.insert(item_release).values({
+    id: MID_RELEASE,
+    itemId: "item-2",
+    date: "2026-06-01",
+    datePrecision: "month",
+  });
+
+  const sent = await commit(
+    request({
+      rows: [
+        { itemId: "item-1", price: null, releaseId: LATE_RELEASE },
+        { itemId: "item-2", price: null, releaseId: MID_RELEASE },
+      ],
+      ownership: newOrder({ title: "June haul" }),
+    }),
+  );
+
+  expect(sent.status).toBe(200);
+  const [created] = await db
+    .select({ releaseDate: order.releaseDate, precision: order.releaseDatePrecision })
+    .from(order)
+    .where(eq(order.title, "June haul"));
+  expect(created).toEqual({ releaseDate: "2026-06-01", precision: "month" });
+});
+
+test("a typed Order Release Date stays a day when a release on the same date is chosen", async () => {
+  await db.insert(item_release).values({
+    id: MID_RELEASE,
+    itemId: "item-2",
+    date: "2026-06-01",
+    datePrecision: "month",
+  });
+
+  await commit(
+    request({
+      rows: [{ itemId: "item-2", price: null, releaseId: MID_RELEASE }],
+      ownership: newOrder({
+        title: "Typed June",
+        releaseDate: { start: "2026-06-01", precision: "day" },
+      }),
+    }),
+  );
+
+  const [created] = await db
+    .select({ releaseDate: order.releaseDate, precision: order.releaseDatePrecision })
+    .from(order)
+    .where(eq(order.title, "Typed June"));
+  expect(created).toEqual({ releaseDate: "2026-06-01", precision: "day" });
+});
