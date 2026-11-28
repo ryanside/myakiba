@@ -12,12 +12,14 @@ import type {
 import { CalendarMonthGrid } from "@/components/calendar/calendar-month-grid";
 import { CalendarReleasePanel } from "@/components/calendar/calendar-release-list";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PageHeader } from "@/components/page-header";
 import { shownMessageOf } from "@/data/api";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
+const NO_DAYS: ReadonlySet<number> = new Set();
 
 function calendarViewOf(search: CalendarSearch, now: Date): CalendarQuery {
   const current = monthOf(now);
@@ -55,6 +57,7 @@ function RouteComponent(): ReactNode {
   const days = useMemo<readonly number[]>(() => searchDays ?? [], [searchDays]);
 
   const selectedDaysSet = useMemo<ReadonlySet<number>>(() => new Set(days), [days]);
+  const showsDayGrid = !useIsMobile();
 
   const updateSearch = useCallback(
     (patch: {
@@ -156,22 +159,24 @@ function RouteComponent(): ReactNode {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <CalendarMonthGrid
-            data={data}
-            isLoading={isPending}
-            month={month}
-            year={year}
-            selectedDays={selectedDaysSet}
-            onToggleDay={toggleDay}
-          />
-        </div>
+        {showsDayGrid && (
+          <div className="flex min-w-0 flex-col gap-3">
+            <CalendarMonthGrid
+              data={data}
+              isLoading={isPending}
+              month={month}
+              year={year}
+              selectedDays={selectedDaysSet}
+              onToggleDay={toggleDay}
+            />
+          </div>
+        )}
         <div className="flex min-w-0 flex-col xl:h-0 xl:min-h-full xl:overflow-hidden">
           <CalendarReleasePanel
             data={data}
             isPending={isPending}
             view={view}
-            selectedDays={selectedDaysSet}
+            selectedDays={showsDayGrid ? selectedDaysSet : NO_DAYS}
             currency={currency}
             locale={locale}
           />
