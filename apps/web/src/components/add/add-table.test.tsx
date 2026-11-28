@@ -172,6 +172,37 @@ test("an Order that also adds to the Wishlist offers no Remove from Wishlist", a
   expect<unknown>(server.commits[0]?.rows).toEqual([{ itemId: "wished000001", price: null }]);
 });
 
+test("Remove from Wishlist waits for an Existing Order to be chosen", async () => {
+  seedItems(item("wished000001", { title: "Wished", wishlisted: true }));
+  draft("wished000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await screen.findByRole("checkbox", REMOVE_FROM_WISHLIST);
+
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Existing Order" }));
+
+  await screen.findByRole("button", { name: "Choose an Order" });
+  expect(screen.queryByRole("checkbox", REMOVE_FROM_WISHLIST)).toBeNull();
+});
+
+test("a preset Order that is gone offers no Remove from Wishlist until an Order is picked", async () => {
+  server.orders.set("spring000001", "Spring order");
+  seedItems(item("wished000001", { title: "Wished", wishlisted: true }));
+  draft("wished000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=order:missing00001");
+  const picker = await screen.findByRole("combobox", { name: "Order" });
+  await waitFor(() => expect(picker.textContent).toContain("Choose an Order"));
+  expect(screen.queryByRole("checkbox", REMOVE_FROM_WISHLIST)).toBeNull();
+
+  await user.click(picker);
+  await user.click(await screen.findByRole("option", { name: "Spring order" }));
+
+  const box = await screen.findByRole("checkbox", REMOVE_FROM_WISHLIST);
+  expect(box.getAttribute("aria-checked")).toBe("true");
+});
+
 test("a custom Item reads Custom item, with no MFC link", async () => {
   seedItems(item("custom000001", { title: "Mine", externalId: null }));
   draft("custom000001");

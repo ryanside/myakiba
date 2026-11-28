@@ -1159,6 +1159,44 @@ test("a commit to an Order with Lists and adding that Order to the List at once 
   ).toHaveLength(1);
 });
 
+test("a commit takes its Items off the Wishlist only under the Wishlist lock a reorder takes first", async () => {
+  await db.insert(wishlistItem).values([
+    { userId, itemId: "item-1", position: 0 },
+    { userId, itemId: "item-2", position: 1 },
+  ]);
+  const locked = Promise.withResolvers<null>();
+  const release = Promise.withResolvers<null>();
+  const holder = db.transaction(async (tx) => {
+    await lockWishlist(tx, userId);
+    locked.resolve(null);
+    await release.promise;
+  });
+  await locked.promise;
+
+  const committing = commit(
+    request({
+      rows: [
+        { itemId: "item-1", price: null, removeFromWishlist: true },
+        { itemId: "item-2", price: null, removeFromWishlist: true },
+      ],
+      ownership: newOrder(),
+    }),
+  );
+  let whileHeld;
+  try {
+    await untilLockWaiters(1);
+    whileHeld = await wished();
+  } finally {
+    release.resolve(null);
+    await holder;
+  }
+  const committed = await committing;
+
+  expect(whileHeld).toHaveLength(2);
+  expect(committed.status).toBe(200);
+  expect(await wished()).toEqual([]);
+});
+
 test.each([
   {
     route: "moving Lists",
