@@ -5857,6 +5857,45 @@
       "fixed": [
         "a saved layout that hid the Title column still shows it, with its link, and the Columns picker never offers it"
       ]
+    },
+    {
+      "fix": "c06f005e7706365d866def76c89df71a26851617",
+      "bug": "The MFC parser stored a month-only or year-only release date as the 1st of its month or January 1 and kept nothing of how precise it was, so every page showed a day MFC never printed. Every parser test that reads a release now names its precision, so each one flips.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release dates > a release MFC dates \"11/15/2018\" is stored as \"2018-11-15\" with \"day\" precision",
+        "parseMfcItemPage release dates > a release MFC dates \"11/2018\" is stored as \"2018-11-01\" with \"month\" precision",
+        "parseMfcItemPage release dates > a release MFC dates \"2018\" is stored as \"2018-01-01\" with \"year\" precision",
+        "parseMfcItemPage on the signed-in 98777 page > reads the item in Item Database vocabulary",
+        "parseMfcItemPage on captured signed-out pages > item 581731 reads six releases in two currencies",
+        "parseMfcItemPage on captured signed-out pages > item 10756 reads a release with no price and its barcode with no bullet",
+        "parseMfcItemPage stored values > a release type and date inside nested elements read once",
+        "parseMfcItemPage release prices > a price after a type that ends in a period reads",
+        "parseMfcItemPage release prices > a price after a type that ends in a digit reads",
+        "parseMfcItemPage release prices > an ungrouped price reads whole",
+        "parseMfcItemPage release prices > a price with one decimal reads whole",
+        "parseMfcItemPage release prices > a price with three decimals reads as no price and warns",
+        "parseMfcItemPage release prices > a price with misplaced commas reads as no price and warns",
+        "parseMfcItemPage release prices > a year and capitals in the release type are not its price",
+        "parseMfcItemPage release prices > a year date and a capitals link with no price are not a price",
+        "parseMfcItemPage release prices > a currency with MFC's conversion link reads",
+        "parseMfcItemPage release barcodes > a barcode link with no price and no bullet reads",
+        "parseMfcItemPage release barcodes > a barcode link after the price with no bullet reads",
+        "parseMfcItemPage release barcodes > a shop link with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a long link of capitals with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a link of seven digits with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > an 8-digit EAN link with no bullet reads",
+        "parseMfcItemPage release barcodes > a long link with digits and other characters with no bullet warns",
+        "parseMfcItemPage release barcodes > an 8-character link with a digit that is not a barcode warns",
+        "parseMfcItemPage release barcodes > a short link of digits with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a release with no barcode has none, not its currency",
+        "parseMfcItemPage release barcodes > whitespace after the barcode keeps it",
+        "parseMfcItemPage release barcodes > a barcode link with no class reads",
+        "parseMfcItemPage release barcodes > a barcode written as text after the bullet reads",
+        "parseMfcItemPage release barcodes > text after the price with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a barcode link holding other characters reads as none and warns",
+        "parseMfcItemPage values too large to store > a release price past safe money reads as no price and warns"
+      ]
     }
   ],
   "lint": [
