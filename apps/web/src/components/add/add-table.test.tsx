@@ -22,6 +22,7 @@ import {
 } from "../../../test/add-app";
 
 const { PickStatus } = await import("./pick-status");
+const { WishlistToggleButton } = await import("@/components/wishlist/wishlist-toggle-button");
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
@@ -172,6 +173,31 @@ test("an Order that also adds to the Wishlist offers no Remove from Wishlist", a
   await user.click(screen.getByRole("button", { name: "Create order with 1" }));
   await waitFor(() => expect(server.commits).toHaveLength(1));
   expect<unknown>(server.commits[0]?.rows).toEqual([{ itemId: "wished000001", price: null }]);
+});
+
+test("an Item put on the Wishlist elsewhere in the app offers Remove from Wishlist back on Add", async () => {
+  seedItems(item("later0000001", { title: "Later", externalId: 4321 }));
+  draft("later0000001");
+  server.pages.set("/wishlist", () => (
+    <WishlistToggleButton itemId="later0000001" itemExternalId={4321} isWishlisted={false} />
+  ));
+  const user = userEvent.setup();
+  const router = openAddPage("/add?to=order-new");
+  await screen.findByRole("checkbox", { name: "Select Later" });
+  expect(screen.queryByRole("checkbox", REMOVE_FROM_WISHLIST)).toBeNull();
+
+  await act(() => router.navigate({ to: "/wishlist" }));
+  await user.click(await screen.findByRole("button", { name: "Add to Wishlist" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Add to Wishlist" }).hasAttribute("disabled")).toBe(
+      false,
+    ),
+  );
+  server.itemsGate = new Promise(() => {});
+  await act(() => router.navigate({ to: "/add", search: { to: "order-new" } }));
+
+  const box = await screen.findByRole("checkbox", REMOVE_FROM_WISHLIST);
+  expect(box.getAttribute("aria-checked")).toBe("true");
 });
 
 test("Remove from Wishlist waits for an Existing Order to be chosen", async () => {
