@@ -355,6 +355,48 @@ describe("an Order write on the orders page", () => {
   });
 });
 
+describe("a delete of several rows on the orders page", () => {
+  test("a delete of two Orders says how many went", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) =>
+      actions.handleDeleteOrders(new Set([ALPHA.orderId, BRAVO.orderId])),
+    );
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: ["success: Successfully deleted 2 orders"],
+    });
+  });
+
+  test("a delete of two Order Items says how many went", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) =>
+      actions.handleDeleteItems(new Set(LOADED_ITEMS.map((item) => item.id))),
+    );
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: ["success: Successfully deleted 2 items"],
+    });
+  });
+
+  test("a delete of one Order Item shows no toast, since its row leaves the Order", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) => actions.handleDeleteItems(new Set(["co-alpha-1"])));
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
+      toasts: [],
+    });
+  });
+});
+
 describe("a merge from the Merge dialog", () => {
   test("does not read the merge draft again once the merged Orders are gone", async () => {
     const mergedIds = [ALPHA.orderId, BRAVO.orderId];

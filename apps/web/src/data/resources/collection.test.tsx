@@ -269,6 +269,20 @@ describe("a Collection Item write on the collection page", () => {
     await waitFor(() => expect(server.listReads).toBe(readsBeforeWrite + 1));
     expect({ shown: shown(), toasts: toastTitles() }).toEqual({
       shown: { totals: "1 items worth 500", items: ["Rin 500"], itemPage: "" },
+      toasts: ["success: Collection item(s) deleted"],
+    });
+  });
+
+  test("a delete of one item shows no toast, since its row leaves the list", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([MIKU.id])),
+    );
+    await answer(0, "finish");
+    expect({ settled: await deleting, toasts: toastTitles() }).toEqual({
+      settled: "ok",
       toasts: [],
     });
   });
