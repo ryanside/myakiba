@@ -84,14 +84,43 @@ test("next month from the Filters dialog does not light Releasing this month", (
   expect(pressed(RELEASING)).toBe(false);
 });
 
-test("pressing Releasing this month again lifts the month and the two statuses it set", async () => {
-  filters = { status: ["Ordered", "Shipped", "Owned"], releaseMonth: "this" };
+test("pressing Releasing this month again lifts the month and its two statuses", async () => {
+  filters = { status: ["Ordered", "Shipped"], paid: true, releaseMonth: "this" };
 
   expect(await press(RELEASING)).toEqual([
     {
-      status: ["Owned"],
-      paid: undefined,
+      status: undefined,
+      paid: true,
       releaseMonth: undefined,
+      releaseDateStart: undefined,
+      releaseDateEnd: undefined,
+      offset: 0,
+    },
+  ]);
+});
+
+test("This month from the Filters dialog alone leaves Releasing this month dark", () => {
+  filters = { releaseMonth: "this" };
+  render(<OrdersQuickFilters />);
+
+  expect(pressed(RELEASING)).toBe(false);
+});
+
+test("Releasing this month goes dark once another status joins Ordered and Shipped", () => {
+  filters = { status: ["Ordered", "Shipped", "Owned"], releaseMonth: "this" };
+  render(<OrdersQuickFilters />);
+
+  expect(pressed(RELEASING)).toBe(false);
+});
+
+test("pressing Releasing this month over a dialog month adds its two statuses", async () => {
+  filters = { status: ["Owned"], releaseMonth: "this" };
+
+  expect(await press(RELEASING)).toEqual([
+    {
+      status: ["Ordered", "Shipped"],
+      paid: undefined,
+      releaseMonth: "this",
       releaseDateStart: undefined,
       releaseDateEnd: undefined,
       offset: 0,
@@ -114,7 +143,7 @@ test("All lifts Releasing this month with every chip", async () => {
   ]);
 });
 
-test("a status chip keeps Releasing this month on", async () => {
+test("a status chip changes the statuses and keeps the month", async () => {
   filters = { status: ["Ordered", "Shipped"], releaseMonth: "this" };
 
   expect(await press("Shipped")).toEqual([{ status: ["Ordered"], paid: undefined, offset: 0 }]);

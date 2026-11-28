@@ -41,7 +41,10 @@ export function OrdersQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useOrdersFilters();
   const statuses = filters.status ?? [];
   const current = paidChipOf(filters.paid);
-  const wasReleasing = filters.releaseMonth === "this";
+  const wasReleasing =
+    filters.releaseMonth === "this" &&
+    statuses.length === RELEASING_STATUSES.length &&
+    RELEASING_STATUSES.every((status) => statuses.includes(status));
   const selected = [
     ...statuses,
     ...(current ? [current] : []),
