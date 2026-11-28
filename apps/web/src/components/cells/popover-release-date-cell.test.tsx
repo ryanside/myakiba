@@ -130,3 +130,19 @@ test("a month-only date marks no day on the calendar, and opens on its month", a
   expect(within(grid).queryAllByRole("button", { pressed: true })).toEqual([]);
   expect(screen.getByRole("grid").getAttribute("aria-label") ?? "").toContain("June 2026");
 });
+
+test("the field takes its label's name, as the date field it replaced in New Order and Merge did", () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <label htmlFor="release">Release</label>
+      <PopoverReleaseDateCell
+        id="release"
+        value={JUNE}
+        triggerVariant="outline"
+        onSubmit={async () => Result.ok()}
+      />
+    </QueryClientProvider>,
+  );
+
+  expect(screen.getByRole("button", { name: "Release" }).textContent).toContain("Jun 2026");
+});

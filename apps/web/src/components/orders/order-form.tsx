@@ -331,6 +331,7 @@ function OrderFormContent(
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Release</Label>
                 <PopoverReleaseDateCell
+                  id={field.name}
                   value={field.state.value ?? null}
                   orderId={type === "edit-order" ? orderData?.orderId : undefined}
                   onSubmit={async (value) => {

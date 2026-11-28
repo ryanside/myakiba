@@ -31,6 +31,7 @@ import { EmptyValue } from "./empty-value";
 import { shownMessageOf } from "@/data/api";
 
 interface PopoverReleaseDateCellProps {
+  readonly id?: string;
   readonly value: ReleaseDate | null;
   readonly dateFormat?: DateFormat;
   readonly onSubmit: (newValue: ReleaseDate | null) => Saving;
@@ -146,6 +147,7 @@ function ReleaseSelect({
 }
 
 export function PopoverReleaseDateCell({
+  id,
   value,
   dateFormat = "MM/DD/YYYY",
   onSubmit,
@@ -178,6 +180,7 @@ export function PopoverReleaseDateCell({
 
   const defaultTrigger = (
     <Button
+      id={id}
       variant={triggerVariant}
       data-empty={!dateValue}
       className={cn(
@@ -215,6 +218,7 @@ export function PopoverReleaseDateCell({
             onSelect={handleSelect}
             defaultMonth={dateValue ?? new Date()}
             captionLayout="dropdown"
+            autoFocus={!orderId}
           />
         </PopoverContent>
       )}
