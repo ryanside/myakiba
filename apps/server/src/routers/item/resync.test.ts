@@ -386,6 +386,33 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await selectedReleases()).toEqual(selected);
   });
 
+  test("two releases on the 1st that the backfill read as month-only keep their selections when a refresh reads their days", async () => {
+    const onTheFirst = edit(
+      edit(derivedTwoReleasesPage, ">11/15/2018<", ">11/01/2018<"),
+      ">03/20/2019<",
+      ">03/01/2019<",
+    );
+    const itemId = await upload(onTheFirst);
+    await db.update(item_release).set({ datePrecision: "month" });
+    await collectEveryRelease(itemId, "2019-03-01");
+    const ids = await db.select({ id: item_release.id }).from(item_release);
+    const selected = await selectedReleases();
+
+    expect(await resync(onTheFirst)).toMatchObject(refreshed("refreshed"));
+
+    expect(await selectedReleases()).toEqual(selected);
+    expect(await db.select({ id: item_release.id }).from(item_release)).toEqual(ids);
+    expect(
+      await db
+        .select({ date: item_release.date, precision: item_release.datePrecision })
+        .from(item_release)
+        .orderBy(asc(item_release.date)),
+    ).toEqual([
+      { date: "2018-11-01", precision: "day" },
+      { date: "2019-03-01", precision: "day" },
+    ]);
+  });
+
   test("an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection", async () => {
     const itemId = await upload(derivedTwoReleasesPage);
     await db.update(item_release).set({ id: sql`gen_random_uuid()` });
