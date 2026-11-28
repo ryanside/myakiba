@@ -22,7 +22,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { OrderFilters } from "@myakiba/contracts/orders/schema";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { RELEASE_MONTHS } from "@myakiba/contracts/orders/schema";
+import type { OrdersPageSearch, ReleaseMonth } from "@myakiba/contracts/orders/schema";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -44,6 +46,14 @@ const PAID_CHOICE_LABELS = {
   unpaid: "Unpaid",
 } satisfies Record<PaidChoice, string>;
 
+const RELEASE_MONTH_LABELS = {
+  this: "This month",
+  next: "Next month",
+} satisfies Record<ReleaseMonth, string>;
+
+const isReleaseMonth = (value: string | undefined): value is ReleaseMonth =>
+  RELEASE_MONTHS.some((month) => month === value);
+
 function paidChoiceOf(paid: boolean | undefined): PaidChoice {
   if (paid === undefined) return "any";
   return paid ? "paid" : "unpaid";
@@ -51,8 +61,8 @@ function paidChoiceOf(paid: boolean | undefined): PaidChoice {
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
-  currentFilters?: OrderFilters;
-  onApplyFilters: (filters: OrderFilters) => void;
+  currentFilters?: OrdersPageSearch;
+  onApplyFilters: (filters: OrdersPageSearch) => void;
   currency: Currency;
 }
 
@@ -84,6 +94,7 @@ function OrdersFiltersDraft({
   const form = useForm({
     defaultValues: {
       shop: currentFilters?.shop ?? [],
+      releaseMonth: currentFilters?.releaseMonth ?? null,
       releaseDateStart: currentFilters?.releaseDateStart ?? "",
       releaseDateEnd: currentFilters?.releaseDateEnd ?? "",
       shipMethod: currentFilters?.shipMethod ?? [],
@@ -115,8 +126,9 @@ function OrdersFiltersDraft({
           : minorUnitsToMajorString(currentFilters.shippingFeeMax),
     },
     onSubmit: async ({ value }) => {
-      const filters: OrderFilters = {
+      const filters: OrdersPageSearch = {
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
+        releaseMonth: value.releaseMonth ?? undefined,
         releaseDateStart: value.releaseDateStart || undefined,
         releaseDateEnd: value.releaseDateEnd || undefined,
         shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
@@ -270,6 +282,31 @@ function OrdersFiltersDraft({
         {/* Release Date */}
         <Field>
           <Label>Release Date</Label>
+          <form.Field
+            name="releaseMonth"
+            children={(field) => (
+              <ToggleGroup
+                value={field.state.value ? [field.state.value] : []}
+                onValueChange={(values) => {
+                  const month = values.find(isReleaseMonth) ?? null;
+                  field.handleChange(month);
+                  if (month === null) return;
+                  form.setFieldValue("releaseDateStart", "");
+                  form.setFieldValue("releaseDateEnd", "");
+                }}
+                variant="pill"
+                size="sm"
+                spacing={1.5}
+                aria-label="Release Date"
+              >
+                {RELEASE_MONTHS.map((month) => (
+                  <ToggleGroupItem key={month} value={month}>
+                    {RELEASE_MONTH_LABELS[month]}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            )}
+          />
           <div className="grid grid-cols-2 gap-2">
             <form.Field
               name="releaseDateStart"
@@ -277,7 +314,10 @@ function OrdersFiltersDraft({
                 <DatePicker
                   placeholder="From"
                   value={field.state.value || null}
-                  onChange={(value) => field.handleChange(value || "")}
+                  onChange={(value) => {
+                    field.handleChange(value || "");
+                    if (value) form.setFieldValue("releaseMonth", null);
+                  }}
                 />
               )}
             />
@@ -287,7 +327,10 @@ function OrdersFiltersDraft({
                 <DatePicker
                   placeholder="To"
                   value={field.state.value || null}
-                  onChange={(value) => field.handleChange(value || "")}
+                  onChange={(value) => {
+                    field.handleChange(value || "");
+                    if (value) form.setFieldValue("releaseMonth", null);
+                  }}
                 />
               )}
             />
