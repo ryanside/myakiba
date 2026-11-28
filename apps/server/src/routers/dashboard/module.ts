@@ -1,6 +1,7 @@
 import { eq, count, and, sum, asc, sql, desc, ne, gte, lt, lte, exists, or } from "drizzle-orm";
 import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import type { ReadTx } from "@myakiba/db/tx";
+import { DASHBOARD_CHART_MONTHS_BACK } from "@myakiba/contracts/shared/constants";
 import type { Category } from "@myakiba/contracts/shared/types";
 import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-only";
 import { orderPreviewImagesSql, orderPreviewItemIdsSql } from "@/lib/order-preview";
@@ -19,7 +20,6 @@ import {
 } from "@/lib/order-money";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
-const CHART_MONTHS_BACK = 2;
 const CHART_MONTH_COUNT = 12;
 
 type MonthQuery = { readonly month: number; readonly year: number };
@@ -345,7 +345,9 @@ export const Dashboard = {
         new Date(Date.UTC(currentYear, currentMonthIndex + 3, 0)),
       );
       const chartMonthStart = (offset: number) =>
-        new Date(Date.UTC(currentYear, currentMonthIndex - CHART_MONTHS_BACK + offset, 1));
+        new Date(
+          Date.UTC(currentYear, currentMonthIndex - DASHBOARD_CHART_MONTHS_BACK + offset, 1),
+        );
       const chartMonths = Array.from({ length: CHART_MONTH_COUNT }, (_, offset) => {
         const start = chartMonthStart(offset);
         return { year: start.getUTCFullYear(), month: start.getUTCMonth() + 1 };

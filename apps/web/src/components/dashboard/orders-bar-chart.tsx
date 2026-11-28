@@ -4,6 +4,7 @@ import { Bar, Rectangle, XAxis, ReferenceLine } from "recharts";
 import { useMotionValueEvent, useSpring } from "motion/react";
 import { useMotionPreference } from "@/hooks/use-appearance";
 import { useNavigate } from "@tanstack/react-router";
+import { DASHBOARD_CHART_MONTHS_BACK } from "@myakiba/contracts/shared/constants";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
 import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
@@ -92,11 +93,12 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
         desktop: orderCount,
       };
     });
+    const browserMonthIndex = rows.findIndex(
+      (row) => row.year === today.getFullYear() && row.monthNumber === today.getMonth() + 1,
+    );
     return {
       chartData: rows,
-      currentMonthIndex: rows.findIndex(
-        (row) => row.year === today.getFullYear() && row.monthNumber === today.getMonth() + 1,
-      ),
+      currentMonthIndex: browserMonthIndex === -1 ? DASHBOARD_CHART_MONTHS_BACK : browserMonthIndex,
     };
   }, [data]);
 
