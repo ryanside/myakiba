@@ -74,7 +74,7 @@ test("a taken username says so and is not saved", async () => {
   expect(savedChanges).toEqual([]);
 });
 
-test("an available username saves and shows Saved on the button, with no toast", async () => {
+test("an available username saves and says so", async () => {
   renderProfile();
   await typeUsername("New.Name");
 

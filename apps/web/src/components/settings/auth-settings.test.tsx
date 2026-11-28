@@ -160,7 +160,7 @@ test("a password change refused without a message shows the form's own text", as
   expect(await screen.findByText("Couldn't change your password")).toBeTruthy();
 });
 
-test("saved preferences show Saved on the button, with no toast, and reload the route data", async () => {
+test("saved preferences say so and reload the route data", async () => {
   const requests = serve(() => Response.json({ status: true }));
 
   await savePreferences();
@@ -190,7 +190,7 @@ test("preferences refused without a message show the form's own text", async () 
   expect(await screen.findByText("Failed to update preferences")).toBeTruthy();
 });
 
-test("a saved profile shows Saved on the button, with no toast, and reloads the route data", async () => {
+test("a saved profile says so and reloads the route data", async () => {
   serve(() => Response.json({ status: true }));
 
   await saveProfile();

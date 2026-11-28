@@ -252,7 +252,7 @@ const alphaWithShippingFee = (shippingFee: number) =>
   }) as EditedOrder;
 
 describe("an Order write on the orders page", () => {
-  test("an unfiltered delete hides the Order before the server answers, and no toast says so", async () => {
+  test("an unfiltered delete hides the Order before the server answers", async () => {
     const orders = renderOrdersPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -271,7 +271,7 @@ describe("an Order write on the orders page", () => {
     });
   });
 
-  test("a filtered delete marks the Order as saving until the server answers, and no toast says it landed", async () => {
+  test("a filtered delete marks the Order as saving until the server answers", async () => {
     const orders = renderOrdersPage({ shop: ["AmiAmi"] });
     await loaded();
 
@@ -356,7 +356,7 @@ describe("an Order write on the orders page", () => {
 });
 
 describe("a merge from the Merge dialog", () => {
-  test("does not read the merge draft again once the merged Orders are gone, and no toast says they merged", async () => {
+  test("does not read the merge draft again once the merged Orders are gone", async () => {
     const mergedIds = [ALPHA.orderId, BRAVO.orderId];
     let actions: Actions | null = null;
     function MergeDialog() {
@@ -396,7 +396,7 @@ describe("a merge from the Merge dialog", () => {
 });
 
 describe("a Paid click on the orders page", () => {
-  test("sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands, with no toast", async () => {
+  test("sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands", async () => {
     const orders = renderOrdersPage({ shop: ["AmiAmi"] });
     await loaded();
 

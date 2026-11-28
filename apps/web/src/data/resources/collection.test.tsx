@@ -248,7 +248,7 @@ const mikuAt = (price: number) =>
   ({ id: MIKU.id, itemTitle: MIKU.itemTitle, price }) as CollectionItemFormValues;
 
 describe("a Collection Item write on the collection page", () => {
-  test("an unfiltered delete hides the items before the server answers, its totals follow the server's answer, and no toast says so", async () => {
+  test("an unfiltered delete hides the items before the server answers, and its totals follow the server's answer", async () => {
     const collection = renderCollectionPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -336,7 +336,7 @@ describe("a Collection Item write on the collection page", () => {
     });
   });
 
-  test("a filtered edit leaves the list alone, still patches the Item page's copy, and no toast says so", async () => {
+  test("a filtered edit leaves the list alone and still patches the Item page's copy", async () => {
     const collection = renderCollectionPage({ shop: ["AmiAmi"] });
     await loaded();
 
