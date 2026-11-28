@@ -187,7 +187,7 @@ const STATUS_DOT = {
 
 /** The labelled columns and the width the app's grid gives each, before the table stretches them. */
 const LABELLED_COLUMNS = [
-  { label: "Order", width: "w-[240px]", numeric: false, sortable: true },
+  { label: "Order", width: "w-[224px]", numeric: false, sortable: true },
   { label: "Shop", width: "w-[140px]", numeric: false, sortable: true },
   { label: "Release", width: "w-[95px]", numeric: false, sortable: true },
   { label: "Items", width: "w-[88px]", numeric: true, sortable: true },
@@ -464,7 +464,7 @@ export function Screen({ now }: { readonly now: Date }) {
               <th className={cn(HEADER_CELL, "w-[28px] pe-0")}>
                 <Checkbox />
               </th>
-              <th aria-label="Expand" className={cn(HEADER_CELL, "w-[24px]")} />
+              <th aria-label="Expand" className={cn(HEADER_CELL, "w-[40px]")} />
               {LABELLED_COLUMNS.map((column) => (
                 <LabelledHeader key={column.label} column={column} />
               ))}
