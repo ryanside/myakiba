@@ -5670,6 +5670,8 @@
       "fix": "bef99b28acaab9c3cc40889c4d6707413b8e5a96",
       "bug": "The draft reads carried their ids in the URL, so on a production build a New Order draft of 382 or more selected items answered 431 before the app saw it and the New Order could not be made; the reads now take a body of up to 1,000 ids, as the writes do.",
       "test": "apps/server/src/routers/owner-isolation.test.ts",
+      "testAt": "bef99b28acaab9c3cc40889c4d6707413b8e5a96",
+      "reason": "The Item Entry page later added the entries router to this test's app, and that router does not exist before it, so this fix replays against the test file as it stood at its own commit.",
       "fixed": [
         "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the New Order draft of her Order Item",
         "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the merge draft of her Order"
