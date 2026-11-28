@@ -703,6 +703,20 @@ test.each([
   },
 );
 
+test("a commit to an Order takes a wishlisted Item off with no flag sent, and keeps one sent with keepOnWishlist", async () => {
+  await db.insert(wishlistItem).values([
+    { userId, itemId: "item-1", position: 0 },
+    { userId, itemId: "item-2", position: 1 },
+  ]);
+  const kept = { itemId: "item-2", price: null, keepOnWishlist: true };
+
+  const sent = await commit(request({ rows: [...bare("item-1"), kept], ownership: newOrder() }));
+
+  expect(sent.status).toBe(200);
+  expect(await ownedRows()).toHaveLength(2);
+  expect(await wished()).toEqual([{ itemId: "item-2", position: 1 }]);
+});
+
 test("a commit with every row unticked leaves the Wishlist as it was", async () => {
   await db.insert(wishlistItem).values({ userId, itemId: "item-1", position: 0 });
 
