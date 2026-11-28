@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { toast } from "@/components/ui/toast";
 import { useRead } from "@/data/client";
-import { add, usePickIntake } from "@/data/resources/add";
+import { add, unansweredRemovals, usePickIntake } from "@/data/resources/add";
 import { orders } from "@/data/resources/orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
@@ -112,10 +112,12 @@ export function useAddController(search: AddSearchParams) {
   const hasItems = rows.length + savingPicks > 0;
   // The label counts what is still on its way, so a commit now would leave those out.
   const pending = itemsLoading || savingPicks > 0;
+  const removalsInFlight = unansweredRemovals(session.user.id);
+  const onWishlist = (item: AddItem) => item.wishlisted || removalsInFlight.has(item.itemId);
   const commitRows: readonly CommitRow[] = selectedRows.map(({ row, item }) => ({
     row,
     title: item.title,
-    wishlisted: item.wishlisted,
+    wishlisted: onWishlist(item),
   }));
   const newOrderTitle = defaultOrderTitle(commitRows.map(({ title }) => title));
   const releaseOf = useRowReleases(rows);
@@ -272,6 +274,7 @@ export function useAddController(search: AddSearchParams) {
 
     resolvedForm,
     setForm,
+    onWishlist,
 
     selectedRows,
     commitRows,
