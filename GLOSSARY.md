@@ -222,7 +222,7 @@ On the Add Page, adding Order Items to an existing Order; they copy its status, 
 _Avoid_: Sync Order Items
 
 **Item Refresh**:
-An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible only to you and may change or clear Selected Item Releases on your Collection Items linked to that Item.
+An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details, and its update is visible only to you. On each Collection Item linked to that Item, a Selected Item Release stays when the page still lists it, moves to a matching Item Release when Item Refresh can tell which one, and is cleared otherwise.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
 **Browser Extension**:

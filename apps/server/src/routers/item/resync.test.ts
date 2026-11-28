@@ -241,7 +241,7 @@ async function itemRows() {
   return { item: row, links, releases };
 }
 
-async function collectEveryRelease(itemId: string, releaseDate: string) {
+async function collectEveryRelease(itemId: string, releaseDate: string | null) {
   const [placed] = await db
     .insert(order)
     .values({ userId, title: "Preorder", releaseDate })
@@ -285,6 +285,65 @@ async function requestsWaitingOnLocks(expected: number) {
   }
 }
 
+const LIMITED_98777 = {
+  date: "2019-03-20",
+  type: "Limited (Japan)",
+  price: 1_600_000,
+  priceCurrency: "JPY",
+  barcode: "4582292609999",
+};
+const derivedTwoSlippedPage = edit(
+  edit(derivedTwoReleasesPage, ">11/15/2018<", ">12/20/2018<"),
+  ">03/20/2019<",
+  ">04/20/2019<",
+);
+const derivedSlippedBesideLimitedPage = edit(
+  derivedTwoReleasesPage,
+  ">11/15/2018<",
+  ">12/20/2018<",
+);
+const derivedSlippedPage = edit(page98777, ">11/15/2018<", ">12/20/2018<");
+const secondStandard = (date: string) =>
+  standardRelease.replace("11/15/2018", date).replace("4582292601715", "4582292609998");
+const derivedTwoStandardsPage = edit(
+  page98777,
+  materials,
+  secondStandard("12/15/2018") + materials,
+);
+const derivedTwoStandardsCrossedPage = edit(
+  edit(page98777, ">11/15/2018<", ">12/20/2018<"),
+  materials,
+  secondStandard("11/20/2018") + materials,
+);
+const derivedTwoNearStandardsPage = edit(
+  edit(page98777, ">11/15/2018<", ">11/01/2018<"),
+  materials,
+  standardRelease.replace("11/15/2018", "11/29/2018").replace("4582292601715", "4582292609998") +
+    materials,
+);
+
+async function selectedDates() {
+  const rows = await db
+    .select({ id: collection.id, date: item_release.date })
+    .from(collection)
+    .leftJoin(item_release, eq(item_release.id, collection.releaseId));
+  return Object.fromEntries(rows.map((row) => [row.id, row.date]));
+}
+
+function selectionsAfterMoves(
+  before: Record<string, string | null>,
+  moved: Record<string, string>,
+) {
+  return Object.fromEntries(
+    Object.entries(before).map(([id, date]) => [id, (date && moved[date]) ?? null]),
+  );
+}
+
+const answered = (moved: number, cleared: number) => ({
+  status: 200,
+  body: { saved: "refreshed", picture: "absent", selections: { moved, cleared } },
+});
+
 describe("POST /api/item/:id/resync refreshes the item from the page the extension fetched", () => {
   test("a new title and one rescheduled release remap the selection and advance the order", async () => {
     const itemId = await upload(page98777, JPEG);
@@ -301,14 +360,16 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
   });
 
-  test("two repriced releases clear both selections and leave only the new releases", async () => {
+  test("two repriced releases move each selection to its repriced release and leave only the new releases", async () => {
     const itemId = await upload(derivedTwoReleasesPage);
     await collectEveryRelease(itemId, "2019-03-20");
-    expect(await selectedReleases()).toHaveLength(2);
+    const before = await selectedDates();
 
     expect(await resync(derivedTwoRepricedPage)).toMatchObject(refreshed("refreshed"));
 
-    expect(await selectedReleases()).toEqual([null, null]);
+    expect(await selectedDates()).toEqual(
+      selectionsAfterMoves(before, { "2018-11-15": "2018-11-15", "2019-03-20": "2019-03-20" }),
+    );
     const { releases } = await itemRows();
     expect(releases).toEqual([
       { id: expect.any(String), ...REPRICED_98777 },
@@ -487,17 +548,115 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
   });
 });
 
+describe("an Item Refresh keeps each selection on the release it became", () => {
+  test("two slipped releases move each selection to its slipped release and advance the order", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    const orderId = await collectEveryRelease(itemId, "2019-03-20");
+    const before = await selectedDates();
+
+    expect(await resync(derivedTwoSlippedPage)).toEqual(answered(2, 0));
+
+    expect(await selectedDates()).toEqual(
+      selectionsAfterMoves(before, { "2018-11-15": "2018-12-20", "2019-03-20": "2019-04-20" }),
+    );
+    const { releases } = await itemRows();
+    expect(releases).toEqual([
+      { id: expect.any(String), ...RELEASE_98777, date: "2018-12-20" },
+      { id: expect.any(String), ...LIMITED_98777, date: "2019-04-20" },
+    ]);
+    expect(await orderReleaseDate(orderId)).toBe("2019-04-20");
+  });
+
+  test("a slipped release beside an added one moves its selection and leaves the added one unselected", async () => {
+    const itemId = await upload(page98777);
+    const orderId = await collectEveryRelease(itemId, "2018-11-15");
+    const before = await selectedDates();
+
+    expect(await resync(derivedSlippedBesideLimitedPage)).toEqual(answered(1, 0));
+
+    expect(await selectedDates()).toEqual(
+      selectionsAfterMoves(before, { "2018-11-15": "2018-12-20" }),
+    );
+    const { releases } = await itemRows();
+    expect(releases).toEqual([
+      { id: expect.any(String), ...RELEASE_98777, date: "2018-12-20" },
+      { id: expect.any(String), ...LIMITED_98777 },
+    ]);
+    expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
+  });
+
+  test("a slipped release beside a removed one moves its selection and clears the removed one's", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    const orderId = await collectEveryRelease(itemId, "2019-03-20");
+    const before = await selectedDates();
+
+    expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
+
+    expect(await selectedDates()).toEqual(
+      selectionsAfterMoves(before, { "2018-11-15": "2018-12-20" }),
+    );
+    const { releases } = await itemRows();
+    expect(releases).toEqual([{ id: expect.any(String), ...RELEASE_98777, date: "2018-12-20" }]);
+    expect(await orderReleaseDate(orderId)).toBe("2019-03-20");
+  });
+
+  test("a slipped release beside a removed one advances an earlier order date to the slipped release, not the removed one", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    const orderId = await collectEveryRelease(itemId, "2018-11-15");
+
+    expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
+
+    expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
+  });
+
+  test("a slipped release beside a removed one advances a blank order date to the slipped release", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    const orderId = await collectEveryRelease(itemId, null);
+
+    expect(await resync(derivedSlippedPage)).toEqual(answered(1, 1));
+
+    expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
+  });
+
+  test("two releases whose barcodes differ clear their selections when their dates cross", async () => {
+    const itemId = await upload(derivedTwoStandardsPage);
+    const orderId = await collectEveryRelease(itemId, "2018-11-15");
+    const before = await selectedDates();
+
+    expect(await resync(derivedTwoStandardsCrossedPage)).toEqual(answered(0, 2));
+
+    expect(await selectedDates()).toEqual(selectionsAfterMoves(before, {}));
+    expect(await orderReleaseDate(orderId)).toBe("2018-11-15");
+  });
+
+  test("a release with two equally near successors clears its selection and leaves the order's date", async () => {
+    const itemId = await upload(page98777);
+    const orderId = await collectEveryRelease(itemId, "2018-11-15");
+    const before = await selectedDates();
+
+    expect(await resync(derivedTwoNearStandardsPage)).toEqual(answered(0, 1));
+
+    expect(await selectedDates()).toEqual(selectionsAfterMoves(before, {}));
+    const { releases } = await itemRows();
+    expect(releases).toEqual([
+      { id: expect.any(String), ...RELEASE_98777, date: "2018-11-01" },
+      { id: expect.any(String), ...RELEASE_98777, date: "2018-11-29", barcode: "4582292609998" },
+    ]);
+    expect(await orderReleaseDate(orderId)).toBe("2018-11-15");
+  });
+});
+
 describe("Item Refresh has no cooldown", () => {
   test("a refresh answers whether it saved and what became of its picture", async () => {
     await upload(page98777);
 
     expect(await resync(derivedRetitledPage)).toEqual({
       status: 200,
-      body: { saved: "refreshed", picture: "absent" },
+      body: { saved: "refreshed", picture: "absent", selections: { moved: 0, cleared: 0 } },
     });
     expect(await resync(derivedRetitledPage, PNG)).toEqual({
       status: 200,
-      body: { saved: "refreshed", picture: "stored" },
+      body: { saved: "refreshed", picture: "stored", selections: { moved: 0, cleared: 0 } },
     });
   });
 
@@ -597,7 +756,7 @@ describe("the posted picture", () => {
 
     expect(await resync(page98777, JPEG)).toEqual({
       status: 200,
-      body: { saved: "unchanged", picture: "stored" },
+      body: { saved: "unchanged", picture: "stored", selections: { moved: 0, cleared: 0 } },
     });
     const { item: after } = await itemRows();
     expect(after).toEqual(before);
@@ -690,7 +849,7 @@ describe("Item Refresh stores pictures only while the owner's ledger is under 2 
 
     expect(await resync(derivedRetitledPage, PNG)).toEqual({
       status: 200,
-      body: { saved: "refreshed", picture: "over_quota" },
+      body: { saved: "refreshed", picture: "over_quota", selections: { moved: 0, cleared: 0 } },
     });
     const { item: row } = await itemRows();
     expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });

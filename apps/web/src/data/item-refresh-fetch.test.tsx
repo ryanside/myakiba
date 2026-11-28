@@ -94,7 +94,12 @@ describe("refreshing an item", () => {
 
   test("posts the fetched page to the item's resync", async () => {
     fakeFetch();
-    answer = () => Response.json({ saved: "refreshed", picture: "absent" });
+    const saved = {
+      saved: "refreshed",
+      picture: "absent",
+      selections: { moved: 0, cleared: 0 },
+    } as const;
+    answer = () => Response.json(saved);
     loadExtension((fetch) => {
       fetch.item(98_777, "<html>fresh</html>");
       fetch.done("complete");
@@ -102,7 +107,7 @@ describe("refreshing an item", () => {
 
     const refreshed = await refreshItemWithExtension(98_777);
 
-    expect(refreshed.isOk() && refreshed.value).toEqual({ saved: "refreshed", picture: "absent" });
+    expect(refreshed.isOk() && refreshed.value).toEqual(saved);
     const [refresh] = posted("/api/item/98777/resync");
     expect(refresh?.formKeys).toEqual(["page"]);
     expect(await refresh?.page?.text()).toBe("<html>fresh</html>");
@@ -125,7 +130,11 @@ describe("refreshing an item", () => {
 
   test("waits for a free upload slot while other refreshes hold both", async () => {
     const releases: (() => void)[] = [];
-    const refreshed = { saved: "refreshed" };
+    const refreshed = {
+      saved: "refreshed",
+      picture: "absent",
+      selections: { moved: 0, cleared: 0 },
+    };
     fakeFetch();
     answer = async () => {
       await new Promise<void>((resolve) => {
@@ -154,7 +163,12 @@ describe("refreshing an item", () => {
 
   test("shows the extension's prompts for the refresh and clears them as it goes", async () => {
     fakeFetch();
-    answer = () => Response.json({ saved: "refreshed" });
+    answer = () =>
+      Response.json({
+        saved: "refreshed",
+        picture: "absent",
+        selections: { moved: 0, cleared: 0 },
+      });
     loadExtension((fetch) => {
       fetch.send({ type: "status", state: "needs_user", mfcItemId: 98_777, untilMs: null });
     });
@@ -179,7 +193,12 @@ describe("refreshing an item", () => {
 
   test("shows that it waits for the extension only once the wait lasts", async () => {
     fakeFetch();
-    answer = () => Response.json({ saved: "refreshed" });
+    answer = () =>
+      Response.json({
+        saved: "refreshed",
+        picture: "absent",
+        selections: { moved: 0, cleared: 0 },
+      });
     loadExtension((fetch) => {
       fetch.status("queued");
     });

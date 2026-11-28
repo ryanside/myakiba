@@ -36,25 +36,36 @@ export const items = {
   }),
 };
 
+function clearedReleasesText(cleared: number): string {
+  return cleared === 1
+    ? "Release date cleared on 1 item in your collection. Edit it to select a release."
+    : `Release date cleared on ${cleared} items in your collection. Edit them to select a release.`;
+}
+
 export const refreshItemCommand = defineCommand({
   invalidates: refreshResultFamilies,
   persist: (externalId: number) => refreshItemWithExtension(externalId),
   successTitle: (_externalId, refreshed) => {
-    if (refreshed.picture === "over_quota") return;
+    if (refreshed.picture === "over_quota" || refreshed.selections.cleared > 0) return;
     return refreshed.saved === "refreshed"
       ? "Item details refreshed"
       : "Item details are up to date";
   },
-  warningToast: (_externalId, refreshed) =>
-    refreshed.picture === "over_quota"
-      ? {
-          title:
-            refreshed.saved === "refreshed"
-              ? "Item details refreshed without the new picture"
-              : "Item details are up to date, without the new picture",
-          description: `${PICTURE_QUOTA_FULL}.`,
-        }
-      : undefined,
+  warningToast: (_externalId, { saved, picture, selections }) => {
+    const overQuota = picture === "over_quota";
+    if (!overQuota && selections.cleared === 0) return;
+    const overQuotaTitle =
+      saved === "refreshed"
+        ? "Item details refreshed without the new picture"
+        : "Item details are up to date, without the new picture";
+    return {
+      title: overQuota ? overQuotaTitle : "Item details refreshed",
+      description: [
+        ...(overQuota ? [`${PICTURE_QUOTA_FULL}.`] : []),
+        ...(selections.cleared > 0 ? [clearedReleasesText(selections.cleared)] : []),
+      ].join(" "),
+    };
+  },
   failureToast: (_externalId, failure) => ({
     title: "Failed to request item refresh",
     ...(failure && { description: refreshFailureText(failure) }),

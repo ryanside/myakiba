@@ -8,11 +8,16 @@ import type { ApiRejected } from "@/lib/errors/api-rejected";
 setDefaultTimeout(20_000);
 
 type Refreshed = Result<
-  { readonly saved: "refreshed" | "unchanged"; readonly picture: "absent" | "over_quota" },
+  {
+    readonly saved: "refreshed" | "unchanged";
+    readonly picture: "absent" | "over_quota";
+    readonly selections: { readonly moved: number; readonly cleared: number };
+  },
   ApiRejected
 >;
+const kept = { moved: 0, cleared: 0 };
 const refreshed = async (): Promise<Refreshed> =>
-  Result.ok({ saved: "refreshed", picture: "absent" });
+  Result.ok({ saved: "refreshed", picture: "absent", selections: kept });
 let refresh = refreshed;
 const realRefresh = await import("@/data/item-refresh");
 await mock.module("@/data/item-refresh", () => ({
@@ -94,7 +99,7 @@ test.each([
 ] as const)(
   "an Item Refresh %s over the picture quota says the picture was left out",
   async (saved, title) => {
-    refresh = async () => Result.ok({ saved, picture: "over_quota" });
+    refresh = async () => Result.ok({ saved, picture: "over_quota", selections: kept });
     const { result } = renderRefresh(new QueryClient());
 
     await act(async () => {
@@ -112,3 +117,56 @@ test.each([
     ]);
   },
 );
+
+test("an Item Refresh that moved release choices shows only that it refreshed", async () => {
+  refresh = async () =>
+    Result.ok({ saved: "refreshed", picture: "absent", selections: { moved: 2, cleared: 0 } });
+  const { result } = renderRefresh(new QueryClient());
+
+  await act(async () => {
+    await result.current.run(98_777);
+  });
+
+  expect(toastAdd.mock.calls).toEqual([[{ type: "success", title: "Item details refreshed" }]]);
+});
+
+test.each([
+  [1, "Release date cleared on 1 item in your collection. Edit it to select a release."],
+  [2, "Release date cleared on 2 items in your collection. Edit them to select a release."],
+])(
+  "an Item Refresh that cleared the release on %i items says to select a release again",
+  async (cleared, description) => {
+    refresh = async () =>
+      Result.ok({ saved: "refreshed", picture: "absent", selections: { moved: 1, cleared } });
+    const { result } = renderRefresh(new QueryClient());
+
+    await act(async () => {
+      await result.current.run(98_777);
+    });
+
+    expect(toastAdd.mock.calls).toEqual([
+      [{ type: "warning", title: "Item details refreshed", description }],
+    ]);
+  },
+);
+
+test("an Item Refresh over the picture quota that cleared a release choice says both", async () => {
+  refresh = async () =>
+    Result.ok({ saved: "refreshed", picture: "over_quota", selections: { moved: 0, cleared: 1 } });
+  const { result } = renderRefresh(new QueryClient());
+
+  await act(async () => {
+    await result.current.run(98_777);
+  });
+
+  expect(toastAdd.mock.calls).toEqual([
+    [
+      {
+        type: "warning",
+        title: "Item details refreshed without the new picture",
+        description:
+          "Your pictures already take the 2 GB one account can store. Release date cleared on 1 item in your collection. Edit it to select a release.",
+      },
+    ],
+  ]);
+});

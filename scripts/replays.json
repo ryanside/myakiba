@@ -4490,7 +4490,30 @@
         "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
       ],
       "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
-      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename. HEAD drops the case where two repriced releases clear both selections, since an Item Refresh now moves each to its repriced release.",
+      "atHead": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a new title and one rescheduled release remap the selection and advance the order",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > the page as it is stored answers unchanged and writes nothing",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists the stored releases in another order refreshes as unchanged",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a challenge page answers 400 and leaves the item as it was",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400 and leaves the item as it was",
+        "Item Refresh has no cooldown > two refreshes in a row both write",
+        "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
+        "Item Refresh has no cooldown > a picture store that throws answers 500 and leaves the item as it was",
+        "who may refresh an Item > an account without a verified email gets 403 and refreshes nothing",
+        "the per-user resync rate limit > the 61st resync in an hour answers 429 and refreshes nothing",
+        "the posted picture > a different picture replaces the item's image with one at its content's key",
+        "the posted picture > the same bytes again change nothing",
+        "the posted picture > a legacy picture refreshed with new bytes moves to their content's key",
+        "the posted picture > a rejected picture keeps the old image",
+        "the posted picture > no picture keeps the old image",
+        "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > a refresh loop with new bytes stops storing once the ledger reaches the quota",
+        "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > an over-quota refresh keeps the Item's picture",
+        "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
+      ]
     },
     {
       "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
@@ -5972,6 +5995,81 @@
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > two releases on the 1st that the backfill read as month-only keep their selections when a refresh reads their days"
+      ]
+    },
+    {
+      "fix": "953775dfdc34d049dd3d4488ffcd8dfbed41f0f0",
+      "bug": "The release planner paired a changed release only when exactly one stored and one page release were unmatched, so several changes cleared every selection; the old cases flip because the plan now lists its moves.",
+      "test": "apps/server/src/lib/release-plan.test.ts",
+      "fixed": [
+        "buildReleasePlan > the same releases need nothing, whatever their stored ids",
+        "buildReleasePlan > only added releases need nothing",
+        "buildReleasePlan > no releases before and none on the page need nothing",
+        "buildReleasePlan > one release replaced by one other remaps the selection",
+        "buildReleasePlan > two releases replaced clears both",
+        "buildReleasePlan > one release replaced while another is added clears it",
+        "buildReleasePlan > two releases replaced by one other clears both",
+        "buildReleasePlan > a removed release with nothing in its place clears it",
+        "buildReleasePlan > every release gone clears them all",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > a date slip with two releases moves each to the release it became",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > an added release beside a changed one leaves the added release alone",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > a removed release beside a changed one moves only the changed one",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > two page releases equally near a stored one move nothing",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > two stored releases equally near one page release move nothing",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > a page release nearer another stored release is not taken by the selected one",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > a release whose type or currency changed beside another change is not matched",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > one changed release still moves to the one new release whatever changed",
+        "buildReleasePlan matches changed releases by type, currency and nearest date > releases with the same barcode, or a barcode on one side only, still pair by date"
+      ]
+    },
+    {
+      "fix": "953775dfdc34d049dd3d4488ffcd8dfbed41f0f0",
+      "bug": "An Item Refresh that found several releases changed cleared every Collection Item's Selected Item Release, even when a release kept its type and currency and only its date or price moved. The three answer cases flip because the answer now counts moved and cleared selections.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > two repriced releases move each selection to its repriced release and leave only the new releases",
+        "an Item Refresh keeps each selection on the release it became > two slipped releases move each selection to its slipped release and advance the order",
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside an added one moves its selection and leaves the added one unselected",
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one moves its selection and clears the removed one's",
+        "an Item Refresh keeps each selection on the release it became > a release with two equally near successors clears its selection and leaves the order's date",
+        "Item Refresh has no cooldown > a refresh answers whether it saved and what became of its picture",
+        "the posted picture > the same bytes again change nothing",
+        "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > an over-quota refresh keeps the Item's picture"
+      ]
+    },
+    {
+      "fix": "953775dfdc34d049dd3d4488ffcd8dfbed41f0f0",
+      "bug": "The Item page said only that an Item Refresh finished when it had cleared a Selected Item Release, so the collector never knew to choose the release again.",
+      "test": "apps/web/src/data/resources/item.test.tsx",
+      "fixed": [
+        "an Item Refresh that cleared the release on 1 items says to select a release again",
+        "an Item Refresh that cleared the release on 2 items says to select a release again",
+        "an Item Refresh over the picture quota that cleared a release choice says both"
+      ]
+    },
+    {
+      "fix": "32b8d85c5c4f5ff0b7e870e30dedcd9a2b5eaa93",
+      "bug": "An Item Refresh that moved one selection and cleared another advanced the Order before the clear, so an Order dated before a removed release took that release's date.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one advances an earlier order date to the slipped release, not the removed one",
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one advances a blank order date to the slipped release"
+      ]
+    },
+    {
+      "fix": "aae9c9ba2596cdfb39e92cf5dab36df66c2810e9",
+      "bug": "An Item Refresh that found several releases changed paired two releases whose dates crossed even when each kept its own barcode, so their Collection Items swapped onto the wrong releases.",
+      "test": "apps/server/src/lib/release-plan.test.ts",
+      "fixed": [
+        "buildReleasePlan matches changed releases by type, currency and nearest date > two releases whose barcodes differ are not paired even when their dates cross"
+      ]
+    },
+    {
+      "fix": "aae9c9ba2596cdfb39e92cf5dab36df66c2810e9",
+      "bug": "An Item Refresh that found several releases changed paired two releases whose dates crossed even when each kept its own barcode, so their Collection Items swapped onto the wrong releases.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "an Item Refresh keeps each selection on the release it became > two releases whose barcodes differ clear their selections when their dates cross"
       ]
     }
   ],

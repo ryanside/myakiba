@@ -263,20 +263,18 @@ export const Items = {
     async (scope, { itemId, page, picture }) => {
       const refreshed = await refreshItem(scope.tx, scope.viewer, itemId, page, picture);
       if (refreshed.isErr()) return refreshed;
-      const { saved, picture: outcome } = refreshed.value;
+      const { saved, selections, picture: outcome } = refreshed.value;
       scope.log.set({
         mfc: {
           itemId: page.mfcItemId,
           contentLabel: page.contentLabel,
           outcome: saved,
+          selections,
           picture: pictureLog(picture, outcome),
           warnings: page.warnings,
         },
       });
-      return Result.ok({
-        saved: saved === "unchanged" ? ("unchanged" as const) : ("refreshed" as const),
-        picture: outcome,
-      });
+      return Result.ok({ saved, picture: outcome, selections });
     },
   ),
 };
