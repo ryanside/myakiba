@@ -57,7 +57,11 @@ test("a tile releasing today reads Released after midnight passes with no other 
         title: "Hatsune Miku",
         image: null,
         category: "Prepainted",
-        latestRelease: { date: "2026-10-16", price: 12_000, priceCurrency: "JPY" },
+        latestRelease: {
+          date: { start: "2026-10-16", precision: "day" },
+          price: 12_000,
+          priceCurrency: "JPY",
+        },
       }}
       destination={{ to: "/item/$externalId", params: { externalId: 123 } }}
       currency="JPY"

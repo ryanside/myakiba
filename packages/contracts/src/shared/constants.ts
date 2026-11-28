@@ -29,6 +29,9 @@ export const ENTRY_CATEGORIES = [
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
 
+/** How much of a release date is known. The stored date is the first day of that period. */
+export const RELEASE_DATE_PRECISIONS = ["day", "month", "year"] as const;
+
 export const CATEGORIES = [
   "Prepainted",
   "Action/Dolls",

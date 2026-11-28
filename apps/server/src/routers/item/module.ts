@@ -30,6 +30,7 @@ import {
 } from "@/lib/mfc-item-ingest";
 import type { EntriesWithRoles } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { optionalReleaseDateOf, releaseDateOf } from "@/lib/release-date";
 
 async function findResyncItem(tx: ReadTx, viewer: Viewer, externalId: number) {
   const id = mfcItemId(externalId);
@@ -47,7 +48,7 @@ export const Items = {
         .select({
           id: item_release.id,
           itemId: item_release.itemId,
-          date: item_release.date,
+          date: releaseDateOf(item_release.date, item_release.datePrecision),
           type: item_release.type,
           price: item_release.price,
           priceCurrency: item_release.priceCurrency,
@@ -93,7 +94,7 @@ export const Items = {
                   JSON_BUILD_OBJECT(
                     'id', ir.id,
                     'itemId', ir.item_id,
-                    'date', ir.date,
+                    'date', JSON_BUILD_OBJECT('start', ir.date, 'precision', ir.date_precision),
                     'type', ir.type,
                     'price', ir.price,
                     'priceCurrency', ir.price_currency,
@@ -170,7 +171,7 @@ export const Items = {
           id: order.id,
           title: order.title,
           shop: order.shop,
-          releaseDate: order.releaseDate,
+          releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
           shippingFee: order.shippingFee,
           taxes: order.taxes,
           duties: order.duties,

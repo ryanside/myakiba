@@ -13,6 +13,7 @@ import {
   check,
   boolean,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
@@ -23,9 +24,12 @@ import {
   SHIPPING_METHODS,
   ORDER_STATUSES,
   CONDITIONS,
+  RELEASE_DATE_PRECISIONS,
 } from "@myakiba/contracts/shared/constants";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
+
+const releasePrecisionIn = (column: AnyPgColumn) => sql`${column} IN ('day', 'month', 'year')`;
 
 export const item = pgTable(
   "item",
@@ -92,6 +96,7 @@ export const item_release = pgTable(
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
+    datePrecision: text("date_precision", { enum: RELEASE_DATE_PRECISIONS }).notNull(),
     type: text("type"),
     price: bigint("price", { mode: "number" }),
     priceCurrency: text("price_currency"),
@@ -106,6 +111,7 @@ export const item_release = pgTable(
       t.createdAt.desc(),
     ),
     index("item_release_date_item_id_idx").on(t.date, t.itemId),
+    check("item_release_date_precision_check", releasePrecisionIn(t.datePrecision)),
   ],
 );
 
@@ -247,6 +253,9 @@ export const order = pgTable(
     shop: text("shop").default("").notNull(),
     orderDate: date("order_date", { mode: "string" }),
     releaseDate: date("release_date", { mode: "string" }),
+    releaseDatePrecision: text("release_date_precision", { enum: RELEASE_DATE_PRECISIONS })
+      .default("day")
+      .notNull(),
     paymentDate: date("payment_date", { mode: "string" }),
     shippingDate: date("shipping_date", { mode: "string" }),
     collectionDate: date("collection_date", { mode: "string" }),
@@ -274,6 +283,7 @@ export const order = pgTable(
     index("order_user_id_release_date_idx").on(t.userId, t.releaseDate),
     index("order_user_id_status_release_date_idx").on(t.userId, t.status, t.releaseDate),
     index("order_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
+    check("order_release_date_precision_check", releasePrecisionIn(t.releaseDatePrecision)),
   ],
 );
 

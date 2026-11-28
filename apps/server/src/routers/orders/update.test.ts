@@ -87,7 +87,7 @@ const editedOrder = {
   title: "Combined shipment",
   shop: "HLJ",
   orderDate: "2026-01-06",
-  releaseDate: "2026-03-01",
+  releaseDate: { start: "2026-03-01", precision: "month" },
   paymentDate: "2026-02-20",
   shippingDate: "2026-03-02",
   collectionDate: "2026-03-09",
@@ -117,7 +117,13 @@ const readOnlyOrderFields = {
   images: [],
 } as const;
 
-type OrderField = string | number | boolean | null | readonly never[];
+type OrderField =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly never[]
+  | { readonly start: string; readonly precision: string };
 
 const put = (
   edited: Readonly<Record<string, OrderField>>,
@@ -188,6 +194,8 @@ describe("an Order edit writes each shape the app sends", () => {
     const after = await readState();
     expect(after.order).toEqual({
       ...editedOrder,
+      releaseDate: "2026-03-01",
+      releaseDatePrecision: "month",
       id: "order-1",
       userId,
       createdAt: before.order.createdAt,

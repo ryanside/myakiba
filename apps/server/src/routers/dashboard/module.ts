@@ -17,6 +17,7 @@ import {
   paidItemPrice,
   selectUnpaidCosts,
 } from "@/lib/order-money";
+import { optionalReleaseDateOf, releaseDateOf } from "@/lib/release-date";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
@@ -86,7 +87,7 @@ const ordersRead = prepared("orders_kanban", (tx) =>
       shop: order.shop,
       status: order.status,
       paid: order.paid,
-      releaseDate: order.releaseDate,
+      releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
       orderDate: order.orderDate,
       paymentDate: order.paymentDate,
       shippingDate: order.shippingDate,
@@ -131,6 +132,7 @@ const ordersRead = prepared("orders_kanban", (tx) =>
       order.status,
       order.paid,
       order.releaseDate,
+      order.releaseDatePrecision,
       order.orderDate,
       order.paymentDate,
       order.shippingDate,
@@ -209,7 +211,7 @@ const releaseCalendarRead = prepared("release_calendar", (tx) =>
       title: item.title,
       image: itemImageSql().as("image"),
       category: item.category,
-      releaseDate: item_release.date,
+      releaseDate: releaseDateOf(item_release.date, item_release.datePrecision),
       price: item_release.price,
       priceCurrency: item_release.priceCurrency,
     })
@@ -277,7 +279,7 @@ const monthlyOrdersKanbanRead = prepared("monthly_orders_kanban", (tx) => {
       shop: order.shop,
       status: order.status,
       paid: order.paid,
-      releaseDate: order.releaseDate,
+      releaseDate: optionalReleaseDateOf(order.releaseDate, order.releaseDatePrecision),
       orderDate: order.orderDate,
       paymentDate: order.paymentDate,
       shippingDate: order.shippingDate,
@@ -312,6 +314,7 @@ const monthlyOrdersKanbanRead = prepared("monthly_orders_kanban", (tx) => {
       order.status,
       order.paid,
       order.releaseDate,
+      order.releaseDatePrecision,
       order.orderDate,
       order.paymentDate,
       order.shippingDate,

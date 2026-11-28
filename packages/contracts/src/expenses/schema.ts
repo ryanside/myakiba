@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { releaseDateSchema } from "../shared/release-date";
 import { CATEGORIES, SHIPPING_METHODS } from "../shared/constants";
 import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
 
@@ -187,7 +188,7 @@ const expenseOrderSchema = z.object({
   orderId: z.string(),
   title: z.string(),
   shop: z.string(),
-  expenseDate: z.string().nullable(),
+  expenseDate: releaseDateSchema.nullable(),
   images: z.array(z.string()),
   feeSpend: z.number(),
   totalSpend: z.number(),

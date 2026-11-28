@@ -1,4 +1,5 @@
 import type { Page } from "../shared/pagination";
+import type { ReleaseDate } from "../shared/release-date";
 import type { Category, CollectionStatus, Condition, ShippingMethod } from "../shared/types";
 
 export type CollectionItem = {
@@ -24,7 +25,7 @@ export type CollectionItem = {
   tags: string[];
   notes: string;
   releaseId: string | null;
-  releaseDate: string | null;
+  releaseDate: ReleaseDate | null;
   releasePrice: number | null;
   releaseType: string | null;
   releaseCurrency: string | null;

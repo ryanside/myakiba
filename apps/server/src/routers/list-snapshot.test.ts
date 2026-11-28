@@ -37,9 +37,12 @@ test("a delete committed while a page is read leaves its rows and totals in agre
     username: "ryan",
   });
   await db.insert(item).values({ id: "item-1", ownerId: userId, externalId: 101, title: "Miku" });
-  await db
-    .insert(item_release)
-    .values({ id: "00000000-0000-4000-8000-000000000001", itemId: "item-1", date: "2026-01-01" });
+  await db.insert(item_release).values({
+    id: "00000000-0000-4000-8000-000000000001",
+    itemId: "item-1",
+    date: "2026-01-01",
+    datePrecision: "day",
+  });
   await db.insert(order).values({ id: "order-1", userId, title: "AmiAmi" });
   await db.insert(collection).values({
     id: "c-1",

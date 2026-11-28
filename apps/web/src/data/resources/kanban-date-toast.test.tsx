@@ -24,7 +24,10 @@ async function changeDateAndReadToast(respond: () => Promise<Response>) {
   });
 
   await act(() =>
-    result.current.run({ orderId: "od-alpha", field: "orderDate", date: "2026-11-05" }),
+    result.current.run({
+      orderId: "od-alpha",
+      change: { field: "orderDate", date: "2026-11-05" },
+    }),
   );
   const toasts = added.mock.calls.map(([options]) => options);
   added.mockRestore();

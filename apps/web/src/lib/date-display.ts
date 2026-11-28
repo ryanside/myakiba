@@ -1,6 +1,8 @@
 import { format as formatDateFns, parseISO } from "date-fns";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
+import { RELEASE_DATE_PRECISIONS } from "@myakiba/contracts/shared/constants";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 
 const DATE_PATTERN_BY_FORMAT = {
   "MM/DD/YYYY": "MM/dd/yyyy",
@@ -36,6 +38,52 @@ export function formatDateOnlyForDisplay(
   if (!date) return "Invalid date";
 
   return formatDateFns(date, DATE_PATTERN_BY_FORMAT[format]);
+}
+
+const RELEASE_PATTERN_BY_PRECISION = {
+  month: "MMM yyyy",
+  year: "yyyy",
+} satisfies Readonly<Record<Exclude<ReleaseDate["precision"], "day">, string>>;
+
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
+/** How a day-precise release reads: the user's date format, "June 18th, 2026", or "Thu, Jun 18". */
+type ReleaseDayStyle = DateFormat | "long" | "weekday";
+
+/**
+ * A release date as far as it is known: a month reads "Jun 2026" and a year "2026" whatever the
+ * date format setting, and only a day uses `day`.
+ */
+export function formatReleaseDate(
+  value: ReleaseDate | null | undefined,
+  day: ReleaseDayStyle = "MM/DD/YYYY",
+): string {
+  if (!value) return "n/a";
+  const date = parseDateOnly(value.start);
+  if (!date) return "Invalid date";
+  if (value.precision !== "day") {
+    return formatDateFns(date, RELEASE_PATTERN_BY_PRECISION[value.precision]);
+  }
+  switch (day) {
+    case "long":
+      return formatDateFns(date, "PPP");
+    case "weekday":
+      return WEEKDAY_FORMATTER.format(date);
+    default:
+      return formatDateFns(date, DATE_PATTERN_BY_FORMAT[day]);
+  }
+}
+
+/** Calendar order: by start, and a release known only to its month or year heads that period. */
+export function releaseCalendarOrder(a: ReleaseDate, b: ReleaseDate): number {
+  return (
+    a.start.localeCompare(b.start) ||
+    RELEASE_DATE_PRECISIONS.indexOf(b.precision) - RELEASE_DATE_PRECISIONS.indexOf(a.precision)
+  );
 }
 
 export function formatTimestampForDisplay(

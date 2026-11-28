@@ -7,6 +7,7 @@ import { query } from "@/domain/kernel";
 import type { CalendarQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 import { orderTotal } from "@/lib/order-money";
+import { releaseDateOf } from "@/lib/release-date";
 
 export const Calendar = {
   items: query(
@@ -25,7 +26,7 @@ export const Calendar = {
           category: item.category,
           price: item_release.price,
           priceCurrency: item_release.priceCurrency,
-          releaseDate: item_release.date,
+          releaseDate: releaseDateOf(item_release.date, item_release.datePrecision),
         })
         .from(item_release)
         .innerJoin(item, eq(item_release.itemId, item.id))
@@ -68,7 +69,7 @@ export const Calendar = {
           shop: order.shop,
           status: order.status,
           paid: order.paid,
-          releaseDate: order.releaseDate,
+          releaseDate: releaseDateOf(order.releaseDate, order.releaseDatePrecision),
           itemCount: sql<number>`COUNT(${collection.id})`.mapWith(Number),
           images: orderPreviewImagesSql,
           total: orderTotal,
@@ -89,6 +90,7 @@ export const Calendar = {
           order.status,
           order.paid,
           order.releaseDate,
+          order.releaseDatePrecision,
           order.shippingFee,
           order.taxes,
           order.duties,

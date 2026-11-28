@@ -38,8 +38,18 @@ beforeEach(async () => {
     { id: "aki-1", ownerId: "user-2", externalId: 186, title: "Nendoroid Hatsune Miku" },
   ]);
   await db.insert(item_release).values([
-    { id: "00000000-0000-0000-0000-000000000001", itemId: "item-1", date: "2026-03-01" },
-    { id: "00000000-0000-0000-0000-000000000002", itemId: "item-1", date: "2026-01-01" },
+    {
+      id: "00000000-0000-0000-0000-000000000001",
+      itemId: "item-1",
+      date: "2026-03-01",
+      datePrecision: "day",
+    },
+    {
+      id: "00000000-0000-0000-0000-000000000002",
+      itemId: "item-1",
+      date: "2026-01-01",
+      datePrecision: "day",
+    },
   ]);
   await db
     .insert(entry)
@@ -86,7 +96,10 @@ describe("each item route answers as before", () => {
         item: {
           id: "item-1",
           externalId: 186,
-          releases: [{ date: "2026-03-01" }, { date: "2026-01-01" }],
+          releases: [
+            { date: { start: "2026-03-01", precision: "day" } },
+            { date: { start: "2026-01-01", precision: "day" } },
+          ],
           entries: [{ id: "entry-1", name: "Hatsune Miku", roles: [] }],
         },
       },
@@ -100,7 +113,12 @@ describe("each item route answers as before", () => {
   test("list releases oldest first", async () => {
     expect(await call("GET", "/item-1/releases")).toMatchObject({
       status: 200,
-      body: { releases: [{ date: "2026-01-01" }, { date: "2026-03-01" }] },
+      body: {
+        releases: [
+          { date: { start: "2026-01-01", precision: "day" } },
+          { date: { start: "2026-03-01", precision: "day" } },
+        ],
+      },
     });
   });
 

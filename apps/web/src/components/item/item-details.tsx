@@ -5,7 +5,7 @@ import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import { Badge } from "@/components/reui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCategoryColor } from "@/lib/category-colors";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { ItemDetail } from "@/components/item/types";
@@ -125,7 +125,7 @@ export function ItemDetails({
                 />
                 {release ? (
                   <span className="animate-data-in font-medium tabular-nums">
-                    {formatDateOnlyForDisplay(release.date, dateFormat)}
+                    {formatReleaseDate(release.date, dateFormat)}
                   </span>
                 ) : (
                   <Skeleton className="h-5 w-24" />

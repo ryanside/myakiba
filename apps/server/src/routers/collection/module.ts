@@ -17,6 +17,7 @@ import { StatusNeedsOrder } from "./errors/status-needs-order";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 import { itemIsPaid, itemOrderJoin, paidItemPrice } from "@/lib/order-money";
+import { optionalReleaseDateOf } from "@/lib/release-date";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
   row: T,
@@ -90,7 +91,7 @@ export const Collection = {
         tags: collection.tags,
         notes: collection.notes,
         releaseId: collection.releaseId,
-        releaseDate: item_release.date,
+        releaseDate: optionalReleaseDateOf(item_release.date, item_release.datePrecision),
         releasePrice: item_release.price,
         releaseCurrency: item_release.priceCurrency,
         releaseBarcode: item_release.barcode,
@@ -177,7 +178,7 @@ export const Collection = {
           tags: collection.tags,
           notes: collection.notes,
           releaseId: collection.releaseId,
-          releaseDate: item_release.date,
+          releaseDate: optionalReleaseDateOf(item_release.date, item_release.datePrecision),
           releasePrice: item_release.price,
           releaseCurrency: item_release.priceCurrency,
           createdAt: collection.createdAt,

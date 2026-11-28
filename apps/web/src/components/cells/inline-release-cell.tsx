@@ -1,4 +1,5 @@
 import { Result } from "better-result";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import {
   Select,
   SelectContent,
@@ -9,7 +10,7 @@ import {
 import { Field } from "@/components/ui/field";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { QUIET_SELECT_TRIGGER_CLASS_NAME } from "./cell-trigger";
@@ -18,7 +19,7 @@ import type { Saving } from "@/data/client";
 import { shownMessageOf } from "@/data/api";
 
 type ReleaseFallback = {
-  readonly releaseDate: string | null;
+  readonly releaseDate: ReleaseDate | null;
   readonly releaseType: string | null;
   readonly releasePrice: number | null;
   readonly releaseCurrency: string | null;
@@ -80,7 +81,7 @@ export function InlineReleaseCell({
           <SelectValue placeholder="Select release">
             {displayReleaseId && displayData.date && (
               <span className="text-sm tabular-nums">
-                {formatDateOnlyForDisplay(displayData.date, dateFormat)}
+                {formatReleaseDate(displayData.date, dateFormat)}
               </span>
             )}
           </SelectValue>
@@ -100,7 +101,7 @@ export function InlineReleaseCell({
               <div className="flex flex-col gap-0.5">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">
-                    {formatDateOnlyForDisplay(release.date, dateFormat)}
+                    {formatReleaseDate(release.date, dateFormat)}
                   </span>
                   {release.type && (
                     <span className="text-xs text-muted-foreground bg-muted/60 px-1.5 py-px rounded">

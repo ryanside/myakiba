@@ -16,7 +16,7 @@ import {
   getShippingMethodTotals,
   orderSpendSums,
   paidOrderWhere,
-  realizedOrderDateSql,
+  realizedOrderDateWithPrecisionSql,
 } from "./expense-queries";
 import {
   itemOrderJoin,
@@ -400,7 +400,7 @@ async function loadTopOrders(
       orderId: order.id,
       title: order.title,
       shop: order.shop,
-      expenseDate: sql<string | null>`${realizedOrderDateSql()}`,
+      expenseDate: realizedOrderDateWithPrecisionSql(),
       images: orderPreviewImagesSql,
       itemSpend: sql<number>`COALESCE(${orderItems.itemSpend}, 0)::double precision`,
       feeSpend: orderFeeSpend,
@@ -418,6 +418,7 @@ async function loadTopOrders(
       order.shippingDate,
       order.orderDate,
       order.releaseDate,
+      order.releaseDatePrecision,
       order.shippingFee,
       order.taxes,
       order.duties,

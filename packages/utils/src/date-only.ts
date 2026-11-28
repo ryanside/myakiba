@@ -80,48 +80,63 @@ export function getDateOnlyMonthBounds(year: number, month: number): DateOnlyRan
   };
 }
 
+/** A release date as MFC printed it: the first day of the period it names, and how long that is. */
+export type MfcDate = {
+  readonly start: string;
+  readonly precision: "day" | "month" | "year";
+};
+
 /**
- * Normalizes release dates as MFC prints them to YYYY-MM-DD.
+ * Reads a release date as MFC prints it.
  *
  * @example
  * normalizeMfcDate("2006")
- * // "2006-01-01"
+ * // { start: "2006-01-01", precision: "year" }
  *
  * @example
  * normalizeMfcDate("09/2010")
- * // "2010-09-01"
+ * // { start: "2010-09-01", precision: "month" }
  *
  * @example
  * normalizeMfcDate("09/18/2025")
- * // "2025-09-18"
+ * // { start: "2025-09-18", precision: "day" }
  */
-export function normalizeMfcDate(dateStr: string): string | null {
+export function normalizeMfcDate(dateStr: string): MfcDate | null {
   const trimmed = dateStr.trim();
   if (!trimmed) return null;
 
-  if (YEAR_ONLY_PATTERN.test(trimmed)) return mfcDate(Number(trimmed), 1, 1);
+  if (YEAR_ONLY_PATTERN.test(trimmed)) return mfcDate(Number(trimmed), 1, 1, "year");
 
   const monthYearMatch = trimmed.match(MONTH_YEAR_PATTERN);
-  if (monthYearMatch) return mfcDate(Number(monthYearMatch[2]), Number(monthYearMatch[1]), 1);
+  if (monthYearMatch) {
+    return mfcDate(Number(monthYearMatch[2]), Number(monthYearMatch[1]), 1, "month");
+  }
 
   const monthDayYearMatch = trimmed.match(MONTH_DAY_YEAR_PATTERN);
   if (monthDayYearMatch) {
     const [, month, day, year] = monthDayYearMatch.map(Number);
-    return mfcDate(year ?? 0, month ?? 0, day ?? 0);
+    return mfcDate(year ?? 0, month ?? 0, day ?? 0, "day");
   }
 
   const datePart = trimmed.split("T")[0] ?? trimmed;
   const result = DATE_ONLY_SCHEMA.safeParse(datePart);
-  return result.success ? mfcDate(result.data.year, result.data.month, result.data.day) : null;
+  return result.success
+    ? mfcDate(result.data.year, result.data.month, result.data.day, "day")
+    : null;
 }
 
 /** Postgres has no year 0, and MFC prints no release year before 1000. */
 const EARLIEST_MFC_YEAR = 1000;
 
-function mfcDate(year: number, month: number, day: number): string | null {
+function mfcDate(
+  year: number,
+  month: number,
+  day: number,
+  precision: MfcDate["precision"],
+): MfcDate | null {
   if (year < EARLIEST_MFC_YEAR) return null;
   const isoDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
+  return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? { start: isoDate, precision } : null;
 }
 
 /**

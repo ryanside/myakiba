@@ -26,7 +26,7 @@ const releases: CalendarResponse = {
     category: "Prepainted",
     price: null,
     priceCurrency: null,
-    releaseDate: `2026-11-0${day}`,
+    releaseDate: { start: `2026-11-0${day}`, precision: "day" as const },
   })),
 };
 

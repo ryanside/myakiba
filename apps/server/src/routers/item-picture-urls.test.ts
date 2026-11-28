@@ -76,11 +76,19 @@ beforeAll(async () => {
     },
   ]);
   await db.insert(item_release).values([
-    { id: KEYED_RELEASE, itemId: "keyed", date: "2026-06-15", price: 15_000, priceCurrency: "JPY" },
+    {
+      id: KEYED_RELEASE,
+      itemId: "keyed",
+      date: "2026-06-15",
+      datePrecision: "day",
+      price: 15_000,
+      priceCurrency: "JPY",
+    },
     {
       id: LEGACY_RELEASE,
       itemId: "legacy",
       date: "2026-06-20",
+      datePrecision: "day",
       price: 15_000,
       priceCurrency: "JPY",
     },

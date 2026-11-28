@@ -5,6 +5,7 @@ import {
   paginationOffsetSchema,
   paginationPageSchema,
 } from "../shared/pagination";
+import { releaseDateSchema } from "../shared/release-date";
 
 export const orderSearchSortSchema = z.enum([
   "title",
@@ -79,7 +80,7 @@ export const itemDatabaseSearchSchema = z.object({
 });
 
 export const itemDatabaseReleaseSummarySchema = z.object({
-  date: z.iso.date(),
+  date: releaseDateSchema,
   price: z.number().int().nullable(),
   priceCurrency: z.string().nullable(),
 });

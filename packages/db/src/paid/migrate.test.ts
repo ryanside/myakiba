@@ -60,7 +60,7 @@ const paidState = async (sql: SQL) => ({
 
 const columnsBothMigrationsKeep = async (sql: SQL) => ({
   orders: [
-    ...(await sql`SELECT to_jsonb(o) - '{status,paid}'::text[] AS row FROM "order" o ORDER BY id`),
+    ...(await sql`SELECT to_jsonb(o) - '{status,paid,release_date_precision}'::text[] AS row FROM "order" o ORDER BY id`),
   ],
   collection: [
     ...(await sql`

@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 import { CATEGORIES, CONTENT_LABELS } from "@myakiba/contracts/shared/constants";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Category, ContentLabel, EntryCategory } from "@myakiba/contracts/shared/types";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { normalizeMfcDate } from "@myakiba/utils/date-only";
 import { readMfcEnvelope } from "./page";
 import { MFC_PAGE_READS as READS } from "./reads";
@@ -25,7 +26,7 @@ export type MfcEntryLink = {
 };
 
 export type MfcRelease = {
-  readonly date: string;
+  readonly date: ReleaseDate;
   readonly type: string;
   readonly price: number;
   readonly priceCurrency: string;

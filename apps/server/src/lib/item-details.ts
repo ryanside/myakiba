@@ -1,5 +1,6 @@
 import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
 import type { MfcItemPage } from "@myakiba/mfc/parse";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 
 export function itemFields(page: MfcItemPage) {
   return {
@@ -23,7 +24,7 @@ export function linksInLockOrder(page: MfcItemPage) {
 }
 
 type ReleaseContent = {
-  readonly date: string;
+  readonly date: ReleaseDate;
   readonly type: string | null;
   readonly price: number | null;
   readonly priceCurrency: string | null;
@@ -33,7 +34,8 @@ type ReleaseContent = {
 // An older parse stored a missing barcode as "", and the page now reads it as null.
 export function releaseKey(release: ReleaseContent): string {
   return JSON.stringify([
-    release.date,
+    release.date.start,
+    release.date.precision,
     release.type,
     release.price,
     release.priceCurrency,

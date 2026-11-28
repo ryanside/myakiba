@@ -1,7 +1,13 @@
 import { expect, test } from "bun:test";
 import type { SQL } from "bun";
 import { testDatabases } from "../test/database";
-import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../test/push";
+import {
+  PICTURE_LEDGER,
+  PUSH_TIMEOUT,
+  RELEASE_PRECISION,
+  REPEATED_ON_EVERY_PUSH,
+  pushSchema,
+} from "../test/push";
 import { migrateItemOwnership } from "./item-ownership/migrate";
 import { migratePaid } from "./paid/migrate";
 import { migrateOrderPaid } from "./paid/order-paid";
@@ -108,6 +114,7 @@ test.skipIf(template === undefined)(
         ...REPEATED_ON_EVERY_PUSH,
         CREATE_INDEX,
         ...PICTURE_LEDGER,
+        ...RELEASE_PRECISION,
       ].toSorted(),
     });
     expect(await commitRecords(sql)).toEqual(before);
@@ -131,7 +138,12 @@ test.skipIf(template === undefined)(
 
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: [DROP_OLD_KEY, ...REPEATED_ON_EVERY_PUSH, ...PICTURE_LEDGER].toSorted(),
+      statements: [
+        DROP_OLD_KEY,
+        ...REPEATED_ON_EVERY_PUSH,
+        ...PICTURE_LEDGER,
+        ...RELEASE_PRECISION,
+      ].toSorted(),
     });
     expect(await pushSchema(url)).toMatchObject({
       applied: true,

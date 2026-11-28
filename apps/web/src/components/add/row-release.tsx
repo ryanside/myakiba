@@ -9,7 +9,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useRead, useReads } from "@/data/client";
 import { items } from "@/data/resources/item";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
@@ -40,7 +40,7 @@ export function useRowReleases(rows: readonly DraftRow[]) {
 
 function releaseFacts(release: Release, c: AddController): readonly string[] {
   return [
-    formatDateOnlyForDisplay(release.date, c.dateFormat),
+    formatReleaseDate(release.date, c.dateFormat),
     release.type,
     release.barcode,
     formatReleasePrice(release.price, release.priceCurrency, c.currency),
@@ -95,7 +95,7 @@ export function ReleaseField({
             {release ? (
               <span className="flex w-full min-w-0 items-center gap-3 text-muted-foreground tabular-nums @max-3xl/grid:gap-1.5 @max-3xl/grid:text-xs">
                 <span className="shrink-0 font-medium text-foreground">
-                  {formatDateOnlyForDisplay(release.date, c.dateFormat)}
+                  {formatReleaseDate(release.date, c.dateFormat)}
                 </span>
                 {release.type ? <span className="min-w-0 truncate">{release.type}</span> : null}
                 {release.barcode ? (
@@ -123,7 +123,7 @@ export function ReleaseField({
               <span className="flex min-w-0 flex-col gap-1 [overflow-wrap:anywhere] whitespace-normal">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">
-                    {formatDateOnlyForDisplay(option.date, c.dateFormat)}
+                    {formatReleaseDate(option.date, c.dateFormat)}
                   </span>
                   {option.type ? (
                     <span className="rounded bg-muted/60 px-1.5 py-px text-xs text-muted-foreground">

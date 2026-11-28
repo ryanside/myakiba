@@ -58,11 +58,14 @@ test("an Order edit names the Order in the path and sends only the fields a user
 
 test("a date changed on a Dashboard card names its field, so its Order Items that held the old date follow it", async () => {
   requested.length = 0;
-  await updateOrderDate("order-1", "orderDate", "2026-01-06");
-  await updateOrderDate("order-1", "paymentDate", "2026-02-20");
-  await updateOrderDate("order-1", "shippingDate", null);
-  await updateOrderDate("order-1", "collectionDate", "2026-03-09");
-  await updateOrderDate("order-1", "releaseDate", "2026-03-01");
+  await updateOrderDate("order-1", { field: "orderDate", date: "2026-01-06" });
+  await updateOrderDate("order-1", { field: "paymentDate", date: "2026-02-20" });
+  await updateOrderDate("order-1", { field: "shippingDate", date: null });
+  await updateOrderDate("order-1", { field: "collectionDate", date: "2026-03-09" });
+  await updateOrderDate("order-1", {
+    field: "releaseDate",
+    date: { start: "2026-03-01", precision: "month" },
+  });
   await updateOrderStatus("order-1", "Shipped");
 
   expect(requested.map(({ body }) => body)).toEqual([
@@ -70,7 +73,7 @@ test("a date changed on a Dashboard card names its field, so its Order Items tha
     { order: { paymentDate: "2026-02-20" }, cascadeOptions: ["paymentDate"] },
     { order: { shippingDate: null }, cascadeOptions: ["shippingDate"] },
     { order: { collectionDate: "2026-03-09" }, cascadeOptions: ["collectionDate"] },
-    { order: { releaseDate: "2026-03-01" }, cascadeOptions: [] },
+    { order: { releaseDate: { start: "2026-03-01", precision: "month" } }, cascadeOptions: [] },
     { order: { status: "Shipped" }, cascadeOptions: ["status"] },
   ]);
 });

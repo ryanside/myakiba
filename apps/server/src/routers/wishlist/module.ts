@@ -8,6 +8,7 @@ import { command, query } from "@/domain/kernel";
 import { WishlistItemNotFound } from "./errors/wishlist-item-not-found";
 import type { WishlistPageQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { releaseDateOf } from "@/lib/release-date";
 
 export const Wishlist = {
   list: query(
@@ -16,6 +17,7 @@ export const Wishlist = {
       const latestRelease = scope.tx
         .select({
           date: item_release.date,
+          released: releaseDateOf(item_release.date, item_release.datePrecision).as("released"),
           price: item_release.price,
           priceCurrency: item_release.priceCurrency,
         })
@@ -43,7 +45,7 @@ export const Wishlist = {
             category: item.category,
             position: wishlistItem.position,
             createdAt: wishlistItem.createdAt,
-            releaseDate: latestRelease.date,
+            releaseDate: latestRelease.released,
             releasePrice: latestRelease.price,
             releasePriceCurrency: latestRelease.priceCurrency,
           })

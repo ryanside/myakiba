@@ -110,6 +110,19 @@ type Row = readonly [name: string, outcome: string, build: () => string];
 
 const ADVERSARIAL_PAGES: readonly Row[] = [
   [
+    "release date: digits and slashes that match no date pattern",
+    "parsed",
+    () => fill("1/", (run) => ({ fields: field("Releases", `<a class="time">${run}2020</a>`) })),
+  ],
+  [
+    "release date: a month and year after the page's room in spaces",
+    "parsed",
+    () =>
+      fill(" ", (run) => ({
+        fields: field("Releases", `<a class="time">${run}06/2026</a>`),
+      })),
+  ],
+  [
     "price: comma groups with no currency",
     "parsed",
     () => fill(",111", (run) => ({ fields: release(`1${run}`) })),

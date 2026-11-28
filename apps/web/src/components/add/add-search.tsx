@@ -13,7 +13,7 @@ import { useRead } from "@/data/client";
 import { add } from "@/data/resources/add";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { ItemBadges } from "./item-badges";
@@ -122,9 +122,7 @@ export function AddSearch({
                   {results.map((item) => {
                     const added = draftItemIds.has(item.itemId);
                     const release = item.latestRelease;
-                    const date = release?.date
-                      ? formatDateOnlyForDisplay(release.date, dateFormat)
-                      : null;
+                    const date = release?.date ? formatReleaseDate(release.date, dateFormat) : null;
                     const price = release
                       ? formatReleasePrice(release.price, release.priceCurrency, currency)
                       : null;

@@ -123,8 +123,18 @@ test("an edit that selects another Item's release answers 404 and leaves the Col
     .insert(item)
     .values({ id: "item-2", ownerId: userId, externalId: 187, title: "Nendoroid Kagamine Rin" });
   await db.insert(item_release).values([
-    { id: "00000000-0000-0000-0000-000000000001", itemId: "item-1", date: "2026-03-01" },
-    { id: "00000000-0000-0000-0000-000000000002", itemId: "item-2", date: "2026-04-01" },
+    {
+      id: "00000000-0000-0000-0000-000000000001",
+      itemId: "item-1",
+      date: "2026-03-01",
+      datePrecision: "day",
+    },
+    {
+      id: "00000000-0000-0000-0000-000000000002",
+      itemId: "item-2",
+      date: "2026-04-01",
+      datePrecision: "day",
+    },
   ]);
   const own = { ...edit, releaseId: "00000000-0000-0000-0000-000000000001" };
   const foreign = { ...edit, notes: "foreign", releaseId: "00000000-0000-0000-0000-000000000002" };
@@ -197,7 +207,9 @@ async function waitForALockWait() {
 
 test("an edit that selects a release an Item Refresh deletes meanwhile answers 404 and changes nothing", async () => {
   const release = "00000000-0000-0000-0000-000000000003";
-  await db.insert(item_release).values({ id: release, itemId: "item-1", date: "2026-03-01" });
+  await db
+    .insert(item_release)
+    .values({ id: release, itemId: "item-1", date: "2026-03-01", datePrecision: "day" });
   const before = await db.select().from(collection);
   const refresh = await deletingRelease(release);
 

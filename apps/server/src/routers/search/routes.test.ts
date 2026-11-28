@@ -55,8 +55,20 @@ beforeEach(async () => {
     { id: "aki-3", ownerId: "user-2", externalId: 300, title: "Rin" },
   ]);
   await db.insert(item_release).values([
-    { itemId: "item-1", date: "2026-01-01", price: 4000, priceCurrency: "JPY" },
-    { itemId: "item-1", date: "2026-06-01", price: 4500, priceCurrency: "JPY" },
+    {
+      itemId: "item-1",
+      date: "2026-01-01",
+      datePrecision: "day",
+      price: 4000,
+      priceCurrency: "JPY",
+    },
+    {
+      itemId: "item-1",
+      date: "2026-06-01",
+      datePrecision: "day",
+      price: 4500,
+      priceCurrency: "JPY",
+    },
   ]);
   await db.insert(entry).values([
     { id: "entry-1", ownerId: userId, name: "Miku Artist", category: "Artists" },
@@ -125,7 +137,11 @@ describe("each search route answers as before", () => {
           title: "Nendoroid Hatsune Miku",
           image: null,
           category: null,
-          latestRelease: { date: "2026-06-01", price: 4500, priceCurrency: "JPY" },
+          latestRelease: {
+            date: { start: "2026-06-01", precision: "day" },
+            price: 4500,
+            priceCurrency: "JPY",
+          },
           collectionCount: 1,
           onOrderCount: 0,
           wishlisted: false,

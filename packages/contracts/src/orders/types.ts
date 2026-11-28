@@ -1,12 +1,13 @@
 import type { CollectionItem } from "../collection/types";
 import type { Page } from "../shared/pagination";
+import type { ReleaseDate } from "../shared/release-date";
 import type { OrderStatus, ShippingMethod } from "../shared/types";
 
 export type Order = {
   orderId: string;
   title: string;
   shop: string;
-  releaseDate: string | null;
+  releaseDate: ReleaseDate | null;
   shippingMethod: ShippingMethod;
   orderDate: string | null;
   paymentDate: string | null;

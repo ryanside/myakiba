@@ -1,3 +1,4 @@
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { afterEach, beforeAll, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,7 +11,7 @@ import { Result } from "better-result";
 
 type Write = {
   readonly orderId: string;
-  readonly change: Readonly<Record<string, string | boolean | null>>;
+  readonly change: Readonly<Record<string, string | boolean | null | ReleaseDate>>;
   readonly settle: () => void;
   readonly fail: () => void;
 };
@@ -52,8 +53,10 @@ const realOrders = await import("@/queries/orders");
 await mock.module("@/queries/orders", () => ({
   ...realOrders,
   updateOrderStatus: (orderId: string, status: string) => sendWrite(orderId, { status }),
-  updateOrderDate: (orderId: string, field: string, date: string | null) =>
-    sendWrite(orderId, { [field]: date }),
+  updateOrderDate: (
+    orderId: string,
+    change: { field: string; date: string | ReleaseDate | null },
+  ) => sendWrite(orderId, { [change.field]: change.date }),
   fillOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
 }));
 const realRouter = await import("@tanstack/react-router");

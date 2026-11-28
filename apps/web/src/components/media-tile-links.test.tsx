@@ -32,7 +32,11 @@ const item = {
   category: "Prepainted",
   position: 0,
   createdAt: "2026-01-01T00:00:00.000Z",
-  latestRelease: { date: "2026-01-02", price: 12_000, priceCurrency: "JPY" },
+  latestRelease: {
+    date: { start: "2026-01-02", precision: "day" },
+    price: 12_000,
+    priceCurrency: "JPY",
+  },
 } satisfies ComponentProps<typeof WishlistItemGrid>["items"][number];
 
 function wishlist(viewMode: MediaViewMode, custom: boolean): ReactNode {

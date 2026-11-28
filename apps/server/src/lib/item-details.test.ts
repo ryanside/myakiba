@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { releaseKey, storedPercentage } from "./item-details";
 
 const release = {
-  date: "2018-11-15",
+  date: { start: "2018-11-15", precision: "day" as const },
   type: "Standard (Japan)",
   price: 1_350_000,
   priceCurrency: "JPY",
@@ -15,7 +15,8 @@ describe("releaseKey is a release's identity within its Item", () => {
   });
 
   test.each([
-    ["date", { date: "2018-12-20" }],
+    ["date", { date: { start: "2018-12-20", precision: "day" } }],
+    ["date precision", { date: { start: "2018-11-15", precision: "month" } }],
     ["type", { type: "Limited (Japan)" }],
     ["price", { price: 1_480_000 }],
     ["priceCurrency", { priceCurrency: "USD" }],

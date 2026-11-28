@@ -427,15 +427,13 @@ test("a New Order's status, Paid, Shipping Method and dates all reach the commit
   expect(fields.status).toBe("Shipped");
   expect(fields.paid).toBe(true);
   expect(fields.shippingMethod).toBe("SAL");
-  for (const field of [
-    "orderDate",
-    "releaseDate",
-    "paymentDate",
-    "shippingDate",
-    "collectionDate",
-  ]) {
+  for (const field of ["orderDate", "paymentDate", "shippingDate", "collectionDate"]) {
     expect(String(fields[field])).toMatch(/^\d{4}-\d{2}-15$/u);
   }
+  expect(fields.releaseDate).toEqual({
+    start: expect.stringMatching(/^\d{4}-\d{2}-15$/u),
+    precision: "day",
+  });
 });
 
 test("a blank Release Date reads as the latest of the selected rows' releases", async () => {
@@ -444,7 +442,7 @@ test("a blank Release Date reads as the latest of the selected rows' releases", 
       title: "Later",
       latestRelease: {
         id: "later",
-        date: "2028-03-01",
+        date: { start: "2028-03-01", precision: "day" },
         type: null,
         barcode: null,
         price: null,
@@ -522,7 +520,7 @@ test("the Release control and its menu show date, type, barcode and price in the
     {
       id: FIRST_RELEASE,
       itemId: ITEM_ID,
-      date: "2026-05-01",
+      date: { start: "2026-05-01", precision: "day" },
       type: "Limited",
       barcode: "4580590174562",
       price: 2_500_000,
@@ -531,7 +529,7 @@ test("the Release control and its menu show date, type, barcode and price in the
     {
       id: SECOND_RELEASE,
       itemId: ITEM_ID,
-      date: "2027-01-15",
+      date: { start: "2027-01-15", precision: "day" },
       type: "Resale",
       barcode: "4580590174999",
       price: 500_000,
@@ -543,7 +541,7 @@ test("the Release control and its menu show date, type, barcode and price in the
       title: "Hatsune Miku",
       latestRelease: {
         id: SECOND_RELEASE,
-        date: "2027-01-15",
+        date: { start: "2027-01-15", precision: "day" },
         type: "Resale",
         barcode: "4580590174999",
         price: 500_000,

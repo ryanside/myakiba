@@ -52,7 +52,12 @@ type CommitBody = {
     readonly kind: string;
     readonly shared?: Readonly<Record<string, string | number | null>>;
     readonly order?: {
-      readonly fields?: Readonly<Record<string, string | number | boolean | null>>;
+      readonly fields?: Readonly<
+        Record<
+          string,
+          string | number | boolean | null | { readonly start: string; readonly precision: string }
+        >
+      >;
     };
   };
   readonly wishlist: boolean;
@@ -239,7 +244,7 @@ export const item = (itemId: string, overrides: Partial<AddItem> = {}): AddItem 
   category: "Prepainted",
   latestRelease: {
     id: `release-${itemId}`,
-    date: "2027-01-15",
+    date: { start: "2027-01-15", precision: "day" },
     type: "Standard",
     barcode: null,
     price: 500_000,

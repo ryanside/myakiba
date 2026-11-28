@@ -18,7 +18,7 @@ import type { KanbanMoveEvent } from "@/components/reui/kanban";
 import { PopoverDatePickerCell } from "@/components/cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "@/components/cells/popover-release-date-cell";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatDateOnlyForDisplay, formatReleaseDate } from "@/lib/date-display";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import { functionalUpdate } from "@tanstack/react-table";
@@ -30,7 +30,7 @@ import {
   updateKanbanOrderPaidCommand,
   updateKanbanOrderStatusCommand,
 } from "@/data/resources/dashboard";
-import type { OrderDateField } from "@/queries/orders";
+import type { OrderDateChange, OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { TILE_HOVER_CLASS_NAME, TILE_SURFACE_CLASS_NAME } from "@/components/media-tile";
@@ -71,9 +71,8 @@ interface StatusMutationVariables {
 
 interface DateMutationVariables {
   readonly orderId: string;
-  readonly field: OrderDateField;
-  readonly date: string | null;
-  readonly previousDate: string | null;
+  readonly change: OrderDateChange;
+  readonly previous: OrderDateChange;
 }
 
 type PaymentFields = Pick<DashboardKanbanOrder, "paid">;
@@ -97,7 +96,7 @@ interface PendingStatusMutations {
 
 interface PendingDateMutations {
   readonly mutations: DateMutationVariables[];
-  readonly persistedDates: Map<OrderDateField, string | null>;
+  readonly persistedDates: Map<OrderDateField, OrderDateChange>;
 }
 
 type KanbanColumnMetadata = Record<OrderStatus, { readonly title: string; readonly color: string }>;
@@ -118,20 +117,19 @@ const DATE_FIELDS: readonly { readonly field: OrderDateField; readonly label: st
 
 function withDateUpdate(
   order: DashboardKanbanOrder,
-  field: OrderDateField,
-  date: string | null,
+  change: OrderDateChange,
 ): DashboardKanbanOrder {
-  switch (field) {
+  switch (change.field) {
     case "releaseDate":
-      return { ...order, releaseDate: date };
+      return { ...order, releaseDate: change.date };
     case "orderDate":
-      return { ...order, orderDate: date };
+      return { ...order, orderDate: change.date };
     case "paymentDate":
-      return { ...order, paymentDate: date };
+      return { ...order, paymentDate: change.date };
     case "shippingDate":
-      return { ...order, shippingDate: date };
+      return { ...order, shippingDate: change.date };
     case "collectionDate":
-      return { ...order, collectionDate: date };
+      return { ...order, collectionDate: change.date };
   }
 }
 
@@ -260,10 +258,15 @@ function updateOrderInColumns(
 function updateOrderDateInColumns(
   columns: OrderColumns,
   orderId: string,
-  field: OrderDateField,
-  date: string | null,
+  change: OrderDateChange,
 ): OrderColumns {
-  return updateOrderInColumns(columns, orderId, (order) => withDateUpdate(order, field, date));
+  return updateOrderInColumns(columns, orderId, (order) => withDateUpdate(order, change));
+}
+
+function dateOf(order: DashboardKanbanOrder, field: OrderDateField): OrderDateChange {
+  return field === "releaseDate"
+    ? { field, date: order.releaseDate ?? null }
+    : { field, date: order[field] ?? null };
 }
 
 async function drainMutationQueue<T>(
@@ -291,7 +294,7 @@ interface OrderCardProps extends Omit<
   currency: Currency;
   dateFormat: DateFormat;
   asHandle?: boolean;
-  onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+  onDateChange: (orderId: string, change: OrderDateChange) => void;
   onPaidChange: (orderId: string, paid: boolean) => void;
 }
 
@@ -361,7 +364,11 @@ function OrderCard({
             />
           </div>
           {DATE_FIELDS.map(({ field, label }) => {
-            const dateValue = order[field] ?? null;
+            const current = dateOf(order, field);
+            const shown =
+              current.field === "releaseDate"
+                ? current.date && formatReleaseDate(current.date, dateFormat)
+                : current.date && formatDateOnlyForDisplay(current.date, dateFormat);
             const triggerButton = (
               <Button
                 type="button"
@@ -372,32 +379,32 @@ function OrderCard({
                 <span
                   className={cn(
                     "text-xs tabular-nums",
-                    dateValue ? "text-foreground" : "text-muted-foreground",
+                    shown ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
-                  {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
+                  {shown || "—"}
                 </span>
               </Button>
             );
 
             const DateCell =
-              field === "releaseDate" ? (
+              current.field === "releaseDate" ? (
                 <PopoverReleaseDateCell
-                  value={dateValue}
+                  value={current.date}
                   dateFormat={dateFormat}
                   orderId={order.orderId}
                   onSubmit={async (date) => {
-                    onDateChange(order.orderId, field, date);
+                    onDateChange(order.orderId, { field: "releaseDate", date });
                     return Result.ok();
                   }}
                   trigger={triggerButton}
                 />
               ) : (
                 <PopoverDatePickerCell
-                  value={dateValue}
+                  value={current.date}
                   dateFormat={dateFormat}
                   onSubmit={async (date) => {
-                    onDateChange(order.orderId, field, date);
+                    onDateChange(order.orderId, { field: current.field, date });
                     return Result.ok();
                   }}
                   trigger={triggerButton}
@@ -429,7 +436,7 @@ interface OrderColumnProps {
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
   readonly isOverlay?: boolean;
-  readonly onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+  readonly onDateChange: (orderId: string, change: OrderDateChange) => void;
   readonly onPaidChange: (orderId: string, paid: boolean) => void;
 }
 
@@ -618,8 +625,8 @@ function OrderKanbanBoard({
     (variables: DateMutationVariables) => {
       const existingQueue = pendingDateMutationsRef.current.get(variables.orderId);
       if (existingQueue) {
-        if (!existingQueue.persistedDates.has(variables.field)) {
-          existingQueue.persistedDates.set(variables.field, variables.previousDate);
+        if (!existingQueue.persistedDates.has(variables.change.field)) {
+          existingQueue.persistedDates.set(variables.change.field, variables.previous);
         }
         existingQueue.mutations.push(variables);
         return;
@@ -627,7 +634,7 @@ function OrderKanbanBoard({
 
       const queue: PendingDateMutations = {
         mutations: [variables],
-        persistedDates: new Map([[variables.field, variables.previousDate]]),
+        persistedDates: new Map([[variables.change.field, variables.previous]]),
       };
       pendingDateMutationsRef.current.set(variables.orderId, queue);
 
@@ -637,13 +644,13 @@ function OrderKanbanBoard({
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
 
-          queue.persistedDates.set(persistedVariables.field, persistedVariables.date);
+          queue.persistedDates.set(persistedVariables.change.field, persistedVariables.change);
         },
         async () => {
           setColumns((current) => {
             let next = current;
-            for (const [field, date] of queue.persistedDates) {
-              next = updateOrderDateInColumns(next, variables.orderId, field, date);
+            for (const change of queue.persistedDates.values()) {
+              next = updateOrderDateInColumns(next, variables.orderId, change);
             }
             return next;
           });
@@ -709,20 +716,15 @@ function OrderKanbanBoard({
   );
 
   const handleDateChange = React.useCallback(
-    (orderId: string, field: OrderDateField, date: string | null) => {
+    (orderId: string, change: OrderDateChange) => {
       const order = Object.values(columns)
         .flat()
         .find((candidate) => candidate.orderId === orderId);
       if (!order) return;
 
-      setColumns((current) => updateOrderDateInColumns(current, orderId, field, date));
+      setColumns((current) => updateOrderDateInColumns(current, orderId, change));
 
-      enqueueDateMutation({
-        orderId,
-        field,
-        date,
-        previousDate: order[field] ?? null,
-      });
+      enqueueDateMutation({ orderId, change, previous: dateOf(order, change.field) });
     },
     [columns, enqueueDateMutation],
   );

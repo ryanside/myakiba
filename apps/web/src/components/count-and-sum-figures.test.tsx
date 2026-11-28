@@ -76,7 +76,7 @@ const calendarOrder = {
   itemCount: 1,
   status: "Ordered",
   paid: false,
-  releaseDate: "2026-11-15",
+  releaseDate: { start: "2026-11-15", precision: "day" },
   total: 3600,
 } satisfies CalendarOrder;
 

@@ -1,4 +1,5 @@
 import { Result } from "better-result";
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { call } from "@/data/api";
 import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
@@ -220,11 +221,19 @@ export type OrderDateField =
   | "shippingDate"
   | "collectionDate";
 
-export function updateOrderDate(orderId: string, field: OrderDateField, date: string | null) {
+/** One date of an Order, set or cleared; a Release Date carries its precision. */
+export type OrderDateChange =
+  | { readonly field: "releaseDate"; readonly date: ReleaseDate | null }
+  | { readonly field: Exclude<OrderDateField, "releaseDate">; readonly date: string | null };
+
+export function updateOrderDate(orderId: string, change: OrderDateChange) {
   return call(
     app.api.orders({ orderId }).put({
-      order: { [field]: date },
-      cascadeOptions: cascadeToItems([field]),
+      order:
+        change.field === "releaseDate"
+          ? { releaseDate: change.date }
+          : { [change.field]: change.date },
+      cascadeOptions: cascadeToItems([change.field]),
     }),
     { fallback: "Failed to update order date" },
   );

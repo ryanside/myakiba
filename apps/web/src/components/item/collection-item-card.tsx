@@ -25,7 +25,7 @@ import {
   TimelineSeparator,
 } from "@/components/reui/timeline";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatDateOnlyForDisplay, formatReleaseDate } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
 import { PaymentLine } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
@@ -179,7 +179,7 @@ export function CollectionItemCard({
             <div className="text-xs text-muted-foreground/60 tabular-nums">
               {release ? (
                 <span className="animate-data-in">
-                  {formatDateOnlyForDisplay(release.date, dateFormat)}
+                  {formatReleaseDate(release.date, dateFormat)}
                 </span>
               ) : (
                 <Skeleton className="h-4 w-20" />

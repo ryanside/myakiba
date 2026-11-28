@@ -265,7 +265,7 @@ describe("the items query", () => {
     category: null,
     latestRelease: {
       id: "release-1",
-      date: "2026-01-31",
+      date: { start: "2026-01-31", precision: "day" as const },
       type: "Limited",
       barcode: "4580590174562",
       price: 1200,

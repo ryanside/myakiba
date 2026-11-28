@@ -1,3 +1,4 @@
+import type { ReleaseDate } from "@myakiba/contracts/shared/release-date";
 import { afterEach, beforeAll, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,7 +18,7 @@ import { Result } from "better-result";
 
 type Write = {
   readonly orderId: string;
-  readonly change: Readonly<Record<string, string | boolean | null>>;
+  readonly change: Readonly<Record<string, string | boolean | null | ReleaseDate>>;
   readonly settle: () => void;
   readonly fail: () => void;
 };
@@ -62,8 +63,10 @@ const realOrders = await import("@/queries/orders");
 await mock.module("@/queries/orders", () => ({
   ...realOrders,
   updateOrderStatus: (orderId: string, status: string) => sendWrite(orderId, { status }),
-  updateOrderDate: (orderId: string, field: string, date: string | null) =>
-    sendWrite(orderId, { [field]: date }),
+  updateOrderDate: (
+    orderId: string,
+    change: { field: string; date: string | ReleaseDate | null },
+  ) => sendWrite(orderId, { [change.field]: change.date }),
   fillOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
 }));
 const realDashboard = await import("@/queries/dashboard");
@@ -148,7 +151,7 @@ function MonthlyDashboard({ month }: { readonly month: number }) {
         costBreakdown: { items: 0, shipping: 0, taxes: 0, duties: 0, tariffs: 0, miscFees: 0 },
         orders: structuredClone(
           server.filter((candidate) =>
-            candidate.releaseDate?.startsWith(`2026-${String(month).padStart(2, "0")}`),
+            candidate.releaseDate?.start.startsWith(`2026-${String(month).padStart(2, "0")}`),
           ),
         ),
       };
@@ -526,9 +529,9 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
   test("a card moved on one month's board does not show on the next month's board while its write is in flight", async () => {
     const { showMonth } = await renderBoard(
       [
-        order("miku", "Ordered", { releaseDate: "2026-03-05" }),
-        order("rin", "Shipped", { releaseDate: "2026-03-07" }),
-        order("len", "Shipped", { releaseDate: "2026-04-02" }),
+        order("miku", "Ordered", { releaseDate: { start: "2026-03-05", precision: "day" } }),
+        order("rin", "Shipped", { releaseDate: { start: "2026-03-07", precision: "day" } }),
+        order("len", "Shipped", { releaseDate: { start: "2026-04-02", precision: "day" } }),
       ],
       3,
     );
@@ -546,8 +549,8 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
   test("a card moved again after a month round trip ends in the column it was moved to last", async () => {
     const { showMonth } = await renderBoard(
       [
-        order("miku", "Ordered", { releaseDate: "2026-03-05" }),
-        order("rin", "Shipped", { releaseDate: "2026-04-02" }),
+        order("miku", "Ordered", { releaseDate: { start: "2026-03-05", precision: "day" } }),
+        order("rin", "Shipped", { releaseDate: { start: "2026-04-02", precision: "day" } }),
       ],
       3,
     );

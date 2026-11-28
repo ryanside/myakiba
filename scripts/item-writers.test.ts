@@ -11,6 +11,29 @@ const OWNERSHIP_MIGRATION_FILES = new Set([
   "packages/db/src/item-ownership/seed.ts",
 ]);
 
+/**
+ * One-time db-push steps that may make one write to an Item table, named by exact path with the
+ * one write each makes. Any other write from such a file, or a second one, is a stray.
+ */
+const ONE_TIME_WRITES: ReadonlyMap<string, Write> = new Map([
+  ["packages/db/src/release-precision/migrate.ts", { verb: "update", table: "item_release" }],
+]);
+
+type Write = { readonly verb: string; readonly table: string };
+
+/** The writes a file makes that no rule allows it. */
+function strayWrites<T extends Write>(file: string, found: readonly T[]): readonly T[] {
+  if (file === WRITER) return found.filter(({ verb }) => verb === "re-export");
+  const allowed = ONE_TIME_WRITES.get(file);
+  const [only] = found;
+  const isAllowed =
+    allowed !== undefined &&
+    found.length === 1 &&
+    only?.verb === allowed.verb &&
+    only.table === allowed.table;
+  return isAllowed ? [] : found;
+}
+
 const SCHEMA = /(?:^|\/)schema\/figure(?:\.[cm]?[jt]s)?$/u;
 const DRIZZLE_WRITES = new Set(["insert", "update", "delete"]);
 const TABLE = `"?(?:public"?\\."?)?(${TABLES.join("|")})"?`;
@@ -494,6 +517,27 @@ describe("an Item table write", () => {
   });
 });
 
+describe("a one-time db-push step's allowance", () => {
+  const MIGRATION = "packages/db/src/release-precision/migrate.ts";
+  const update = { line: 1, verb: "update", table: "item_release" };
+
+  test("lets the release precision step make its one update of item_release", async () => {
+    const source = await Bun.file(path.resolve(import.meta.dir, "..", MIGRATION)).text();
+    const found = itemWrites(MIGRATION, source).map(({ verb, table }) => ({ verb, table }));
+    expect(found).toEqual([{ verb: "update", table: "item_release" }]);
+    expect(strayWrites(MIGRATION, [update])).toEqual([]);
+  });
+
+  test.each([
+    ["another file beside it", "packages/db/src/release-precision/backfill.ts", [update]],
+    ["a write to another Item table", MIGRATION, [{ ...update, table: "item" }]],
+    ["an insert into item_release", MIGRATION, [{ ...update, verb: "insert" }]],
+    ["a second update", MIGRATION, [update, { ...update, line: 2 }]],
+  ])("does not reach %s", (_case, file, found) => {
+    expect(strayWrites(file, found)).toEqual(found);
+  });
+});
+
 describe("a production file", () => {
   test.each([
     ["apps/server/src/lib/item-database.ts"],
@@ -539,9 +583,12 @@ test(`only ${WRITER} writes ${TABLES.join(", ")}`, async () => {
   for (const file of files) {
     const source = Bun.file(path.join(root, file));
     if (!(await source.exists())) continue;
-    for (const { line, verb, table } of itemWrites(file, await source.text())) {
-      if (file === WRITER && verb !== "re-export") written.add(table);
-      else strays.push(`${file}:${line} ${verb} ${table}`);
+    const found = itemWrites(file, await source.text());
+    if (file === WRITER) {
+      for (const { verb, table } of found) if (verb !== "re-export") written.add(table);
+    }
+    for (const { line, verb, table } of strayWrites(file, found)) {
+      strays.push(`${file}:${line} ${verb} ${table}`);
     }
   }
   expect(strays).toEqual([]);
