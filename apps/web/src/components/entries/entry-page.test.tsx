@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -11,6 +11,8 @@ import {
 } from "@tanstack/react-router";
 import { entryItemStateSchema } from "@myakiba/contracts/entries/schema";
 import type { EntryItemState } from "@myakiba/contracts/entries/schema";
+import { useResourceMutation } from "@/data/client";
+import { fillCollectionItemsCommand } from "@/data/resources/collection";
 import { entryItemsInput, itemEntries, preloadEntryPage } from "@/data/resources/entries";
 import type { EntryItemsData } from "@/queries/entries";
 import { Route as entryRoute } from "@/routes/(app)/entries.$entryId";
@@ -21,6 +23,7 @@ const realFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();
   globalThis.fetch = realFetch;
+  received = false;
 });
 
 const picture = (id: string, title: string) => ({ id, externalId: 1, title, image: null });
@@ -29,6 +32,12 @@ const ITEMS = {
   ordered: { items: [picture("i-3", "Miku C")], totalCount: 1 },
   wishlist: { items: [], totalCount: 0 },
 } satisfies Record<EntryItemState, EntryItemsData>;
+const RECEIVED = {
+  ...ITEMS,
+  owned: { items: [...ITEMS.owned.items, ...ITEMS.ordered.items], totalCount: 3 },
+  ordered: { items: [], totalCount: 0 },
+} satisfies Record<EntryItemState, EntryItemsData>;
+let received = false;
 const MIKU = { entry: { id: ENTRY_ID, name: "Hatsune Miku", category: "Characters" } };
 
 function serve(entry: () => Response) {
@@ -37,7 +46,13 @@ function serve(entry: () => Response) {
       const url = new URL(input instanceof Request ? input.url : String(input));
       if (url.pathname === `/api/entries/${ENTRY_ID}`) return entry();
       if (url.pathname === `/api/entries/${ENTRY_ID}/items`) {
-        return Response.json(ITEMS[entryItemStateSchema.parse(url.searchParams.get("state"))]);
+        return Response.json(
+          (received ? RECEIVED : ITEMS)[entryItemStateSchema.parse(url.searchParams.get("state"))],
+        );
+      }
+      if (url.pathname === "/api/collection/fill") {
+        received = true;
+        return new Response("Collection items filled successfully");
       }
       if (url.pathname.endsWith("/relationships")) {
         return Response.json({ section: "characters", items: [], totalCount: 0 });
@@ -73,6 +88,7 @@ async function renderEntryPage() {
     );
     await router.load();
   });
+  return queryClient;
 }
 
 test("the page names the Item Entry and shows its Owned, Ordered and Wishlist Items", async () => {
@@ -115,4 +131,25 @@ test("a hover preloads the heading and each state's first page under the screen'
       queryClient.getQueryData(itemEntries.items.key(entryItemsInput(ENTRY_ID, state))),
     ).toEqual(ITEMS[state]);
   }
+});
+
+test("an open page refetches its Items after a Collection write", async () => {
+  serve(() => Response.json(MIKU));
+  const queryClient = await renderEntryPage();
+  await screen.findByRole("region", { name: "On order 1" });
+  const fill = renderHook(() => useResourceMutation(fillCollectionItemsCommand), {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    ),
+  });
+
+  const filled = await act(() =>
+    fill.result.current.run({ ids: ["c-3"], fill: { field: "status", value: "Owned" } }),
+  );
+
+  expect(filled.isOk()).toBe(true);
+  const owned = await screen.findByRole("region", { name: "Owned 3" });
+  const ordered = await screen.findByRole("region", { name: "On order 0" });
+  expect(within(owned).getAllByRole("link")).toHaveLength(3);
+  expect(within(ordered).queryAllByRole("link")).toHaveLength(0);
 });

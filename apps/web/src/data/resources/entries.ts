@@ -8,7 +8,6 @@ import { preload, preloadPage, rootedRead } from "../client";
 
 const detailKey = (entryId: string) => ["item-entry", entryId] as const;
 
-/** The input of one state's page of an Item Entry's Items, shared by the loader and the screen. */
 export function entryItemsInput(
   entryId: string,
   state: EntryItemState,
@@ -33,7 +32,6 @@ export const itemEntries = {
   }),
 };
 
-/** The Item Entry page's loader: its heading and each state's first page. */
 export function preloadEntryPage(
   queryClient: QueryClient,
   cause: "preload" | "enter" | "stay",

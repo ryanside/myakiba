@@ -15,7 +15,6 @@ type PictureItem = {
 
 type PicturePage = { readonly items: readonly PictureItem[]; readonly totalCount: number };
 
-/** A page of Item pictures that link to their Item pages, with a pager past one page. */
 export function ItemPicturePages({
   data,
   isPending,

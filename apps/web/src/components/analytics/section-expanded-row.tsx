@@ -12,7 +12,6 @@ import type { AnalyticsSectionRow } from "@/queries/analytics";
 
 const SECTION_ITEM_PAGE_SIZE = 6;
 
-/** The sections whose rows have no page of their own, so they expand in place. */
 export type ExpandingSection = Extract<AnalyticsSection, "shops" | "scales">;
 
 export function ExpandedRowContent({

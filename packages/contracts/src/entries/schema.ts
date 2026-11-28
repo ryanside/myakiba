@@ -3,7 +3,7 @@ import { paginationLimitSchema, paginationOffsetSchema } from "../shared/paginat
 
 export const ENTRY_ITEMS_PAGE_SIZE = 12;
 
-/** Owned and ordered list Collection Items; ordered holds Ordered and Shipped Order Items. */
+/** `ordered` holds Ordered and Shipped Order Items. */
 export const entryItemStateSchema = z.enum(["owned", "ordered", "wishlist"]);
 
 export type EntryItemState = z.infer<typeof entryItemStateSchema>;
