@@ -116,7 +116,7 @@ test("only a wishlisted Item going to an Order offers Remove from Wishlist, tick
   const boxes = screen.getAllByRole("checkbox", REMOVE_FROM_WISHLIST);
   expect(boxes).toHaveLength(1);
   expect(boxes[0]?.getAttribute("aria-checked")).toBe("true");
-  const wishedCell = screen.getByRole("link", { name: "Wished" }).parentElement;
+  const wishedCell = screen.getByRole("link", { name: "Wished" }).closest("td");
   expect(wishedCell?.textContent).toBe("WishedMFC #1000Remove from Wishlist");
 
   await user.click(screen.getByRole("button", { name: "Create order with 2" }));

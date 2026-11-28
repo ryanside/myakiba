@@ -26,7 +26,7 @@ import type { PickRow } from "@/data/picks";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
-import { removeButtonId, wishlistRemoval } from "./commit-input";
+import { offersWishlistRemoval, removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
 import { onTableKeys, revealFocus } from "./add-table-keys";
 import { useColumnsFade } from "./destination-motion";
@@ -223,32 +223,31 @@ function SelectRow({ row }: CellContext<AddRow, unknown>) {
 
 function ItemName({ row: { id, row, item } }: { readonly row: ItemRow }) {
   const { c } = useAddTable();
-  const removal = wishlistRemoval(row, item.wishlisted, c.resolvedForm);
-  const removalId = `add-unwish-${id}`;
-  return (
+  const title = (
     <ItemTitleCell
       itemId={id}
       title={item.title}
       externalId={item.externalId}
       image={item.image}
       walkedByKeys
-    >
-      {removal === null ? null : (
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Checkbox
-            id={removalId}
-            checked={removal}
-            onCheckedChange={(checked) => c.edit(id, { removeFromWishlist: checked === true })}
-          />
-          <Label
-            htmlFor={removalId}
-            className="cursor-pointer truncate text-xs font-normal text-muted-foreground"
-          >
-            Remove from Wishlist
-          </Label>
-        </span>
-      )}
-    </ItemTitleCell>
+    />
+  );
+  if (!offersWishlistRemoval(item.wishlisted, c.resolvedForm)) return title;
+  const removalId = `add-unwish-${id}`;
+  return (
+    <div className="space-y-1.5">
+      {title}
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={removalId}
+          checked={!row.overrides.keepOnWishlist}
+          onCheckedChange={(checked) => c.edit(id, { keepOnWishlist: checked !== true })}
+        />
+        <Label htmlFor={removalId} className="cursor-pointer text-xs font-normal whitespace-nowrap">
+          Remove from Wishlist
+        </Label>
+      </div>
+    </div>
   );
 }
 
