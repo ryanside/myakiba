@@ -80,3 +80,37 @@ test("a tile releasing today reads Released after midnight passes with no other 
 
   expect(screen.getByText("Released 10/16/2026")).toBeDefined();
 });
+
+test.each([
+  { precision: "month", start: "2026-06-01", day: "2026-06-30", label: "Releases Jun 2026" },
+  { precision: "month", start: "2026-06-01", day: "2026-07-01", label: "Released Jun 2026" },
+  { precision: "year", start: "2026-01-01", day: "2026-12-31", label: "Releases 2026" },
+  { precision: "year", start: "2026-01-01", day: "2027-01-01", label: "Released 2026" },
+] as const)(
+  "a $precision-only release tile reads $label on $day",
+  async ({ precision, start, day, label }) => {
+    setSystemTime(new Date(`${day}T12:00:00`));
+    const router = createRouter({
+      routeTree: createRootRoute({
+        component: () => (
+          <ReleaseItemTile
+            viewMode="grid"
+            item={{
+              title: "Hatsune Miku",
+              image: null,
+              category: "Prepainted",
+              latestRelease: { date: { start, precision }, price: 12_000, priceCurrency: "JPY" },
+            }}
+            destination={{ to: "/item/$externalId", params: { externalId: 123 } }}
+            currency="JPY"
+            dateFormat="MM/DD/YYYY"
+          />
+        ),
+      }),
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    expect(screen.queryByText(label) !== null).toBe(true);
+  },
+);

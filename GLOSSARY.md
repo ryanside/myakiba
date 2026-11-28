@@ -19,7 +19,7 @@ The picture an Item shows, stored by its content, so two Items with the same pic
 _Avoid_: Thumbnail when the stored picture is meant
 
 **Item Release**:
-A dated release of an Item for sale. One Item can have several Item Releases. Its date is known to the day, the month or the year, as MyFigureCollection printed it, and is shown only that far: a month reads "Jun 2026" and a year "2026". When dates are sorted or compared, a date known only to its month or year counts as the first day of that period, but the Calendar never places it on that day. For an Item Release saved before precision was recorded, its precision is a guess from the stored date until an Item Refresh reads the page.
+A dated release of an Item for sale. One Item can have several Item Releases. Its date is known to the day, the month or the year, as MyFigureCollection printed it, and is shown only that far: a month reads "Jun 2026" and a year "2026". Sorting and picking the latest Item Release treat a date known only to its month or year as the first day of that period; the Calendar never places it on that day, and the Wishlist Release Filter counts such a release as Released only from the day after its period ends. For an Item Release saved before precision was recorded, its precision is a guess from the stored date until an Item Refresh reads the page.
 _Avoid_: Catalog Release, release when Order Release Date could also be meant
 
 **Selected Item Release**:
@@ -128,13 +128,13 @@ One Item included in a Wishlist. An Item can appear only once and stays until th
 _Avoid_: Wishlist Entry, List Member, wished Item
 
 **Wishlist Release Filter**:
-One of three Wishlist views: All, Upcoming, or Available, based on the Item Release with the latest date and the viewer's local date. All includes every Wishlist Item, including Items with no Item Release, and is the only view with ranks and manual reordering.
+One of three Wishlist views: All, Upcoming, or Released, based on the Item Release with the latest date and the viewer's local date. An Item Release's released-from day is its own day for a day-precise release, the 1st of the next month for a month-only release, and January 1 of the next year for a year-only release; it counts as Released from that day on and Upcoming before it. All includes every Wishlist Item, including Items with no Item Release, and is the only view with ranks and manual reordering.
 
 **Upcoming**:
-A Wishlist Release Filter for Items whose latest Item Release date is after today.
+A Wishlist Release Filter for Items whose latest Item Release has a released-from day after the viewer's local date.
 
-**Available**:
-A Wishlist Release Filter for Items whose latest Item Release date is today or earlier. Available describes the release date, not whether a Shop has stock.
+**Released**:
+A Wishlist Release Filter for Items whose latest Item Release has a released-from day on or before the viewer's local date (its own day for a day-precise release, the 1st of the next month for a month-only release, and January 1 of the next year for a year-only release). Released describes the release date, not whether a Shop has stock.
 
 ### Expenses
 

@@ -1,4 +1,4 @@
-import { format as formatDateFns, parseISO } from "date-fns";
+import { format as formatDateFns, lastDayOfMonth, lastDayOfYear, parseISO } from "date-fns";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { RELEASE_DATE_PRECISIONS } from "@myakiba/contracts/shared/constants";
@@ -71,6 +71,13 @@ export function formatReleaseDate(
     default:
       return formatDateFns(date, DATE_PATTERN_BY_FORMAT[dayStyle]);
   }
+}
+
+export function releasePeriodEnd({ start, precision }: ReleaseDate): string {
+  const date = parseDateOnly(start);
+  if (!date || precision === "day") return start;
+  const end = precision === "month" ? lastDayOfMonth(date) : lastDayOfYear(date);
+  return formatDateFns(end, "yyyy-MM-dd");
 }
 
 /** A month view names its month already, so a release known only to that month has no caption. */

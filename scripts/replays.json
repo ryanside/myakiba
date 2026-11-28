@@ -5973,6 +5973,24 @@
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > two releases on the 1st that the backfill read as month-only keep their selections when a refresh reads their days"
       ]
+    },
+    {
+      "fix": "c2cec6fd21c3132390e833b6b15dc2912c920037",
+      "bug": "The Wishlist counted a month-only release as Released from the 1st of its month and a year-only release from January 1, before the period had passed.",
+      "test": "apps/server/src/routers/wishlist/released.test.ts",
+      "fixed": [
+        "a June month-only release is Upcoming through June 30 and Released from July 1",
+        "a year-only release is Upcoming on December 31 and Released from January 1"
+      ]
+    },
+    {
+      "fix": "c2cec6fd21c3132390e833b6b15dc2912c920037",
+      "bug": "A release tile read \"Released\" during a month-only release's month or a year-only release's year, before the period had ended.",
+      "test": "apps/web/src/components/release-item-tile.test.tsx",
+      "fixed": [
+        "a month-only release tile reads Releases Jun 2026 on 2026-06-30",
+        "a year-only release tile reads Releases 2026 on 2026-12-31"
+      ]
     }
   ],
   "lint": [

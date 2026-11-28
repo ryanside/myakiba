@@ -9,6 +9,10 @@ export function releaseDateOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<ReleaseDate>`${pair(start, precision)}`;
 }
 
+export function releasedFromOf(start: AnyPgColumn, precision: AnyPgColumn) {
+  return sql<string>`(${start} + CASE ${precision} WHEN 'month' THEN interval '1 month' WHEN 'year' THEN interval '1 year' ELSE interval '0' END)::date`;
+}
+
 export function optionalReleaseDateOf(start: AnyPgColumn, precision: AnyPgColumn) {
   return sql<ReleaseDate | null>`CASE WHEN ${start} IS NULL THEN NULL ELSE ${pair(start, precision)} END`;
 }

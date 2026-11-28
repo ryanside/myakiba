@@ -50,7 +50,7 @@ function applyMove({ movedIds, anchorId, placement }: PositionOrderInput) {
 
 function isInReleaseStatus(item: ServerItem, { releaseStatus, today }: WishlistQuery): boolean {
   if (releaseStatus === "upcoming") return item.releaseDate > today;
-  if (releaseStatus === "available") return item.releaseDate <= today;
+  if (releaseStatus === "released") return item.releaseDate <= today;
   return true;
 }
 
@@ -125,7 +125,7 @@ afterEach(() => {
   server.heldOrderPatch.length = 0;
 });
 
-function WishlistTab({ tab }: { tab: "all" | "upcoming" | "available" }) {
+function WishlistTab({ tab }: { tab: "all" | "upcoming" | "released" }) {
   const { data, isPending } = useWishlistItemsQuery(tab);
   if (isPending) return <p>Loading wishlist</p>;
   const titles = data?.pages.flatMap((page) => page.items.map((item) => item.title)) ?? [];
