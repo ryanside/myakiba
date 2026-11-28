@@ -7,7 +7,7 @@ description: Launch an isolated production build of myakiba (the Elysia server p
 
 Run every command from the root of the myakiba checkout you are verifying. `H=.agents/skills/verify-myakiba/scripts/verify.sh`, relative to that root, so each checkout runs its own copy. `up` builds whichever checkout it runs in, including a worktree.
 
-The helper builds this checkout's `packages/db/Dockerfile` and `apps/server/Dockerfile` images, the same ones CI smokes and production runs. It serves the API and the web app from one origin, `http://localhost:<free port>`. It never touches the operator's `bun dev` stack on ports 3000, 3001, 5432 and 6379, or Compose's `myakiba-*` containers. Each run is labeled `verify-myakiba.run=<run>`, so runs can sit side by side.
+The helper builds this checkout's `packages/db/Dockerfile` and `apps/server/Dockerfile` images, the same ones CI smokes and production runs. It serves the API and the web app from one origin, `http://localhost:<free port>`. It never touches the operator's `bun dev` stack on ports 3000, 3001, 5432 and 6379, or Compose's `myakiba-*` containers. Each run is labeled `verify-myakiba.run=<run>`, so runs can sit side by side. Each run has its own auth secret, so a session cookie from one run reads no session on another. But the browser keeps one cookie jar for `localhost` across every port, so a sign-in on one run signs out the other runs' tabs in that profile: drive one signed-in session at a time.
 
 Picks, Item Refresh and item pictures need the myakiba browser extension and a MyFigureCollection sign-in. The preview browser has no extension, so do not verify them here. `features/README.md` lists every surface this harness cannot reach.
 
