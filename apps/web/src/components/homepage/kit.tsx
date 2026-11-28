@@ -131,7 +131,6 @@ export function GitHubAction() {
   );
 }
 
-/** A store listing that installs in this browser, or null where none does. */
 function listingFor(availability: ExtensionAvailability): string | null {
   switch (availability.kind) {
     case "listed":
@@ -143,7 +142,6 @@ function listingFor(availability: ExtensionAvailability): string | null {
   }
 }
 
-/** Opens the listing; without one, goes to How it works, which says where the extension runs. */
 export function InstallAction() {
   const listing = listingFor(extensionAvailability());
   return (
