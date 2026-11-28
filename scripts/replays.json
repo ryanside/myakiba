@@ -6017,6 +6017,14 @@
         "an Item Refresh that cleared the release on 2 items says to select a release again",
         "an Item Refresh over the picture quota that cleared a release choice says both"
       ]
+    },
+    {
+      "fix": "32b8d85c5c4f5ff0b7e870e30dedcd9a2b5eaa93",
+      "bug": "An Item Refresh that moved one selection and cleared another advanced the Order before the clear, so an Order dated before a removed release took that release's date.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "an Item Refresh keeps each selection on the release it became > a slipped release beside a removed one advances an earlier order date to the slipped release, not the removed one"
+      ]
     }
   ],
   "lint": [
