@@ -5896,6 +5896,16 @@
       "test": "apps/web/src/components/add/add-retry.test.tsx",
       "fixed": [
         "a reload after a lost commit that took an Item off the Wishlist sends its commitId and choices again"
+      ],
+      "testAt": "bb4b1536e7cacb82a3597c50eb55e1aeb5d554cd",
+      "reason": "A later fix in this PR stopped sending removeFromWishlist, so today's copy of this test expects a payload this fix never sent; its test file stays at the fix."
+    },
+    {
+      "fix": "510c6991be4590ffbe2c5e2caabfc8c2b47bdb0a",
+      "bug": "An Add commit to an Order carried the Item's live Wishlist membership, so a retry after a lost answer, with the Item put on the Wishlist meanwhile, sent other choices under a new commitId and wrote a second Order.",
+      "test": "apps/web/src/components/add/add-retry.test.tsx",
+      "fixed": [
+        "a reload after a lost commit whose Item has since joined the Wishlist sends its commitId and choices again"
       ]
     }
   ],
